@@ -235,130 +235,301 @@ function initScene() {
   frame();
 }
 
-/* ---------- 3D burger ---------- */
+/* ---------- 3D burger that comes apart on scroll ---------- */
 const burgerCanvas = document.getElementById("burger-scene");
-try { initBurger(); } catch (err) { console.warn("WebGL unavailable for burger.", err); burgerCanvas.remove(); }
+try { initBurger(); } catch (err) { console.warn("WebGL unavailable for burger.", err); document.getElementById("burger").remove(); }
 
 function initBurger() {
+  const track = document.getElementById("burger");
+  const stick = document.getElementById("burger-stick");
+  const labelsEl = document.getElementById("burger-labels");
+
   const renderer = new THREE.WebGLRenderer({ canvas: burgerCanvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.9;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const FOV = 32;
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-  camera.position.set(0, 0.6, 9.5);
-  camera.lookAt(0, 0, 0);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
 
-  scene.add(new THREE.HemisphereLight(0xffe2b0, 0x120d08, 0.8));
-  const key = new THREE.DirectionalLight(0xffe0b0, 3.2);
-  key.position.set(3, 6, 5);
+  /* studio reflections: a dark room with a few bright softboxes, baked into an environment map */
+  {
+    const env = new THREE.Scene();
+    env.background = new THREE.Color(0x0b0907);
+    const box = (w, h, color, k, x, y, z) => {
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(k), side: THREE.DoubleSide }));
+      mesh.position.set(x, y, z); mesh.lookAt(0, 0, 0); env.add(mesh);
+    };
+    box(9, 9, 0xfff1dc, 9, 0, 9, 2);       // overhead softbox
+    box(2.5, 11, 0xdfe8ff, 5, -9, 2, 3);   // cool strip, left
+    box(2.5, 11, 0xffb55a, 7, 9, 1, -2);   // warm strip, right
+    box(10, 3, 0xffe1b0, 3, 0, 2, -9);     // back rim
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(env, 0.02).texture;
+    scene.environmentIntensity = 0.5;
+  }
+
+  scene.add(new THREE.HemisphereLight(0xffe8c4, 0x1a120a, 0.35));
+  const key = new THREE.DirectionalLight(0xffdcae, 2.0);
+  key.position.set(3, 9, 6);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -5, right: 5, top: 6, bottom: -6, near: 1, far: 30 });
+  key.shadow.bias = -0.0006; key.shadow.normalBias = 0.03; key.shadow.radius = 5;
   scene.add(key);
-  const rim = new THREE.PointLight(0xd4a24c, 45, 20);
-  rim.position.set(-4, 3, -3);
+  const rim = new THREE.PointLight(0xd4a24c, 50, 30);
+  rim.position.set(-4, 4, -4);
   scene.add(rim);
 
-  const mat = (color, rough = 0.6, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: rough, ...extra });
-  const burger = new THREE.Group();
   const V = (x, y) => new THREE.Vector2(x, y);
-
-  // bottom bun: an upside-down dome, flat face up
-  const bunMat = mat(0xd9953f, 0.55);
-  const heel = new THREE.Mesh(new THREE.SphereGeometry(1.3, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), bunMat);
-  heel.scale.y = 0.45; heel.rotation.x = Math.PI; heel.position.y = 0.585;
-  burger.add(heel);
-
-  // patty: lathe with a rounded edge
-  const patty = new THREE.Mesh(new THREE.LatheGeometry(
-    [V(0, 0.58), V(1.3, 0.58), V(1.42, 0.65), V(1.45, 0.74), V(1.42, 0.83), V(1.3, 0.9), V(0, 0.9)], 64),
-    mat(0x4a2a18, 0.9));
-  burger.add(patty);
-
-  // cheese: a square slice whose corners droop over the patty
-  const cheeseGeo = new THREE.PlaneGeometry(2.7, 2.7, 24, 24);
-  cheeseGeo.rotateX(-Math.PI / 2);
-  const cp = cheeseGeo.attributes.position;
-  for (let i = 0; i < cp.count; i++) {
-    const d = Math.max(0, Math.hypot(cp.getX(i), cp.getZ(i)) - 1.15);
-    cp.setY(i, cp.getY(i) - d * d * 0.55);
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const phys = (color, rough, extra = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: rough, ...extra });
+  /* smooth lathe through a handful of profile points */
+  const lathe = (pts, seg = 80) => new THREE.LatheGeometry(new THREE.SplineCurve(pts.map(([x, y]) => V(x, y))).getPoints(pts.length * 10), seg);
+  /* paint vertices by a function of position */
+  function paint(geo, fn) {
+    const p = geo.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color();
+    for (let i = 0; i < p.count; i++) { fn(c, p.getX(i), p.getY(i), p.getZ(i)); col.set([c.r, c.g, c.b], i * 3); }
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    return geo;
   }
-  cheeseGeo.computeVertexNormals();
-  const cheese = new THREE.Mesh(cheeseGeo, mat(0xf5b82e, 0.35, { side: THREE.DoubleSide }));
-  cheese.rotation.y = Math.PI / 4; cheese.position.y = 0.95;
-  burger.add(cheese);
+  const lerpHex = (c, a, b, t) => c.set(a).lerp(new THREE.Color(b), clamp(t, 0, 1));
 
-  // tomato
-  const tomatoMat = mat(0xd23a2a, 0.35);
-  [[0.22, 0], [-0.25, 0.1]].forEach(([x, z], i) => {
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.1, 40), tomatoMat);
-    t.position.set(x, 1.04 + i * 0.1, z);
-    burger.add(t);
-  });
-
-  // lettuce: a ruffled disc
-  const lg = new THREE.RingGeometry(0.01, 1.62, 96, 8);
-  const lp = lg.attributes.position;
-  for (let i = 0; i < lp.count; i++) {
-    const x = lp.getX(i), y = lp.getY(i), r = Math.hypot(x, y), a = Math.atan2(y, x);
-    lp.setZ(i, Math.sin(a * 9) * 0.09 * (r / 1.62) ** 2 + Math.sin(a * 5 + r * 3) * 0.04 * (r / 1.62));
+  /* tomato slice top: skin ring, flesh, seed chambers */
+  function tomatoTexture() {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 512;
+    const g = cv.getContext("2d"); g.translate(256, 256);
+    g.fillStyle = "#b3241a"; g.beginPath(); g.arc(0, 0, 256, 0, 7); g.fill();
+    g.fillStyle = "#e0432e"; g.beginPath(); g.arc(0, 0, 238, 0, 7); g.fill();
+    for (let i = 0; i < 6; i++) {
+      g.save(); g.rotate((i * Math.PI) / 3);
+      g.fillStyle = "#f0674d"; g.beginPath(); g.ellipse(128, 0, 78, 56, 0, 0, 7); g.fill();
+      g.fillStyle = "#f5d683";
+      for (let s = 0; s < 6; s++) { g.beginPath(); g.ellipse(100 + Math.random() * 60, (Math.random() - 0.5) * 60, 8, 5, Math.random() * 3, 0, 7); g.fill(); }
+      g.restore();
+    }
+    g.fillStyle = "#f6cdb7"; g.beginPath(); g.arc(0, 0, 36, 0, 7); g.fill();
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    return t;
   }
-  lg.computeVertexNormals();
-  const lettuce = new THREE.Mesh(lg, mat(0x5fa83a, 0.5, { side: THREE.DoubleSide }));
-  lettuce.rotation.x = -Math.PI / 2; lettuce.position.y = 1.24;
-  burger.add(lettuce);
 
-  // top bun with sesame seeds
-  const crown = new THREE.Mesh(new THREE.SphereGeometry(1.4, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2), bunMat);
-  crown.scale.y = 0.85; crown.position.y = 1.3;
-  burger.add(crown);
-
-  const SEEDS = 46;
-  const seeds = new THREE.InstancedMesh(new THREE.SphereGeometry(0.05, 10, 8).scale(1, 0.55, 1.9), mat(0xf6e7c1, 0.5), SEEDS);
-  const up = new THREE.Vector3(0, 1, 0), o = new THREE.Object3D();
-  for (let i = 0; i < SEEDS; i++) {
-    const phi = Math.acos(1 - Math.random() * 0.8);       // keep seeds on the upper dome
-    const th = Math.random() * Math.PI * 2;
-    const n = new THREE.Vector3(Math.sin(phi) * Math.cos(th), Math.cos(phi), Math.sin(phi) * Math.sin(th));
-    o.position.set(n.x * 1.4, 1.3 + n.y * 1.4 * 0.85 + 0.01, n.z * 1.4);
-    o.quaternion.setFromUnitVectors(up, n).multiply(new THREE.Quaternion().setFromAxisAngle(up, Math.random() * Math.PI));
-    o.updateMatrix();
-    seeds.setMatrixAt(i, o.matrix);
+  const layers = [];  // bottom to top
+  const root = new THREE.Group();
+  function layer(name, y, anchorY = 0) {
+    const g = new THREE.Group(), anchor = new THREE.Object3D();
+    anchor.position.y = anchorY; g.add(anchor); g.position.y = y; root.add(g);
+    layers.push({ name, group: g, anchor, base: y });
+    return g;
   }
-  burger.add(seeds);
+  const dropMat = phys(0xffffff, 0.02, { transparent: true, opacity: 0.38, clearcoat: 1 });
+  function droplets(g, n, radius, y, rMax) {
+    const geo = new THREE.SphereGeometry(1, 10, 8).scale(1, 0.55, 1);
+    const im = new THREE.InstancedMesh(geo, dropMat, n), o = new THREE.Object3D();
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 7, d = Math.sqrt(Math.random()) * rMax, s = radius * (0.5 + Math.random());
+      o.position.set(Math.cos(a) * d, y, Math.sin(a) * d); o.scale.setScalar(s); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+    }
+    g.add(im);
+  }
 
-  burger.position.y = -1.15;
-  burger.rotation.x = 0.08;
+  const BUN_LIP = 1.52;
+  // 0 · bottom brioche bun
+  {
+    const g = layer("Brioche bottom", 0, 0.22);
+    const side = paint(lathe([[1.15, 0], [1.42, 0.05], [1.53, 0.17], [1.52, 0.31], [1.4, 0.42], [1.3, 0.45]]),
+      (c, x, y) => lerpHex(c, 0xd88a2c, 0xe9aa4a, y / 0.45));
+    g.add(new THREE.Mesh(side, phys(0xffffff, 0.45, { vertexColors: true, clearcoat: 0.5, clearcoatRoughness: 0.4 })));
+    const top = new THREE.Mesh(new THREE.CircleGeometry(1.3, 56), phys(0xd9a050, 0.85));
+    top.rotation.x = -Math.PI / 2; top.position.y = 0.45;
+    const bottom = new THREE.Mesh(new THREE.CircleGeometry(1.2, 40), phys(0xc98a34, 0.85));
+    bottom.rotation.x = Math.PI / 2; bottom.position.y = 0.005;
+    g.add(top, bottom);
+  }
+  // 1 · patty: dark, craggy, seared
+  {
+    const g = layer("Beef patty", 0.67, 0);
+    const prof = [V(0, -0.2)];
+    for (let r = 0.2; r <= 1.28; r += 0.08) prof.push(V(r, -0.2));
+    for (let a = -0.5; a <= 0.5 + 1e-6; a += 0.125) prof.push(V(1.28 + Math.cos(a * Math.PI) * 0.16, Math.sin(a * Math.PI) * 0.2));
+    for (let r = 1.28; r >= 0; r -= 0.08) prof.push(V(Math.max(r, 0), 0.2));
+    const geo = new THREE.LatheGeometry(prof, 96);
+    const p = geo.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color();
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const n = Math.sin(x * 6.3 + z * 1.7) * Math.cos(z * 5.1) * 0.045 + Math.sin(x * 13 + z * 9) * 0.03 + Math.sin(z * 21 - x * 11) * 0.02 + Math.sin(x * 33 + z * 29) * 0.012;
+      const a = Math.atan2(z, x);
+      const k = 1 + Math.sin(a * 7) * 0.02 + Math.cos(a * 11) * 0.015;
+      if (y > 0.05) y += n; else if (y > -0.05) { x *= 1 + n * 0.5; z *= 1 + n * 0.5; }
+      p.setXYZ(i, x * k, y, z * k);
+      const t = clamp(0.35 + n * 7 + (y > 0 ? 0.15 : -0.05), 0, 1);
+      c.set(0x2a0f0b).lerp(new THREE.Color(0x7c3320), t);
+      col.set([c.r, c.g, c.b], i * 3);
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo, phys(0xffffff, 0.7, { vertexColors: true, sheen: 0.4, sheenRoughness: 0.5, sheenColor: new THREE.Color(0x8a3a24) })));
+  }
+  // 2 · melted cheese, sagging over the edge
+  {
+    const g = layer("Melted cheese", 0.88);
+    const geo = new THREE.PlaneGeometry(3.0, 3.0, 40, 40);
+    geo.rotateX(-Math.PI / 2);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i), d = Math.max(0, Math.hypot(x, z) - 1.12);
+      p.setY(i, p.getY(i) - d * d * 0.95 + Math.sin(x * 7) * Math.sin(z * 6) * 0.01);
+    }
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, phys(0xe39b32, 0.28, { side: THREE.DoubleSide, clearcoat: 0.7, clearcoatRoughness: 0.25 }));
+    m.rotation.y = 0.5;
+    g.add(m);
+  }
+  // 3 · lettuce: big ruffled leaves with pale edges
+  {
+    const g = layer("Crisp lettuce", 1.0, 0);
+    [[1.92, 0], [1.62, 1.7]].forEach(([R, ph], k) => {
+      const lg = new THREE.RingGeometry(0.01, R, 128, 12), lp = lg.attributes.position;
+      for (let i = 0; i < lp.count; i++) {
+        const x = lp.getX(i), y = lp.getY(i), s = Math.hypot(x, y) / R, a = Math.atan2(y, x);
+        lp.setZ(i, Math.sin(a * 13 + ph + s * 2) * 0.17 * s ** 3 + Math.sin(a * 5 + ph) * 0.07 * s + Math.sin(a * 29 + s * 9) * 0.03 * s - s * s * 0.12);
+      }
+      lg.computeVertexNormals();
+      paint(lg, (c, x, y) => lerpHex(c, 0x2a6417, 0x66a834, Math.hypot(x, y) / R * 1.1 - 0.1));
+      const mesh = new THREE.Mesh(lg, phys(0xffffff, 0.35, { vertexColors: true, side: THREE.DoubleSide, clearcoat: 0.35, clearcoatRoughness: 0.4 }));
+      mesh.rotation.x = -Math.PI / 2; mesh.position.y = k * 0.06;
+      g.add(mesh);
+    });
+  }
+  // 4 · red onion: two overlapping slices
+  {
+    const g = layer("Red onion", 1.17, 0);
+    const ring = (rin, rout) => paint(new THREE.LatheGeometry([V(rin, -0.035), V(rout, -0.035), V(rout + 0.012, 0), V(rout, 0.035), V(rin, 0.035), V(rin - 0.012, 0), V(rin, -0.035)], 72),
+      (c, x, y, z) => lerpHex(c, 0x5a1d6b, 0xb978b4, 1 - (Math.hypot(x, z) - rin) / (rout - rin)));
+    const om = phys(0xffffff, 0.3, { vertexColors: true, clearcoat: 0.9, clearcoatRoughness: 0.2 });
+    [[0.12, 0, -0.08, 0], [-0.1, 0.07, 0.1, 1]].forEach(([x, y, z]) => {
+      for (const [a, b] of [[1.22, 0.78], [0.62, 0.34]]) {
+        const r = new THREE.Mesh(ring(b, a), om);
+        r.position.set(x, y, z); g.add(r);
+      }
+    });
+  }
+  // 5 · tomato: thick slices, wet
+  {
+    const g = layer("Ripe tomato", 1.34, 0);
+    const skin = phys(0xb82a1c, 0.25, { clearcoat: 1, clearcoatRoughness: 0.12 });
+    const tex = tomatoTexture();
+    const flesh = phys(0xffffff, 0.22, { map: tex, clearcoat: 1, clearcoatRoughness: 0.1 });
+    [[0.1, 0, 0.05], [-0.18, 0.13, -0.05]].forEach(([x, y, z], i) => {
+      const s = new THREE.Mesh(lathe([[1.0, -0.065], [1.2, -0.06], [1.23, 0], [1.2, 0.06], [1.0, 0.065]], 64), skin);
+      const t = new THREE.Mesh(new THREE.CircleGeometry(1.2, 56), flesh);
+      t.rotation.x = -Math.PI / 2; t.position.y = 0.066;
+      const b = t.clone(); b.rotation.x = Math.PI / 2; b.position.y = -0.066;
+      const grp = new THREE.Group(); grp.add(s, t, b); grp.position.set(x, y, z); grp.rotation.y = i * 1.2;
+      if (i === 1) droplets(grp, 36, 0.045, 0.075, 1.0);
+      g.add(grp);
+    });
+  }
+  // 6 · brioche crown: puffy, glossy, golden
+  {
+    const g = layer("Brioche top", 1.58, 0.5);
+    const crown = paint(lathe([[1.4, 0], [1.53, 0.1], [1.58, 0.26], [1.52, 0.5], [1.3, 0.76], [0.9, 0.94], [0.45, 1.02], [0.0, 1.04]]),
+      (c, x, y) => lerpHex(c, 0xe3a13f, 0xa8561a, Math.pow(y / 1.04, 0.8)));
+    const p = crown.attributes.position;
+    for (let i = 0; i < p.count; i++) {   // soft dimples and a slightly squarish plan
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x);
+      const k = 1 + Math.sin(a * 4 + 0.6) * 0.012 + Math.sin(x * 4.5) * Math.cos(z * 3.7) * 0.012 * (y > 0.3 ? 1 : 0);
+      p.setXYZ(i, x * k, y + Math.sin(x * 5 + z * 3) * 0.012 * (y > 0.3 ? 1 : 0), z * k);
+    }
+    crown.computeVertexNormals();
+    g.add(new THREE.Mesh(crown, phys(0xffffff, 0.35, { vertexColors: true, clearcoat: 0.9, clearcoatRoughness: 0.28 })));
+    const under = new THREE.Mesh(new THREE.CircleGeometry(1.4, 48), phys(0xd9a458, 0.85));
+    under.rotation.x = Math.PI / 2;
+    g.add(under);
+  }
+  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  const N = layers.length, GAP = 0.92, MID = 1.3;
+  layers.forEach((l, i) => { l.apart = MID + (i - (N - 1) / 2) * GAP; });
+
+  const tilt = new THREE.Group();
+  tilt.add(root);
   const spinner = new THREE.Group();
-  spinner.add(burger);
+  spinner.add(tilt);
   scene.add(spinner);
 
-  // drag to spin; otherwise idle rotation
-  let dragging = false, lastX = 0, vel = 0.006;
+  const labels = layers.map((l, i) => {
+    const d = document.createElement("div");
+    d.className = "lbl";
+    d.innerHTML = `<i></i><b>${String(i + 1).padStart(2, "0")}</b><span></span>`;
+    d.querySelector("span").textContent = l.name;
+    labelsEl.append(d);
+    return d;
+  });
+
+  /* drag to spin; otherwise idle rotation */
+  let dragging = false, lastX = 0, vel = 0.004;
   burgerCanvas.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; burgerCanvas.setPointerCapture(e.pointerId); });
   burgerCanvas.addEventListener("pointermove", (e) => { if (!dragging) return; vel = (e.clientX - lastX) * 0.01; spinner.rotation.y += vel; lastX = e.clientX; });
   const release = () => { dragging = false; };
   burgerCanvas.addEventListener("pointerup", release);
   burgerCanvas.addEventListener("pointercancel", release);
 
+  let W = 1, H = 1, dist = 14, wide = true, visH = 8;
   function resize() {
-    const w = burgerCanvas.clientWidth, h = burgerCanvas.clientHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    W = burgerCanvas.clientWidth; H = burgerCanvas.clientHeight;
+    renderer.setSize(W, H, false);
+    const aspect = W / H;
+    camera.aspect = aspect;
     camera.updateProjectionMatrix();
+    wide = aspect > 1.1;
+    const tan = Math.tan((FOV * Math.PI) / 360);
+    dist = Math.max(10.6 / (2 * tan), 7.2 / (2 * tan * aspect));   // fit the exploded stack and (on phones) the labels
+    visH = 2 * dist * tan;
+    camera.position.set(0, 0.5, dist);
+    camera.lookAt(0, 0, 0);
+    tilt.position.x = wide ? -visH * aspect * 0.2 : -visH * aspect * 0.2;
   }
   addEventListener("resize", resize);
   resize();
 
   let visible = false;
-  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(burgerCanvas);
+  new IntersectionObserver(([en]) => (visible = en.isIntersecting), { rootMargin: "100px" }).observe(track);
   const clock = new THREE.Clock();
+  const v = new THREE.Vector3();
+
   (function frame() {
     requestAnimationFrame(frame);
     if (!visible) return;
     const t = clock.getElapsedTime();
+    const r = track.getBoundingClientRect();
+    const p = clamp(-r.top / (r.height - innerHeight), 0, 1);
+    const e = smooth(0.06, 0.62, p);
+    stick.style.setProperty("--e", e.toFixed(3));
+
+    layers.forEach((l, i) => {
+      const k = smooth(0, 1, clamp(e * 1.25 - i * 0.03, 0, 1));
+      l.group.position.y = l.base + (l.apart - l.base) * k;
+    });
+    root.position.y = -1.25 - 0.45 * e;      // keep the (taller) exploded stack centred
+    tilt.rotation.x = 0.05 + e * 0.4;
+
     if (!dragging && !reduceMotion) {
-      vel += (0.006 - vel) * 0.04;               // ease back to idle speed after a flick
+      vel += (0.004 - vel) * 0.04;
       spinner.rotation.y += vel;
     }
-    spinner.position.y = reduceMotion ? 0 : Math.sin(t * 1.2) * 0.12;
+    spinner.position.y = reduceMotion ? 0 : Math.sin(t * 1.2) * 0.06 * (1 - e);
+
     renderer.render(scene, camera);
+
+    const off = (wide ? 1.95 : 1.5) * (H / visH);
+    layers.forEach((l, i) => {
+      l.anchor.getWorldPosition(v).project(camera);
+      const sx = (v.x * 0.5 + 0.5) * W, sy = (-v.y * 0.5 + 0.5) * H;
+      labels[i].style.transform = `translate(${sx + off}px, ${sy}px) translateY(-50%)`;
+      labels[i].style.opacity = smooth(0.35 + i * 0.05, 0.6 + i * 0.05, e).toFixed(3);
+    });
   })();
 }

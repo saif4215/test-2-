@@ -45,14 +45,22 @@
     </div>
   </div>
 
-  <section id="burger" class="section burger-sec">
-    <canvas id="burger-scene" aria-label="Rotating 3D burger. Drag to spin it." role="img"></canvas>
-    <div>
-      <p class="eyebrow reveal">Burgers</p>
-      <h2 class="reveal">Stacked <em>different.</em></h2>
-      <p class="reveal lede">Drag the burger to spin it. Classic Burger $10. ICSI Burger $14.</p>
-      <p class="reveal"><a class="btn" href="#menu" data-goto="Burgers">See the burgers</a></p>
+  <section id="burger" class="burger-track" aria-label="Burger, taken apart as you scroll">
+    <div class="burger-stick" id="burger-stick">
+      <canvas id="burger-scene" aria-label="3D burger that comes apart as you scroll. Drag to spin it." role="img"></canvas>
+      <div class="labels" id="burger-labels" aria-hidden="true"></div>
+      <div class="burger-copy">
+        <p class="eyebrow">Burgers</p>
+        <h2>Stacked <em>different.</em></h2>
+        <p class="lede">Scroll to take it apart. Drag to spin it.</p>
+      </div>
+      <div class="hint" aria-hidden="true">Keep scrolling ↓</div>
     </div>
+  </section>
+
+  <section class="section burger-after">
+    <p class="reveal">Classic Burger <b>$10</b> · ICSI Burger <b>$14</b></p>
+    <p class="reveal"><a class="btn" href="#menu" data-goto="Burgers">See the burgers</a></p>
   </section>
 
   <section id="menu" class="section">
