@@ -21,6 +21,7 @@
     <a href="#menu">Menu</a>
     <a href="#story">Story</a>
     <a href="#visit">Visit</a>
+    <a class="nav-cta" href="https://www.marufcafe.com/s/order">Order online</a>
   </nav>
 </header>
 
@@ -32,6 +33,7 @@
       <h1>Brew<br><em>different.</em></h1>
       <p class="lede">Strong coffee. Zero noise. Built for people who move in silence.</p>
       <a class="btn" href="#menu">See the menu</a>
+      <a class="btn ghost" href="https://www.marufcafe.com/s/order">Order online</a>
     </div>
     <a class="scroll-cue" href="#menu" aria-label="Scroll to menu"><span></span></a>
   </section>
@@ -43,57 +45,39 @@
     </div>
   </div>
 
+  <section id="burger" class="section burger-sec">
+    <canvas id="burger-scene" aria-label="Rotating 3D burger. Drag to spin it." role="img"></canvas>
+    <div>
+      <p class="eyebrow reveal">Burgers</p>
+      <h2 class="reveal">Stacked <em>different.</em></h2>
+      <p class="reveal lede">Drag the burger to spin it. Classic Burger $10. ICSI Burger $14.</p>
+      <p class="reveal"><a class="btn" href="#menu" data-goto="Burgers">See the burgers</a></p>
+    </div>
+  </section>
+
   <section id="menu" class="section">
     <p class="eyebrow reveal">The menu</p>
     <h2 class="reveal">Pick your <em>weapon.</em></h2>
-    <p class="note reveal">Placeholder items and prices. Replace them with the real menu.</p>
-    <div class="cards">
-      <article class="card reveal" data-tilt>
-        <div class="card-in">
-          <span class="tag">Hot</span>
-          <h3>Espresso</h3>
-          <p>Short, dark and direct.</p>
-          <b class="price">$0.00</b>
-        </div>
-      </article>
-      <article class="card reveal" data-tilt>
-        <div class="card-in">
-          <span class="tag">Hot</span>
-          <h3>Latte</h3>
-          <p>Smooth steamed milk over a double shot.</p>
-          <b class="price">$0.00</b>
-        </div>
-      </article>
-      <article class="card reveal" data-tilt>
-        <div class="card-in">
-          <span class="tag">Cold</span>
-          <h3>Iced Coffee</h3>
-          <p>Slow-steeped. Served over ice.</p>
-          <b class="price">$0.00</b>
-        </div>
-      </article>
-      <article class="card reveal" data-tilt>
-        <div class="card-in">
-          <span class="tag">Bite</span>
-          <h3>Pastry</h3>
-          <p>Fresh daily. When it's gone, it's gone.</p>
-          <b class="price">$0.00</b>
-        </div>
-      </article>
-    </div>
+    <div class="tabs reveal" role="tablist" aria-label="Menu section"></div>
+    <div class="chips reveal" role="tablist" aria-label="Category"></div>
+    <div class="items" id="items" aria-live="polite"></div>
+    <p class="cta-row reveal">
+      <a class="btn" href="https://www.marufcafe.com/s/order">Order online</a>
+      <a class="btn ghost" href="https://www.marufcafe.com/s/gift-cards">Gift cards</a>
+    </p>
   </section>
 
   <section id="story" class="section split">
     <div>
-      <p class="eyebrow reveal">Our story</p>
-      <h2 class="reveal">Made with <em>discipline.</em></h2>
+      <p class="eyebrow reveal">The spread</p>
+      <h2 class="reveal">All day. <em>All fuel.</em></h2>
     </div>
     <div>
-      <p class="reveal">Replace this paragraph with the real Maruf Cafe story: who you are, where the beans come from, and what makes the place yours.</p>
+      <p class="reveal">Espresso drinks and seasonal lattes, fruit refreshers, tea, smoothies, then breakfast, sandwiches, burgers, bowls, wings and sweets. One counter, the whole day covered.</p>
       <div class="stats reveal">
-        <div><b data-count="100">0</b><span>Placeholder stat</span></div>
-        <div><b data-count="24">0</b><span>Placeholder stat</span></div>
-        <div><b data-count="7">0</b><span>Placeholder stat</span></div>
+        <div><b data-stat="items">0</b><span>Menu items</span></div>
+        <div><b data-stat="drinks">0</b><span>Drinks</span></div>
+        <div><b data-stat="food">0</b><span>Food items</span></div>
       </div>
     </div>
   </section>
@@ -101,16 +85,29 @@
   <section id="visit" class="section">
     <p class="eyebrow reveal">Visit</p>
     <h2 class="reveal">Show <em>up.</em></h2>
+    <p class="note reveal">Address, hours and phone were not in the pasted content. Fill them in below.</p>
     <div class="info">
-      <div class="reveal"><h4>Address</h4><p>Your address here</p></div>
-      <div class="reveal"><h4>Hours</h4><p>Mon–Sun · 00:00–00:00</p></div>
-      <div class="reveal"><h4>Contact</h4><p>(000) 000-0000</p></div>
+      <div class="reveal"><h4>Address</h4><p class="todo">Add address</p></div>
+      <div class="reveal"><h4>Hours</h4><p class="todo">Add opening hours</p></div>
+      <div class="reveal"><h4>Contact</h4><p class="todo">Add phone number</p>
+      <div class="social" aria-label="Social media">
+        <a href="https://www.instagram.com/" target="_blank" rel="noopener" aria-label="Instagram" data-social="instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none"/></svg>
+          <span>Instagram</span>
+        </a>
+        <a href="https://www.tiktok.com/" target="_blank" rel="noopener" aria-label="TikTok" data-social="tiktok">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+          <span>TikTok</span>
+        </a>
+      </div></div>
     </div>
   </section>
 </main>
 
 <footer>
   <span>© <span id="year"></span> Maruf Cafe</span>
+  <a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram</a>
+  <a href="https://www.tiktok.com/" target="_blank" rel="noopener">TikTok</a>
   <a href="#top">Back to top ↑</a>
 </footer>
 

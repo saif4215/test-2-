@@ -8,9 +8,10 @@ Run locally (ES modules need http, not file://):
 
 Then open http://localhost:8080. Deploy by uploading the folder to any static host.
 
-## Placeholder content to replace
-The real marufcafe.com content could not be fetched, so these are placeholders:
-- Menu items and `$0.00` prices in `index.html` (`#menu`)
-- Story paragraph and the three stats (`#story`)
-- Address, hours and phone (`#visit`)
-- Taglines in the hero and marquee
+## Content
+- The menu (all categories, items and prices) is the `MENU` object at the top of `main.js`, copied from marufcafe.com. Edit it there. The burger blurb in `index.html` (`#burger`) repeats the two burger prices.
+- "Order online" and "Gift cards" link to the cafe's real pages on marufcafe.com.
+
+## Still to fill in
+- Address, hours and phone (`#visit` in `index.html`, marked with dashed outlines). They were not in the content provided.
+- Instagram and TikTok links currently point to the platforms' home pages. Replace the `href`s (search `instagram.com` and `tiktok.com` in `index.html`, 3 places each) with the cafe's profile URLs.
