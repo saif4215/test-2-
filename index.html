@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maruf Cafe</title>
+<meta name="description" content="Maruf Cafe. Coffee with no excuses.">
+<meta name="theme-color" content="#0a0907">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0907'/%3E%3Ctext x='16' y='24' font-size='22' font-weight='700' text-anchor='middle' fill='%23d4a24c' font-family='Impact,sans-serif'%3EM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="logo" href="#top">MARUF<span>.</span></a>
+  <nav>
+    <a href="#menu">Menu</a>
+    <a href="#story">Story</a>
+    <a href="#visit">Visit</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <canvas id="scene" aria-hidden="true"></canvas>
+    <div class="hero-copy">
+      <p class="eyebrow">Maruf Cafe</p>
+      <h1>Brew<br><em>different.</em></h1>
+      <p class="lede">Strong coffee. Zero noise. Built for people who move in silence.</p>
+      <a class="btn" href="#menu">See the menu</a>
+    </div>
+    <a class="scroll-cue" href="#menu" aria-label="Scroll to menu"><span></span></a>
+  </section>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="track">
+      <span>Stay focused</span><span>★</span><span>No sugar, no excuses</span><span>★</span><span>Grind never stops</span><span>★</span>
+      <span>Stay focused</span><span>★</span><span>No sugar, no excuses</span><span>★</span><span>Grind never stops</span><span>★</span>
+    </div>
+  </div>
+
+  <section id="menu" class="section">
+    <p class="eyebrow reveal">The menu</p>
+    <h2 class="reveal">Pick your <em>weapon.</em></h2>
+    <p class="note reveal">Placeholder items and prices. Replace them with the real menu.</p>
+    <div class="cards">
+      <article class="card reveal" data-tilt>
+        <div class="card-in">
+          <span class="tag">Hot</span>
+          <h3>Espresso</h3>
+          <p>Short, dark and direct.</p>
+          <b class="price">$0.00</b>
+        </div>
+      </article>
+      <article class="card reveal" data-tilt>
+        <div class="card-in">
+          <span class="tag">Hot</span>
+          <h3>Latte</h3>
+          <p>Smooth steamed milk over a double shot.</p>
+          <b class="price">$0.00</b>
+        </div>
+      </article>
+      <article class="card reveal" data-tilt>
+        <div class="card-in">
+          <span class="tag">Cold</span>
+          <h3>Iced Coffee</h3>
+          <p>Slow-steeped. Served over ice.</p>
+          <b class="price">$0.00</b>
+        </div>
+      </article>
+      <article class="card reveal" data-tilt>
+        <div class="card-in">
+          <span class="tag">Bite</span>
+          <h3>Pastry</h3>
+          <p>Fresh daily. When it's gone, it's gone.</p>
+          <b class="price">$0.00</b>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="story" class="section split">
+    <div>
+      <p class="eyebrow reveal">Our story</p>
+      <h2 class="reveal">Made with <em>discipline.</em></h2>
+    </div>
+    <div>
+      <p class="reveal">Replace this paragraph with the real Maruf Cafe story: who you are, where the beans come from, and what makes the place yours.</p>
+      <div class="stats reveal">
+        <div><b data-count="100">0</b><span>Placeholder stat</span></div>
+        <div><b data-count="24">0</b><span>Placeholder stat</span></div>
+        <div><b data-count="7">0</b><span>Placeholder stat</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="visit" class="section">
+    <p class="eyebrow reveal">Visit</p>
+    <h2 class="reveal">Show <em>up.</em></h2>
+    <div class="info">
+      <div class="reveal"><h4>Address</h4><p>Your address here</p></div>
+      <div class="reveal"><h4>Hours</h4><p>Mon–Sun · 00:00–00:00</p></div>
+      <div class="reveal"><h4>Contact</h4><p>(000) 000-0000</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>© <span id="year"></span> Maruf Cafe</span>
+  <a href="#top">Back to top ↑</a>
+</footer>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
