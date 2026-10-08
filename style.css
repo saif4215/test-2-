@@ -160,3 +160,47 @@ footer a:hover { color: var(--gold-2); }
   .lbl b { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .burger-track { height: 300svh; } }
+
+/* ---- ordering ---- */
+.card .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.add { font: 600 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-2); background: transparent; border: 1px solid var(--gold); border-radius: 99px; padding: 8px 16px; cursor: pointer; transform: translateZ(45px); transition: background .2s, color .2s; }
+.add:hover { background: var(--gold); color: var(--bg); }
+.add.alt { border-color: var(--line); color: var(--muted); }
+.add.alt:hover { border-color: var(--gold); background: transparent; color: var(--gold-2); }
+
+.cart-fab { position: fixed; right: max(16px, 3vw); bottom: max(16px, 3vw); z-index: 45; font: 600 14px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--bg); background: var(--gold); border: 0; border-radius: 99px; padding: 14px 22px; cursor: pointer; box-shadow: 0 14px 40px -10px rgba(0,0,0,.8); display: flex; gap: 8px; }
+.cart-fab[hidden] { display: none; }
+.cart-fab.bump { animation: bump .35s; }
+@keyframes bump { 40% { transform: scale(1.1); } }
+.cart { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(440px, 100%); overflow-y: auto; background: var(--bg-2); border-left: 1px solid var(--line); padding: 22px max(16px, 5vw) 32px; display: flex; flex-direction: column; gap: 18px; box-shadow: -30px 0 80px -30px #000; }
+.cart[hidden] { display: none; }
+.cart header { display: flex; justify-content: space-between; align-items: center; }
+.cart h3 { font: 34px var(--display); text-transform: uppercase; }
+.cart-close { font-size: 32px; line-height: 1; color: var(--muted); background: none; border: 0; cursor: pointer; padding: 0 6px; }
+.cart-close:hover { color: var(--gold-2); }
+.cart-empty { color: var(--muted); }
+.cart-lines { list-style: none; display: grid; gap: 12px; }
+.cart-lines li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; }
+.cart-lines .ln { min-width: 0; overflow-wrap: anywhere; }
+.cart-lines .lp { font: 20px var(--display); color: var(--gold-2); min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
+.qty { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 99px; padding: 2px 4px; }
+.qty button { width: 30px; height: 30px; font-size: 18px; color: var(--text); background: none; border: 0; border-radius: 50%; cursor: pointer; }
+.qty button:hover { color: var(--gold-2); }
+.qty b { min-width: 1.4em; text-align: center; font-variant-numeric: tabular-nums; }
+.cart-sum { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; border-top: 1px solid var(--line); padding-top: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cart-sum dd { text-align: right; }
+.cart-sum .grand { color: var(--text); font: 26px var(--display); }
+.co-form { display: grid; gap: 14px; }
+.co-pickup { color: var(--muted); font-size: 14px; }
+.co-field { display: grid; gap: 6px; }
+.co-field span, .co-label { font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); }
+.co-field input { font: 16px var(--body); color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.co-field input:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 1px; }
+.card-box { min-height: 90px; background: #fff; border-radius: 10px; padding: 6px; }
+.co-status { min-height: 1.4em; color: var(--muted); font-size: 14px; }
+.co-status[data-bad="1"] { color: #ff9b8a; }
+.btn.pay { width: 100%; cursor: pointer; background-color: var(--gold); color: var(--bg); text-align: center; }
+.btn.pay:disabled { opacity: .5; cursor: not-allowed; }
+.co-off, .co-done { display: grid; gap: 14px; justify-items: start; color: var(--muted); }
+.co-done h4 { font: 30px var(--display); text-transform: uppercase; color: var(--gold-2); }
+.co-done[hidden], .co-form[hidden], .co-off[hidden], .cart-empty[hidden] { display: none; }

@@ -1,27 +1,16 @@
 import * as THREE from "./vendor/three.module.min.js";
+import { initCheckout } from "./checkout.js";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 document.getElementById("year").textContent = new Date().getFullYear();
 
-/* ---------- menu data (from marufcafe.com) ---------- */
-const MENU = {
-  Drinks: {
-    Coffee: [["Americano","$3.00"],["Cappuccino","$4.00"],["Cortado","$3.75"],["Flat White","$4.00"],["Mocha","$5.25"],["Oat Brown Sugar","$6.50"],["Spanish Latte","$5.50"],["Dirty Chai","$6.00"],["Latte","$4.50"],["Drip","$3.00"],["Espresso","$3.00"],["Biscoff Latte","$6.50"],["Maple Honey Almond Latte","$6.50"],["White Mocha","$5.25"],["Hazelnut Mocha","$5.50"],["Honey Vanilla","$5.00"],["Pistachio Latte","$6.00"],["Pumpkin Spice","$6.50"],["Banana Bread Latte","$6.00"]],
-    Refreshers: [["Berry Blast","$3.00 - $4.50"],["Kiwi Lemongrass","$5.50"],["Lemonade","$3.00 - $4.00"],["Mango Dragonfruit","$5.50"],["Mango Passion Fruit","$5.50"],["Strawberry Acai","$5.50"],["Tropical Splash","$3.00 - $4.50"],["Watermelon Cucumber","$5.50"],["White Peach","$3.00 - $4.50"],["Lychee Blackberry","$5.50 - $6.00"]],
-    Tea: [["Earl Grey","$3.00"],["Chai Latte","$5.00 - $6.00"],["London Fog","$4.50 - $5.50"],["Matcha","$5.00 - $6.00"],["Yuzu Peach Green Tea","$3.00"],["Peppermint Tea","$3.50"],["Blueberry Hibiscus","$3.50"],["Chamomile Medley","$3.50"]],
-    "Smoothies / Others": [["Strawberry Banana Smoothie","$6.50"],["Hot Chocolate","$3.00"]],
-  },
-  Food: {
-    Breakfast: [["Bagel & Cream Cheese","$3.00"],["Egg & Cheese","$3.50"],["Zaatar Avocado Toast","$8.00"],["Breakfast Wrap","$10.00"],["Breakfast Sandwich","$8.00"]],
-    Sandwiches: [["Cheesesteak","$14.00"],["Turkey Sandwich","$12.00"],["Chicken Parmesan","$12.00"],["Fried Chicken Sandwich","$8.00"],["Grilled Cheese","$6.00"],["Hot Chicken Sandwich","$10.00"],["Pesto Grilled Chicken","$12.00"],["Buffalo Chicken","$12.00"],["Chipotle Chicken","$12.00"],["Sandwich Meal Combo","$18.00"]],
-    Burgers: [["Classic Burger","$10.00"],["ICSI Burger","$14.00"]],
-    Bowls: [["Garden Salad","$8.00"],["Chicken Caesar Salad","$10.00"]],
-    "Chicken & Wings": [["Chicken Tenders","$6.00 - $15.00"],["Wings","$10.00"],["Chicken Nuggets","$6.00"]],
-    "Salads / Others": [["Personal Pizza","$7.00"]],
-    Sides: [["Chips","$2.50"],["French Fries","$4.00 - $6.00"],["Mac & Cheese","$6.00"],["Mozzarella Sticks","$8.00"],["Coleslaw","$3.00"],["Hash Brown","$2.00"]],
-    Sweets: [["Brownie","$3.00"],["Muffin","$3.00"],["Cookie","$3.00"],["Banana Pudding","$5.00"],["Dubai Chocolate","$6.00 - $16.00"],["Dubai Chocolate Cake","$5.00"]],
-  },
-};
+/* ---------- menu data (menu.json is shared with the checkout server) ---------- */
+const money = (c) => `$${(c / 100).toFixed(2)}`;
+const MENU = (await fetch("menu.json").then((r) => r.json())).groups;
+const ORDER_URL = "https://www.marufcafe.com/s/order";
+const orderable = new Map();   // items with one fixed price can go in the cart; size-based prices are ordered on Square Online
+for (const cats of Object.values(MENU)) for (const items of Object.values(cats)) for (const it of items) if (it.cents != null) orderable.set(it.id, it);
+const checkout = await initCheckout(orderable);
 
 const count = (g) => Object.values(MENU[g]).reduce((n, items) => n + items.length, 0);
 const STATS = { drinks: count("Drinks"), food: count("Food") };
@@ -51,9 +40,15 @@ function renderMenu() {
     b.onclick = () => { cat = c; renderMenu(); };
     return b;
   }));
-  itemsEl.replaceChildren(...MENU[group][cat].map(([name, price], i) => {
+  itemsEl.replaceChildren(...MENU[group][cat].map((it, i) => {
+    const fixed = it.cents != null;
+    const action = fixed
+      ? el("button", { type: "button", className: "add", textContent: "Add", ariaLabel: `Add ${it.name} to your order` })
+      : el("a", { className: "add alt", href: ORDER_URL, textContent: "Choose size", ariaLabel: `Choose a size for ${it.name} on Square Online` });
+    if (fixed) action.onclick = () => checkout.add(it.id);
     const card = el("article", { className: "card" },
-      el("div", { className: "card-in" }, el("h3", { textContent: name }), el("b", { className: "price", textContent: price })));
+      el("div", { className: "card-in" }, el("h3", { textContent: it.name }),
+        el("div", { className: "foot" }, el("b", { className: "price", textContent: fixed ? money(it.cents) : `${money(it.min)} - ${money(it.max)}` }), action)));
     card.style.setProperty("--i", i);
     bindTilt(card);
     return card;
