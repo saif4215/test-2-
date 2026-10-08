@@ -32,7 +32,7 @@ is the dashboard. Part 4 is the list of things only the café can fill in.
    | `PUBLIC_URL` | `https://maruf-cafe.onrender.com` (your real address, no slash at the end) | links in emails, search data, sitemap |
    | `RESEND_API_KEY`, `NOTIFY_EMAIL` | see Part 2 | email alert for every request |
 
-   Optional: `STAFF_PASSWORD` (a second sign-in for staff, 10+ characters), `STAFF_CAN_EDIT_SITE=1`. The full list with
+   Optional: `STAFF_PASSWORD` (a second sign-in for staff, 10+ characters), `STAFF_CAN_EDIT_SITE=1` (lets staff also edit site info and photos; they can already edit the menu). The full list with
    explanations is in `.env.example`.
 5. Tap **Create Web Service** and wait for **Live**. Your address looks like `https://maruf-cafe.onrender.com`:
    - `/` the website, `/large-orders`, `/rent-the-cafe`, `/app/` the phone app, `/admin/` the dashboard.
@@ -87,7 +87,8 @@ Sessions last 12 hours, 5 wrong passwords lock that sign-in for 15 minutes, and 
 | Tab | What you can do | Who |
 |---|---|---|
 | **Requests** | search, filter by status, read every answer, Call / Text / Email buttons, set status (New → Contacted → Quote sent → Accepted → Declined/Closed), private notes, download a spreadsheet | owner and staff |
-| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items. Hidden items disappear from the website, the app and online checkout. "Reset" returns to the original menu. | owner (staff if `STAFF_CAN_EDIT_SITE=1`) |
+| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items. Hidden items disappear from the website, the app and online checkout. | owner and staff |
+| **Menu reset** | "Reset to the original menu" throws away all menu edits | owner only |
 | **Site info** | phone, email, address, hours, Instagram/TikTok, event options and prices, what the space holds, rental rules, FAQ, **real** customer reviews | owner (or staff, same switch) |
 | **Photos** | upload photos from your phone (they are shrunk automatically), put them in the photo spots and the gallery with a short description | owner (or staff, same switch) |
 | **Setup** | checks that alerts, Square and accounts are set up; recent changes | owner only |

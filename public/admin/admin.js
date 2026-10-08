@@ -52,7 +52,7 @@ const canManage = () => !!me?.canManageSite;
 function render() {
   app.replaceChildren();
   if (!me) return renderLogin();
-  const tabs = [["requests", "Requests"], ...(canManage() ? [["menu", "Menu"], ["site", "Site info"], ["photos", "Photos"]] : []), ...(me.role === "owner" ? [["setup", "Setup"]] : [])];
+  const tabs = [["requests", "Requests"], ["menu", "Menu"], ...(canManage() ? [["site", "Site info"], ["photos", "Photos"]] : []), ...(me.role === "owner" ? [["setup", "Setup"]] : [])];
   if (!tabs.some(([k]) => k === S.tab)) S.tab = "requests";
   const main = h("main", { id: "main" });
   app.append(
@@ -147,7 +147,7 @@ async function viewMenu(main) {
   const tree = h("div");
   main.append(
     h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the website and app (it also stops online ordering), then press Save. Prices are in dollars. For a size-based price, use the low and high boxes." }),
-    h("div", { class: "row" }, h("div", { class: "grow" }, filter), canManage() && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
+    h("div", { class: "row" }, h("div", { class: "grow" }, filter), me.role === "owner" && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
       if (!confirm("Throw away all your menu edits and go back to the original menu?")) return;
       try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })),
     tree);

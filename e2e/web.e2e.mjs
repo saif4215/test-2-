@@ -207,7 +207,7 @@ const noOverflow = (p) => p.evaluate(() => document.documentElement.scrollWidth 
   await s.p.getByRole("button", { name: "Sign in" }).click();
   await s.p.getByRole("button", { name: /Sam Lee/ }).first().waitFor();
   const tabs = await s.p.$$eval(".tabs button", (b) => b.map((x) => x.textContent));
-  ok(tabs.join() === "Requests", "staff only see Requests: " + tabs.join());
+  ok(tabs.join() === "Requests,Menu", "staff see Requests and Menu only: " + tabs.join());
   await s.ctx.close();
 }
 

@@ -241,12 +241,12 @@ export function createServer(env = process.env) {
       const r = auth.login(typeof b.username === "string" ? b.username : "", typeof b.password === "string" ? b.password : "", ip);
       if (!r.ok) throw new HttpError(r.status, r.error);
       db?.audit(r.user, "login");
-      return out(200, { ok: true, user: r.user, role: r.role, csrf: r.csrf, canManageSite: manages(r.role) }, { headers: { "Set-Cookie": auth.cookie(r.token, secure, r.maxAge) } });
+      return out(200, { ok: true, user: r.user, role: r.role, csrf: r.csrf, canManageSite: manages(r.role), canEditMenu: true }, { headers: { "Set-Cookie": auth.cookie(r.token, secure, r.maxAge) } });
     }
     const session = auth.session(req);
     if (!session) throw new HttpError(401, "Please sign in.");
     const who = session.user, role = session.role, canManage = manages(role);
-    if (route === "me") return out(200, { ok: true, user: who, role, csrf: session.csrf, canManageSite: canManage });
+    if (route === "me") return out(200, { ok: true, user: who, role, csrf: session.csrf, canManageSite: canManage, canEditMenu: true });
     if (method !== "GET" && method !== "HEAD" && !auth.csrfOk(req, session)) throw new HttpError(403, "Your sign-in expired. Reload the page and try again.");
     if (route === "logout") {
       if (method !== "POST") throw new HttpError(405, "Method not allowed.");
@@ -287,15 +287,15 @@ export function createServer(env = process.env) {
     }
 
     /* menu, content, photos (owner, or staff when STAFF_CAN_EDIT_SITE=1) */
-    if (route === "menu" && method === "GET") { needOwner(); return out(200, { ok: true, menu: getMenu(), custom: !!db.kvGet("menu") }); }
+    // Staff can edit the menu and prices (anyone signed in can). Site info, photos and resetting the menu stay with the owner.
+    if (route === "menu" && method === "GET") { return out(200, { ok: true, menu: getMenu(), custom: !!db.kvGet("menu") }); }
     if (route === "menu" && method === "PUT") {
-      needOwner();
       const { menu, errors } = normalizeMenu((await readBody(req, 600000)).menu);
       if (errors.length) throw new HttpError(400, errors[0], { errors });
       db.kvSet("menu", menu, who); db.audit(who, "menu.save");
       return out(200, { ok: true, menu });
     }
-    if (route === "menu" && method === "DELETE") { needOwner(); db.kvDel("menu"); db.audit(who, "menu.reset"); return out(200, { ok: true, menu: defaultMenu }); }
+    if (route === "menu" && method === "DELETE") { ownerOnly(); db.kvDel("menu"); db.audit(who, "menu.reset"); return out(200, { ok: true, menu: defaultMenu }); }
     if (route === "content" && method === "GET") { needOwner(); return out(200, { ok: true, content: getContent(), custom: !!db.kvGet("content"), slots: ["hero", "largeOrders", "catering", "interior", "interior2", "event"] }); }
     if (route === "content" && method === "PUT") {
       needOwner();

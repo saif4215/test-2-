@@ -98,7 +98,7 @@ test("an accepted status is internal only: nothing is sent to the customer", asy
   t.close();
 });
 
-test("staff can work requests but cannot change the menu, content or photos", async () => {
+test("staff can work requests and edit the menu, but not site info or photos", async () => {
   const t = await startSite();
   await t.post({ type: "event", fields: goodEvent() });
   const s = await t.login("staff", "staff-pass-12345");
@@ -106,10 +106,16 @@ test("staff can work requests but cannot change the menu, content or photos", as
   assert.equal((await s.get("inquiries.csv")).status, 200);
   const id = (await s.get("inquiries")).json.rows[0].id;
   assert.equal((await s.patch(`inquiries/${id}`, { status: "contacted" })).status, 200);
-  for (const [m, route, body] of [["GET", "menu"], ["PUT", "menu", { menu: {} }], ["DELETE", "menu"], ["GET", "content"], ["PUT", "content", { content: {} }], ["GET", "uploads"], ["POST", "uploads", PNG], ["GET", "audit"], ["GET", "status"]]) {
+  for (const [m, route, body] of [["DELETE", "menu"], ["GET", "content"], ["PUT", "content", { content: {} }], ["GET", "uploads"], ["POST", "uploads", PNG], ["GET", "audit"], ["GET", "status"]]) {
     assert.equal((await s.call(m, route, body)).status, 403, `${m} ${route}`);
   }
-  assert.equal((await fetch(t.u + "/menu.json").then((r) => r.json())).groups.Drinks.Coffee.length > 0, true);
+  const menu = (await s.get("menu")).json.menu;
+  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents = 610;
+  assert.equal((await s.put("menu", { menu })).status, 200, "staff can change a price");
+  assert.equal((await fetch(t.u + "/menu.json").then((r) => r.json())).groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents, 610);
+  assert.equal((await s.put("menu", { menu: { groups: {} } })).status, 400, "and menu checks still apply");
+  const log = (await (await t.login()).get("audit")).json.entries;
+  assert.ok(log.some((e) => e.action === "menu.save" && e.user === "staff"), "the change is logged under the staff name");
   t.close();
 });
 
