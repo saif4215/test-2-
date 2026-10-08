@@ -40,5 +40,5 @@ Not covered yet:
 
 ## Still to fill in
 - Address, hours and phone (`#visit` in `index.html`, marked with dashed outlines).
-- Instagram and TikTok links currently point to the platforms' home pages. Replace the `href`s
-  (search `instagram.com` and `tiktok.com` in `index.html`, 3 places each) with the cafe's profile URLs.
+- The TikTok links currently point to tiktok.com's home page. Replace the two `href`s containing
+  `tiktok.com` in `index.html` with the cafe's profile URL.
