@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, H1, Small } from "../components/ui";
 import { FormShell } from "../components/FormShell";
-import { business } from "../config";
+import { business } from "../config";   // only the Square Online address is used here
 import { money, priceText, useOrder } from "../lib/order";
 import { colors } from "../theme";
 

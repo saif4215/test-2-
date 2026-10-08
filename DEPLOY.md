@@ -1,40 +1,139 @@
-# Put the Maruf Cafe app online (phone only)
+# Put Maruf Cafe online, set it up, and run it day to day
 
-This puts the phone app and the request server at one web address. Open the address on any phone and add it to the
-home screen. No computer needed. The built app is already in `public/app`, so the host has nothing to build.
+This one server runs everything: the 3D website (`/`), the Large Orders and Rent the Café pages, the phone app (`/app/`),
+the staff dashboard (`/admin/`), card checkout (Square, optional) and the quote/event request form backend.
+It needs **Node 22.12 or newer** and no `npm install` (the database is built into Node).
 
-You'll use **Render** (render.com). Its free plan is enough to try it.
+You can do all of this from a phone. Part 1 gets it online. Part 2 makes sure **you never miss a request**. Part 3
+is the dashboard. Part 4 is the list of things only the café can fill in.
 
-1. On your phone, open **render.com** and tap **Sign up**. Use your **email and a password** (you do not need GitHub),
-   then open the verification email Render sends you. (Signing up with GitHub also works if you prefer.)
-2. Tap **New** then **Web Service**. Open the **Public Git Repository** tab and paste
-   `https://github.com/saif4215/test-one`, then tap **Continue**. (This repository is public, so Render can read it
-   without a GitHub login. With the public-repository option Render does not redeploy by itself when the code changes:
-   tap **Manual Deploy** to update.)
+---
+
+## 1. Get it online (Render, about 10 minutes)
+
+1. On your phone open **render.com**, tap **Sign up** and use your email and a password (GitHub is not needed). Open the
+   verification email Render sends.
+2. Tap **New** then **Web Service**, open the **Public Git Repository** tab, paste `https://github.com/saif4215/test-one`
+   and tap **Continue**. (Render does not redeploy by itself for a public-repository service: tap **Manual Deploy** after changes.)
 3. Fill in:
-   - **Name:** `maruf-cafe` (this becomes part of your address)
+   - **Name:** `maruf-cafe`
    - **Branch:** `claude/maruf-cafe-redesign-5ulf0y`
    - **Root Directory:** `maruf-cafe`
-   - **Language / Runtime:** Node
+   - **Runtime:** Node
    - **Build Command:** `npm install`
    - **Start Command:** `node server.mjs`
-   - **Instance Type:** Free
-4. Under **Environment Variables** add:
-   - `NODE_VERSION` = `22`
-   - `ADMIN_PASSWORD` = a password you choose (lets you read requests at `/admin/requests`)
-5. Tap **Create Web Service** (or Deploy). Wait until it says **Live** (a few minutes).
-6. Open your address, which looks like `https://maruf-cafe.onrender.com`, and add `/app/` on the end.
-7. Add it to your home screen:
-   - iPhone (Safari): tap Share, then **Add to Home Screen**.
-   - Android (Chrome): tap the menu (three dots), then **Add to Home screen** or **Install app**.
+   - **Instance Type:** Free to try, **Starter** (paid) to keep requests safely (see Part 2)
+4. Under **Environment Variables** add (names are exact):
+
+   | Name | Value | Why |
+   |---|---|---|
+   | `NODE_VERSION` | `22` | the built-in database needs Node 22 |
+   | `ADMIN_PASSWORD` | a long password you choose (**10+ characters**) | switches the staff dashboard on |
+   | `PUBLIC_URL` | `https://maruf-cafe.onrender.com` (your real address, no slash at the end) | links in emails, search data, sitemap |
+   | `RESEND_API_KEY`, `NOTIFY_EMAIL` | see Part 2 | email alert for every request |
+
+   Optional: `STAFF_PASSWORD` (a second sign-in for staff, 10+ characters), `STAFF_CAN_EDIT_SITE=1`. The full list with
+   explanations is in `.env.example`.
+5. Tap **Create Web Service** and wait for **Live**. Your address looks like `https://maruf-cafe.onrender.com`:
+   - `/` the website, `/large-orders`, `/rent-the-cafe`, `/app/` the phone app, `/admin/` the dashboard.
+6. Add the app to your home screen: iPhone Safari → Share → **Add to Home Screen**; Android Chrome → menu → **Install app**.
+
+Nothing is stored in your GitHub repository: requests, edits and photos live only on the server (in `DATA_DIR`).
+
+---
+
+## 2. Never miss a request (important)
+
+When a customer sends a quote or event request the server **saves it in its database first, then emails you**. The website
+and app only say "received" after that worked. If nothing could be saved and no email/webhook could be sent, the customer
+is told it failed and is given your phone number. A form never pretends to work.
+
+**Render's free plan has temporary storage.** Anything saved (the database, uploaded photos, menu edits) is erased
+whenever the service restarts or redeploys, which happens regularly. So:
+
+- **Always set up email alerts** (below). The email is your permanent copy of every request.
+- When you are ready to rely on the dashboard, move the service to a **paid instance** and add a **Persistent Disk**
+  (Render → your service → **Disks**, mount path `/var/data`), then set `DATA_DIR=/var/data`. Check Render's pricing page
+  for the current cost. Until then, use the dashboard as an inbox and keep the emails.
+- Back up any time: dashboard → Requests → **Download spreadsheet**.
+
+### Email alerts with Resend (free tier is enough)
+
+1. Create an account at **resend.com**. Open **API Keys → Create API Key** (permission: *Sending access*). Copy the key.
+2. In Render add `RESEND_API_KEY` = that key and `NOTIFY_EMAIL` = the address that should receive requests
+   (several allowed, separated by commas).
+3. **Quick test:** leave `NOTIFY_FROM` empty. Resend then sends from `onboarding@resend.dev`, which only delivers to the
+   email address you used to sign up at Resend. So use that same address for `NOTIFY_EMAIL`.
+4. **For real use:** in Resend open **Domains → Add Domain** (the café's own domain), add the DNS records it shows at your
+   domain provider, wait until it says *Verified*, then set `NOTIFY_FROM` to e.g. `Maruf Cafe <requests@your-domain.com>`.
+5. Send yourself a test request from the website. You should get an email with all the details; **Reply** goes to the customer.
+
+The key lives only in Render's settings. It is never in the code and never sent to a browser.
+
+### Or a chat message instead (Slack, Discord, Zapier, Make)
+
+Create an *incoming webhook* in that app and put its address in `INQUIRY_WEBHOOK_URL`. Every request is posted there as plain text.
+You can use the webhook and email together.
+
+The dashboard's **Setup** tab shows whether alerts are on, and every request shows whether its alert went out.
+
+---
+
+## 3. The staff dashboard (`/admin/`)
+
+Sign in at `https://YOUR-ADDRESS/admin/` with username `owner` and your `ADMIN_PASSWORD`.
+Sessions last 12 hours, 5 wrong passwords lock that sign-in for 15 minutes, and every change is logged (Setup → Recent changes).
+
+| Tab | What you can do | Who |
+|---|---|---|
+| **Requests** | search, filter by status, read every answer, Call / Text / Email buttons, set status (New → Contacted → Quote sent → Accepted → Declined/Closed), private notes, download a spreadsheet | owner and staff |
+| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items. Hidden items disappear from the website, the app and online checkout. "Reset" returns to the original menu. | owner (staff if `STAFF_CAN_EDIT_SITE=1`) |
+| **Site info** | phone, email, address, hours, Instagram/TikTok, event options and prices, what the space holds, rental rules, FAQ, **real** customer reviews | owner (or staff, same switch) |
+| **Photos** | upload photos from your phone (they are shrunk automatically), put them in the photo spots and the gallery with a short description | owner (or staff, same switch) |
+| **Setup** | checks that alerts, Square and accounts are set up; recent changes | owner only |
+
+"Accepted" is only your own label. **It does not book anything and sends nothing to the customer.**
+
+---
+
+## 4. What only the café can fill in (nothing here is guessed)
+
+Until you add these, the site simply leaves them out or shows a neutral line:
+
+- **Email address** (Site info). Shown as "[ADD EMAIL]" on the support/privacy pages until set; hidden on the website.
+- **Real photos** (Photos). Without them, photo spots and the Gallery section are hidden.
+- **Real customer reviews** (Site info → Customer reviews). Only add reviews real customers wrote. No stars or ratings are ever shown or sent to Google.
+- **How many people the space holds, rental rules, deposit/cancellation policy** (Site info → Rent the café). Blank means not shown.
+- **Prices for event options** (Site info → Event options). Blank means no price is shown.
+- **Group-size calculator numbers** in the phone app (`app/src/config.js`, `calculator`): serving sizes and prices stay empty until you set them.
+- **Hours** were taken from what you gave (Mon–Sat 7–10, Sunday 7–4). Update them for holidays.
+
+---
+
+## 5. Payments and bookings
+
+- **Quote and event requests collect no money and confirm nothing.** Every page says so. Take payment and confirm dates yourself,
+  after you have decided your deposit and cancellation rules, and write them under Site info → Rent the café.
+- **Square card checkout** for fixed-price menu items on the 3D site is separate and optional. It stays off until you set
+  `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` and `SQUARE_APP_ID`. Start with `SQUARE_ENV=sandbox` and Square's test cards, set
+  `TAX_PERCENT`, and only then switch to `production`. It has been tested against a mock of Square, not Square itself.
+  Checkout always uses the live menu, so a price you change or an item you hide applies to checkout immediately.
+
+---
+
+## 6. Local search (Google)
+
+- Each page has a title, description, address/phone/hours search data (LocalBusiness), FAQ search data, a canonical link,
+  share preview image, `robots.txt` and `sitemap.xml` (the last two need `PUBLIC_URL`).
+- Claim your **Google Business Profile** for 365 Veterans Rd W and keep its hours the same as the dashboard.
+- Optional: add the site in **Google Search Console** and submit `https://YOUR-ADDRESS/sitemap.xml`.
+- Using your own domain (e.g. marufcafe.com) is a separate step: it currently points to your Square Online store. Add a custom
+  domain in Render only if you want this site to replace it, then update `PUBLIC_URL`.
+
+---
 
 ## Good to know
 
-- **The free plan goes to sleep** when nobody uses it. The first open after a break can take about a minute.
-- **Requests are saved on temporary storage** on the free plan, so they can disappear when the service restarts or
-  redeploys. To be safe, also set one of these environment variables so every request reaches you:
-  `INQUIRY_WEBHOOK_URL` (a Slack, Zapier or Make webhook), or `RESEND_API_KEY` + `NOTIFY_EMAIL` (email). See `.env.example`.
-- **Read your requests** at `https://YOUR-ADDRESS/admin/requests`. Sign in with any username and your `ADMIN_PASSWORD`.
-- The 3D café website is at the main address (`/`). The phone app is at `/app/`.
-- If you change the app's code, rebuild it with `npm run build` (needs a computer or a build service) and commit the
-  updated `public/app` folder. Render redeploys by itself when the branch changes.
+- **The free plan sleeps** when idle: the first visit after a break can take about a minute.
+- The app's web copy is built into `public/app`. After changing app code run `npm run build` (needs a computer or build service) and commit it.
+- Tests: `npm test` (server, forms, dashboard, search data; no keys needed). Browser tests are in `e2e/` (`node e2e/web.e2e.mjs`, needs `playwright-core` and Chromium).

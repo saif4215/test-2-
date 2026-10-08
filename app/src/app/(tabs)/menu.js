@@ -4,17 +4,19 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Chip, Eyebrow, Grid, H1, H3, Screen, Section, Small } from "../../components/ui";
 import { placeholderCategories, showPlaceholders } from "../../config";
-import menu from "../../data/menu.json";
+import { useSite } from "../../lib/site";
 import { money, priceText, useOrder } from "../../lib/order";
 import { colors } from "../../theme";
 
-const categories = Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items })));
 
 export default function Menu() {
-  const [active, setActive] = useState(categories[0].name);
+  const { menu } = useSite();
+  const categories = useMemo(() => Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items: items.filter((i) => !i.hidden) }))).filter((c) => c.items.length), [menu]);
+  const [chosen, setActive] = useState(null);
   const order = useOrder();
+  const active = categories.some((c) => c.name === chosen) || placeholderCategories.includes(chosen) ? chosen : categories[0]?.name;   // a category the café removed falls back to the first
   const current = categories.find((c) => c.name === active);
-  const names = useMemo(() => [...categories.map((c) => c.name), ...placeholderCategories], []);
+  const names = useMemo(() => [...categories.map((c) => c.name), ...placeholderCategories.filter((p) => !categories.some((c) => c.name === p))], [categories]);
 
   return (
     <View style={{ flex: 1 }}>

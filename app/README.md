@@ -24,13 +24,15 @@ by email and/or a webhook. See `../.env.example`. Set `EXPO_PUBLIC_API_URL` to t
 build the app. Without it the forms cannot send, and the app says so and offers the phone number. It never shows
 "Thank you" unless the server confirmed it saved the request.
 
-You read requests at `https://YOUR-SERVER/admin/requests` (set `ADMIN_PASSWORD` on the server).
+Staff read and manage requests at `https://YOUR-SERVER/admin/` (set `ADMIN_PASSWORD` on the server).
+
+The app also loads the live menu (`/menu.json`) and the café's details, FAQ, event options, photos, gallery and reviews (`/content.json`) from that server, so edits made in the dashboard show up in the app. If the server cannot be reached, the app uses the copy built into it (`src/config.js`, `src/data/menu.json`). The web copy served at `/app/` uses the same server automatically.
 
 ## Edit it without touching code
 
 | What | Where |
 | --- | --- |
-| Address, phone, email, hours, social links | `src/config.js` → `business` |
+| Address, phone, email, hours, social links | the dashboard (Site info), or `src/config.js` → `business` as the built-in fallback |
 | Occasions, catering cards, venue cards, event options, FAQ | `src/config.js` |
 | Calculator serving sizes and prices | `src/config.js` → `calculator` (null means "Maruf Cafe will confirm") |
 | Menu items and prices | `src/data/menu.json` (prices in cents; add `"desc": "..."` to show a description) |

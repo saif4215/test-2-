@@ -39,7 +39,7 @@ export function openStatus(hours, now = new Date()) {
   const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
   const minutes = Number(parts.hour) * 60 + Number(parts.minute);
   const today = hours.find((h) => h.days.includes(day));
-  const fmt = (h) => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+  const fmt = (h) => { const w = Math.floor(h) % 24, m = Math.round((h % 1) * 60); return `${w % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""} ${w < 12 ? "AM" : "PM"}`; };
   if (today && minutes >= today.open * 60 && minutes < today.close * 60) return { open: true, text: `Open now · until ${fmt(today.close)}` };
   if (today && minutes < today.open * 60) return { open: false, text: `Closed · opens ${fmt(today.open)}` };
   const next = hours.find((h) => h.days.includes((day + 1) % 7));

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
+import { mergeSite, indexMenu } from "../src/lib/site-merge.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -85,4 +86,51 @@ test("open-now uses New York time and the right day's hours", () => {
   assert.equal(openStatus(HOURS, new Date("2026-10-09T03:30:00Z")).text, "Closed · opens 7 AM tomorrow");     // Thu 11:30 PM
   assert.equal(openStatus(HOURS, new Date("2026-10-11T17:00:00Z")).text, "Open now · until 4 PM");            // Sunday 1 PM
   assert.equal(openStatus(HOURS, new Date("2026-10-11T21:30:00Z")).text, "Closed · opens 7 AM tomorrow");     // Sunday 5:30 PM
+});
+
+test("delivery needs an address, and the new quote fields are passed on", () => {
+  const delivery = { ...goodQuote, fulfillment: "delivery", deliveryAddress: "", contactMethod: "text", dietary: "Nut allergy" };
+  assert.deepEqual(Object.keys(buildQuote(delivery, NOW).errors), ["deliveryAddress"]);
+  const ok = buildQuote({ ...delivery, deliveryAddress: " 12 Example St " }, NOW);
+  assert.deepEqual(ok.errors, {});
+  assert.equal(ok.fields.deliveryAddress, "12 Example St"); assert.equal(ok.fields.contactMethod, "text"); assert.equal(ok.fields.dietary, "Nut allergy");
+  assert.equal(buildQuote({ ...goodQuote, deliveryAddress: "left over text" }, NOW).fields.deliveryAddress, "", "pickup never sends an address");
+});
+
+test("event form: backup date, budget and end-before-start", () => {
+  assert.deepEqual(Object.keys(buildEvent({ ...goodEvent, endTime: "5 PM" }, NOW).errors), ["endTime"]);
+  assert.deepEqual(Object.keys(buildEvent({ ...goodEvent, alternateDate: "10/01/2026" }, NOW).errors), ["alternateDate"]);
+  const ok = buildEvent({ ...goodEvent, alternateDate: "11/21/2026", budget: "$2000", dietary: "Halal", contactMethod: "email" }, NOW);
+  assert.deepEqual(ok.errors, {});
+  assert.equal(ok.fields.alternateDate, "2026-11-21"); assert.equal(ok.fields.budget, "$2000");
+});
+
+const BASE = { business: { phone: "(929) 335-3296", phoneTel: "+19293353296", email: "", address: ["365 Veterans Rd W", "Staten Island, NY 10309"], hours: HOURS, instagram: "https://i/x", tiktok: "https://t/x" }, faq: [{ q: "a?", a: "b" }], packages: [{ id: "x", title: "X", blurb: "", includes: [] }], packagesNote: "note", venue: { capacity: "", notes: "", policies: "" }, gallery: [], reviews: [], photos: {}, menu: { groups: { Food: { Burgers: [{ id: "f-b", name: "Burger", cents: 1000 }] } } } };
+
+test("live café details replace the built-in ones, and bad or missing answers change nothing", () => {
+  assert.equal(mergeSite(BASE, null), BASE);
+  assert.equal(mergeSite(BASE, "garbage"), BASE);
+  const m = mergeSite(BASE, { business: { phone: "(718) 555-0100", phoneTel: "+17185550100", email: "hi@example.com", hours: [{ label: "Daily", days: [0, 1], open: 8.5, close: 20 }] }, venue: { capacity: "Up to 40 seated" }, faq: [], packagesNote: "" }, "https://cafe.example");
+  assert.equal(m.business.phone, "(718) 555-0100"); assert.equal(m.business.email, "hi@example.com"); assert.equal(m.business.hours[0].open, 8.5);
+  assert.deepEqual(m.business.address, BASE.business.address, "address not sent: keep ours");
+  assert.deepEqual(m.faq, BASE.faq, "an empty FAQ from the server does not erase ours");
+  assert.equal(m.packagesNote, "", "but the café can clear a note");
+  assert.equal(m.venue.capacity, "Up to 40 seated"); assert.equal(m.venue.notes, "");
+  assert.equal(mergeSite(BASE, { business: { hours: [{ label: "bad" }] } }).business.hours, HOURS, "malformed hours are ignored");
+});
+
+test("live photos, gallery and reviews are real entries only, with absolute photo addresses", () => {
+  const m = mergeSite(BASE, { photos: { hero: "/uploads/a.jpg", bad: 5 }, gallery: [{ url: "/uploads/b.jpg", alt: "The counter" }, { url: "/uploads/c.jpg", alt: "" }], reviews: [{ name: "Jo", text: "Great" }, { name: "", text: "x" }] }, "https://cafe.example");
+  assert.deepEqual(m.photos, { hero: "https://cafe.example/uploads/a.jpg" });
+  assert.deepEqual(m.gallery.map((g) => g.url), ["https://cafe.example/uploads/b.jpg"], "a photo without a description is skipped");
+  assert.equal(m.reviews.length, 1);
+  assert.deepEqual(mergeSite(BASE, {}).reviews, [], "no reviews unless the café added some");
+});
+
+test("the live menu replaces the built-in one, and a removed item is simply gone", () => {
+  const live = { groups: { Food: { Burgers: [{ id: "f-b", name: "Burger", cents: 1250 }] }, Drinks: { Coffee: [{ id: "d-l", name: "Latte", cents: 450 }] } } };
+  const m = mergeSite(BASE, { menu: live });
+  assert.equal(indexMenu(m.menu).get("f-b").cents, 1250);
+  assert.equal(indexMenu(m.menu).get("d-l").cat, "Coffee");
+  assert.equal(mergeSite(BASE, { menu: { groups: {} } }).menu, BASE.menu, "an empty menu from the server never wipes ours");
 });

@@ -3,11 +3,10 @@ import { Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Eyebrow, Grid, H1, H2, H3, IconBadge, Screen, Section, Small } from "../../components/ui";
-import { business, faq, showPlaceholders } from "../../config";
+import { showPlaceholders } from "../../config";
+import { useSite } from "../../lib/site";
 import { openStatus } from "../../lib/dates";
 import { colors } from "../../theme";
-
-const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
 
 function InfoCard({ icon, title, children }) {
   return (
@@ -32,7 +31,9 @@ function Question({ q, a }) {
 }
 
 export default function Contact() {
+  const { business, faq, reviews } = useSite();
   const status = openStatus(business.hours);
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
   return (
     <Screen>
       <Section style={{ marginTop: 16 }}>
@@ -57,8 +58,8 @@ export default function Contact() {
           {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => Linking.openURL(`mailto:${business.email}`)} /> : null}
         </View>
         <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
-          <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} />
-          <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} />
+          {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
+          {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
         </View>
       </Section>
 
@@ -71,4 +72,4 @@ export default function Contact() {
   );
 }
 
-function fmt(h) { return `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`; }
+function fmt(h) { const w = Math.floor(h) % 24, m = Math.round((h % 1) * 60); return `${w % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""} ${w < 12 ? "AM" : "PM"}`; }

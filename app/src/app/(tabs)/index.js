@@ -1,15 +1,15 @@
-import { Linking, Text, View } from "react-native";
+import { Image, Linking, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Display, Eyebrow, Grid, H1, H2, H3, IconBadge, Photo, Screen, Section, Small } from "../../components/ui";
-import { business } from "../../config";
+import { useSite } from "../../lib/site";
 import { openStatus } from "../../lib/dates";
 import { colors, radius, text } from "../../theme";
 
-const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
-
 export default function Home() {
+  const { business, reviews, gallery } = useSite();
   const status = openStatus(business.hours);
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
   return (
     <Screen>
       {/* hero */}
@@ -29,6 +29,11 @@ export default function Home() {
         <View style={{ gap: 12 }}>
           <Button title="Order for a large group" variant="primary" icon="basket-outline" onPress={() => router.push("/quote")} />
           <Button title="Rent our space" variant="gold" icon="calendar-outline" onPress={() => router.push("/event-request")} />
+        </View>
+        <View accessibilityRole="toolbar" accessibilityLabel="Quick actions" style={{ flexDirection: "row", gap: 10 }}>
+          <Button title="Call" size="medium" variant="outline" icon="call-outline" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} style={{ flex: 1 }} />
+          <Button title="Large Orders" size="medium" variant="outline" onPress={() => router.push("/orders")} style={{ flex: 1.2 }} />
+          <Button title="Rent the Cafe" size="medium" variant="outline" onPress={() => router.push("/events")} style={{ flex: 1.2 }} />
         </View>
         <Photo slot="hero" label="Add a hero photo: food spread or café interior" ratio={1.35} />
       </View>
@@ -65,6 +70,31 @@ export default function Home() {
           ))}
         </Grid>
       </Section>
+
+      {gallery.length ? (
+        <Section>
+          <Eyebrow>Gallery</Eyebrow>
+          <H1 style={{ marginTop: 8, marginBottom: 20 }}>Take a look</H1>
+          <Grid min={240} gap={12}>
+            {gallery.map((g) => <Image key={g.url} source={{ uri: g.url }} accessibilityLabel={g.alt} resizeMode="cover" style={{ width: "100%", aspectRatio: 1.4, borderRadius: radius.card }} />)}
+          </Grid>
+        </Section>
+      ) : null}
+
+      {reviews.length ? (
+        <Section>
+          <Eyebrow>Reviews</Eyebrow>
+          <H1 style={{ marginTop: 8, marginBottom: 20 }}>What customers say</H1>
+          <Grid min={280} gap={12}>
+            {reviews.map((r) => (
+              <Card key={`${r.name}-${r.text.slice(0, 20)}`} style={{ padding: 20, gap: 10 }}>
+                <Body>“{r.text}”</Body>
+                <Small style={{ fontWeight: "700" }}>{r.name}{r.source ? `, ${r.source}` : ""}</Small>
+              </Card>
+            ))}
+          </Grid>
+        </Section>
+      ) : null}
 
       {/* quick contact */}
       <Section>

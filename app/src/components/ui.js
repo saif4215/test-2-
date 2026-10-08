@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, shadow, text } from "../theme";
 import { photos } from "../photos";
 import { showPlaceholders } from "../config";
+import { useSite } from "../lib/site";
 
 /** Scrolling screen with a centred, readable column on tablets and the web. */
 export function Screen({ children, bottomPad = 120 }) {
@@ -85,7 +86,8 @@ export function Grid({ children, min = 280, gap = 16, style }) {
 
 /** A photo slot. Shows the photo from photos.js, or a tidy placeholder until one is added. */
 export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.card }) {
-  const source = photos[slot];
+  const { photos: remote } = useSite();
+  const source = photos[slot] || (remote[slot] ? { uri: remote[slot] } : null);   // a photo built into the app wins, then one uploaded in the dashboard
   const { width } = useWindowDimensions();
   const box = { width: "100%", aspectRatio: width >= 768 ? ratio * 1.6 : ratio, borderRadius: radiusSize, overflow: "hidden" };
   if (source) return <Image source={source} accessibilityLabel={label} resizeMode="cover" style={[box, style]} />;

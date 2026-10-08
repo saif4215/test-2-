@@ -294,3 +294,12 @@ test("the dashboard page is locked down and the old requests page moves there", 
   assert.equal(old.status, 301); assert.equal(old.headers.get("location"), "/admin/");
   t.close();
 });
+
+test("one visitor's wrong passwords do not lock the owner out for everyone else", async () => {
+  const t = await startSite({ TRUST_PROXY: "1" });
+  const attempt = (ip, pw) => fetch(t.u + "/admin/api/login", { method: "POST", headers: { "Content-Type": "application/json", "X-Forwarded-For": ip }, body: JSON.stringify({ username: "owner", password: pw }) }).then((r) => r.status);
+  for (let i = 0; i < 5; i++) assert.equal(await attempt("9.9.9.9", `bad-${i}`), 401);
+  assert.equal(await attempt("9.9.9.9", "owner-pass-12345"), 429, "the attacker is locked out");
+  assert.equal(await attempt("8.8.8.8", "owner-pass-12345"), 200, "the real owner is not");
+  t.close();
+});

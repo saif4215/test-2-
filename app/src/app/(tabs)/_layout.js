@@ -1,13 +1,14 @@
 import { Image, Linking, Pressable, Text } from "react-native";
 import { Tabs } from "expo-router/js-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { business } from "../../config";
+import { useSite } from "../../lib/site";
 import { colors } from "../../theme";
 
 const logo = require("../../../assets/logo-dark.png");
 
 /** Always-visible way to reach the café. */
 function CallPill() {
+  const { business } = useSite();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)}
       style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.ink, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 14, marginRight: 16 }}>

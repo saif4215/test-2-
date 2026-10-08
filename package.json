@@ -8,6 +8,6 @@
   "scripts": {
     "build": "node scripts/build-app.mjs",
     "start": "node server.mjs",
-    "test": "node --test server.test.mjs quote.test.mjs admin.test.mjs"
+    "test": "node --test server.test.mjs quote.test.mjs admin.test.mjs site.test.mjs"
   }
 }

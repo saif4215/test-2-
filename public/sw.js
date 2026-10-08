@@ -1,8 +1,8 @@
 // Offline support. Pages and assets: try the network first so updates show immediately, fall back to the
 // cached copy when offline. The 3D library is cached first (it never changes without a CACHE bump).
-// Orders and payments (/api/*) and anything cross-origin (Square, fonts) are never touched.
-const CACHE = "maruf-v3";
-const SHELL = ["/", "/showcase.css", "/showcase.js", "/checkout.js", "/menu.json", "/logo.svg", "/logo-dark.svg", "/logo-cup.svg", "/manifest.webmanifest", "/icon-192.png", "/vendor/three.module.min.js"];
+// Orders and payments (/api/*), the staff dashboard (/admin/*) and anything cross-origin (Square, fonts) are never touched.
+const CACHE = "maruf-v4";
+const SHELL = ["/", "/showcase.css", "/site.css", "/showcase.js", "/checkout.js", "/menu.json", "/content.json", "/large-orders", "/rent-the-cafe", "/logo.svg", "/logo-dark.svg", "/logo-cup.svg", "/manifest.webmanifest", "/icon-192.png", "/vendor/three.module.min.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -14,7 +14,7 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const req = e.request, url = new URL(req.url);
-  if (req.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+  if (req.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
 
   if (url.pathname.startsWith("/vendor/")) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => store(req, res))));

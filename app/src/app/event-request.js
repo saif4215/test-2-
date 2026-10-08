@@ -11,7 +11,7 @@ const venues = [{ value: "private-event", label: "Private event" }, { value: "fu
 
 export default function EventRequest() {
   const params = useLocalSearchParams();
-  const [v, setV] = useState({ name: "", phone: "", email: "", eventType: "", eventDate: "", startTime: "", endTime: "", guests: "", needFood: "", catering: "", foodBudget: "", venueType: "", specialRequests: "", decorations: "", entertainment: "", notes: "", packageInterest: params.package || "" });
+  const [v, setV] = useState({ name: "", phone: "", email: "", eventType: "", eventDate: "", startTime: "", endTime: "", guests: "", needFood: "", catering: "", foodBudget: "", venueType: "", specialRequests: "", decorations: "", entertainment: "", notes: "", packageInterest: params.package || "", contactMethod: "", alternateDate: "", budget: "", dietary: "" });
   const [errors, setErrors] = useState({});
   const [state, setState] = useState({ busy: false, done: false, error: "" });
   const set = (k) => (t) => { setV((cur) => ({ ...cur, [k]: t })); if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined })); };
@@ -38,10 +38,12 @@ export default function EventRequest() {
             <Field label="Name" required value={v.name} onChangeText={set("name")} error={errors.name} autoComplete="name" textContentType="name" />
             <Field label="Phone" required value={v.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
             <Field label="Email" required value={v.email} onChangeText={set("email")} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" />
+            <Choice label="Best way to reach you" value={v.contactMethod} onChange={set("contactMethod")} options={[{ value: "phone", label: "Phone call" }, { value: "text", label: "Text" }, { value: "email", label: "Email" }]} />
           </FormGroup>
           <FormGroup title="Event information">
             <Choice label="Type of Event" required value={v.eventType} onChange={set("eventType")} error={errors.eventType} options={eventTypes} />
             <Field label="Event Date" required value={v.eventDate} onChangeText={set("eventDate")} error={errors.eventDate} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" />
+            <Field label="Backup Date" value={v.alternateDate} onChangeText={set("alternateDate")} error={errors.alternateDate} placeholder="Optional, MM/DD/YYYY" keyboardType="numbers-and-punctuation" />
             <Field label="Start Time" value={v.startTime} onChangeText={set("startTime")} error={errors.startTime} placeholder="For example, 6:00 PM" />
             <Field label="End Time" value={v.endTime} onChangeText={set("endTime")} error={errors.endTime} placeholder="For example, 9:00 PM" />
             <Field label="Number of Guests" required value={v.guests} onChangeText={(t) => set("guests")(t.replace(/[^0-9]/g, ""))} error={errors.guests} keyboardType="number-pad" maxLength={4} />
@@ -50,11 +52,13 @@ export default function EventRequest() {
             <Choice label="Will you need food?" value={v.needFood} onChange={set("needFood")} options={yesNo} />
             <Choice label="Catering required?" value={v.catering} onChange={set("catering")} options={yesNo} />
             <Field label="Estimated food budget" value={v.foodBudget} onChangeText={set("foodBudget")} placeholder="Optional" />
+            <Field label="Allergies or dietary needs" multiline value={v.dietary} onChangeText={set("dietary")} placeholder="Optional" />
           </FormGroup>
           <FormGroup title="Venue">
             <Choice label="What are you looking for?" value={v.venueType} onChange={set("venueType")} options={venues} />
           </FormGroup>
           <FormGroup title="Additional information">
+            <Field label="Overall event budget" value={v.budget} onChangeText={set("budget")} placeholder="Optional" />
             <Field label="Special requests" multiline value={v.specialRequests} onChangeText={set("specialRequests")} />
             <Field label="Decorations" multiline value={v.decorations} onChangeText={set("decorations")} />
             <Field label="Entertainment" multiline value={v.entertainment} onChangeText={set("entertainment")} />

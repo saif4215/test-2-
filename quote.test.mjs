@@ -136,3 +136,10 @@ test("requests saved by the first version (inquiries.jsonl) are brought into the
   assert.ok(existsSync(path.join(dir, "inquiries.jsonl.imported")));
   t.close();
 });
+
+test("behind a host's proxy, visitors are limited one by one, not all together", async () => {
+  const t = await startSite({ INQUIRY_RATE_LIMIT_PER_MIN: "1", TRUST_PROXY: "1" });
+  const send = (ip) => fetch(t.u + "/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json", "X-Forwarded-For": `spoofed, ${ip}` }, body: JSON.stringify({ type: "event", fields: goodEvent() }) }).then((r) => r.status);
+  assert.deepEqual([await send("1.1.1.1"), await send("1.1.1.1"), await send("2.2.2.2")], [200, 429, 200]);
+  t.close();
+});

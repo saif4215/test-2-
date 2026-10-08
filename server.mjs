@@ -89,6 +89,10 @@ export function createServer(env = process.env) {
   const dataDir = env.DATA_DIR || path.join(ROOT, "data");
   const uploadDir = path.join(dataDir, "uploads");
   const allowOrigin = env.ALLOWED_ORIGIN || "*";   // the phone app is not served from this origin
+  // Behind a host's proxy (Render sets RENDER) every visitor reaches us from the proxy's address, so rate limits and
+  // sign-in lockouts need the visitor's real address, which the proxy appends to X-Forwarded-For.
+  const trustProxy = env.TRUST_PROXY === "1" || (!!env.RENDER && env.TRUST_PROXY !== "0");
+  const clientIp = (req) => (trustProxy && String(req.headers["x-forwarded-for"] || "").split(",").pop().trim()) || req.socket.remoteAddress;
   const publicUrl = /^https?:\/\/[^\s/]+/i.test(env.PUBLIC_URL || "") ? env.PUBLIC_URL.replace(/\/+$/, "") : "";
 
   // Storage. If the disk cannot be written the site still works (menu and pages come from the files) but the
@@ -364,7 +368,7 @@ export function createServer(env = process.env) {
     let cors = false;
     try {
       const url = new URL(req.url, "http://localhost");
-      const ip = req.socket.remoteAddress;
+      const ip = clientIp(req);
       const p = url.pathname;
       cors = p === "/api/inquiry" || p === "/api/config" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
       if (cors && req.method === "OPTIONS") {

@@ -2,16 +2,19 @@
 
 Standalone static site (no build step). Three.js is vendored in `vendor/`.
 
-## The phone app
-To open it with only a phone, put it online: see `DEPLOY.md` (about 10 minutes, free). It is served at `/app/`.
-The event, catering and large-order app lives in `app/` (Expo / React Native: iPhone, Android and web). See `app/README.md`.
-Its forms send to this server (`POST /api/inquiry`). Set `INQUIRY_WEBHOOK_URL` or `RESEND_API_KEY` + `NOTIFY_EMAIL` to be
-notified, and `ADMIN_PASSWORD` to read requests at `/admin/requests`.
+## What is here
+- **The website** (`public/`): 3D showcase, menu, **Large Orders** (`/large-orders`) and **Rent the Café** (`/rent-the-cafe`) pages with real request forms, FAQ, gallery and reviews (shown only when you add real ones), a Call / Large Orders / Rent the Café bar on phones, and local search data.
+- **The staff dashboard** (`/admin/`): requests and statuses, menu and prices, site info, photos. See `DEPLOY.md`.
+- **The backend** (`server.mjs`, `lib/`): saves requests in a SQLite database, emails the owner (Resend) and/or posts to a webhook, serves the menu and site details, and runs Square checkout.
+- **The phone app** (`app/`, served at `/app/`): the same requests, menu and details from the same server. See `app/README.md`.
+
+Setup, email, hosting and what the café still has to fill in: **`DEPLOY.md`**. Settings: `.env.example`.
 
 ## Run it
 
     cd maruf-cafe
-    node server.mjs            # Node 18+, no npm install needed
+    node server.mjs            # Node 22.12+, no npm install needed
+    ADMIN_PASSWORD=choose-a-long-one node server.mjs   # also switches on /admin/
 
 Open http://localhost:8080. Without Square settings the site works and ordering falls back to
 a link to the Square Online store. A plain `python3 -m http.server` also shows the site, but not checkout.
@@ -32,16 +35,17 @@ Set up:
    (https://developer.squareup.com/docs/devtools/sandbox/payments). Switch to `production` only after that.
 4. Set `TAX_PERCENT` to your real sales tax rate. The server adds it to the Square order, which is the amount charged.
 
-Tests: `node --test server.test.mjs` (runs against a mock Square, no keys needed).
+Tests: `npm test` (mock Square, mock email, no keys needed). Browser tests: `e2e/`.
 
 Not covered yet:
-- Items with a price range (sizes, e.g. Lemonade $3.00 - $4.00) link to Square Online, because the size names are not in `menu.json`.
+- Items with a price range (sizes, e.g. Lemonade $3.00 - $4.00) link to Square Online, because the size names are not in the menu.
 - Pickup only. No delivery, tips or order-ready notifications.
 - The server must be hosted somewhere that runs Node (Render, Fly.io, Railway, a VPS). A static host alone cannot take payments.
 - It has not been run against Square itself, only against the mock in `server.test.mjs`.
 
 ## Content
-- The menu is `menu.json` (prices in cents). Ids must stay unique. The menu was copied from marufcafe.com.
+- The menu starts from `public/menu.json` (prices in cents) and is edited in the dashboard. Edits are stored in the database and win over the file. The menu was copied from marufcafe.com.
+- Business details, FAQ and event options start from `public/content.default.json` and are also edited in the dashboard.
 - "Order online" and "Gift cards" link to the cafe's real pages on marufcafe.com.
 
 ## Install it as an app
@@ -63,4 +67,4 @@ vector redraw of the Maruf Cafe logo, made from the image shared in chat, not th
 replace them with your own (same names, SVG or PNG with matching extension updated in `index.html`, `main.js`, `server.mjs`).
 
 ## Still to fill in
-Nothing required. Hours are in `#visit` in `index.html` and again in `main.js` (open-now badge) and the JSON-LD block; change all three if they change. The Columbus Day note on the cafe's listing was left out as a one-day exception.
+See section 4 of `DEPLOY.md`. Hours, phone and address now come from one place (the dashboard, or `public/content.default.json`).
