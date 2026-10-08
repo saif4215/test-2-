@@ -204,3 +204,12 @@ footer a:hover { color: var(--gold-2); }
 .co-off, .co-done { display: grid; gap: 14px; justify-items: start; color: var(--muted); }
 .co-done h4 { font: 30px var(--display); text-transform: uppercase; color: var(--gold-2); }
 .co-done[hidden], .co-form[hidden], .co-off[hidden], .cart-empty[hidden] { display: none; }
+
+.info address { font-style: normal; color: var(--muted); }
+.info a { color: var(--muted); transition: color .2s; }
+.info a:hover { color: var(--gold-2); }
+.hours { list-style: none; display: grid; gap: 4px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hours li { display: flex; justify-content: space-between; gap: 16px; max-width: 280px; padding: 2px 0; }
+.hours li[data-today] { color: var(--text); }
+.open-now { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; color: var(--gold-2); }
+.open-now[data-open="0"] { color: var(--muted); }

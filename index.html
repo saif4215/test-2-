@@ -93,11 +93,16 @@
   <section id="visit" class="section">
     <p class="eyebrow reveal">Visit</p>
     <h2 class="reveal">Show <em>up.</em></h2>
-    <p class="note reveal">Address, hours and phone were not in the pasted content. Fill them in below.</p>
     <div class="info">
-      <div class="reveal"><h4>Address</h4><p class="todo">Add address</p></div>
-      <div class="reveal"><h4>Hours</h4><p class="todo">Add opening hours</p></div>
-      <div class="reveal"><h4>Contact</h4><p class="todo">Add phone number</p>
+      <div class="reveal"><h4>Address</h4>
+        <address><a href="https://www.google.com/maps/search/?api=1&amp;query=365+Veterans+Rd+W+Staten+Island+NY+10309" target="_blank" rel="noopener">365 Veterans Rd W<br>Staten Island, NY 10309</a></address></div>
+      <div class="reveal"><h4>Hours</h4>
+        <p id="open-now" class="open-now" hidden></p>
+        <ul class="hours" id="hours">
+          <li data-days="1,2,3,4,5,6"><span>Mon – Sat</span><span>7 AM – 10 PM</span></li>
+          <li data-days="0"><span>Sunday</span><span>7 AM – 4 PM</span></li>
+        </ul></div>
+      <div class="reveal"><h4>Phone</h4><p><a href="tel:+19293353296">(929) 335-3296</a></p>
       <div class="social" aria-label="Social media">
         <a href="https://www.instagram.com/maruf.cafe/" target="_blank" rel="noopener" aria-label="Instagram" data-social="instagram">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none"/></svg>
@@ -111,6 +116,13 @@
     </div>
   </section>
 </main>
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CafeOrCoffeeShop","name":"Maruf Cafe","url":"https://www.marufcafe.com/","telephone":"+1-929-335-3296",
+ "address":{"@type":"PostalAddress","streetAddress":"365 Veterans Rd W","addressLocality":"Staten Island","addressRegion":"NY","postalCode":"10309","addressCountry":"US"},
+ "openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"opens":"07:00","closes":"22:00"},{"@type":"OpeningHoursSpecification","dayOfWeek":"Sunday","opens":"07:00","closes":"16:00"}],
+ "sameAs":["https://www.instagram.com/maruf.cafe/","https://www.tiktok.com/@marufsi1"]}
+</script>
 
 <footer>
   <span>© <span id="year"></span> Maruf Cafe</span>

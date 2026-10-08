@@ -39,4 +39,4 @@ Not covered yet:
 - "Order online" and "Gift cards" link to the cafe's real pages on marufcafe.com.
 
 ## Still to fill in
-- Address, hours and phone (`#visit` in `index.html`, marked with dashed outlines).
+Nothing required. Hours are in `#visit` in `index.html` and again in `main.js` (open-now badge) and the JSON-LD block; change all three if they change. The Columbus Day note on the cafe's listing was left out as a one-day exception.

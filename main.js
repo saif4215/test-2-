@@ -98,6 +98,24 @@ function countUp(node) {
   requestAnimationFrame(tick);
 }
 
+/* ---------- open now (cafe is in New York) ---------- */
+{
+  const HOURS = { 0: [7, 16] };                       // Sunday; every other day is 7 AM to 10 PM
+  const hoursFor = (d) => HOURS[d] || [7, 22];
+  const fmt = (h) => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+  const now = new Date();
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(now).map((p) => [p.type, p.value]));
+  const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
+  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
+  const [open, close] = hoursFor(day);
+  const isOpen = minutes >= open * 60 && minutes < close * 60;
+  document.querySelectorAll("#hours li").forEach((li) => { if (li.dataset.days.split(",").map(Number).includes(day)) li.dataset.today = ""; });
+  const badge = document.getElementById("open-now");
+  badge.dataset.open = isOpen ? "1" : "0";
+  badge.textContent = isOpen ? `Open now · until ${fmt(close)}` : minutes < open * 60 ? `Closed · opens ${fmt(open)}` : `Closed · opens ${fmt(hoursFor((day + 1) % 7)[0])} tomorrow`;
+  badge.hidden = false;
+}
+
 /* ---------- hero 3D scene ---------- */
 const canvas = document.getElementById("scene");
 try { initScene(); } catch (err) { console.warn("WebGL unavailable, showing static hero.", err); canvas.remove(); }
