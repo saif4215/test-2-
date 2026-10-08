@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import { openDb, STATUSES, STATUS_LABELS } from "./lib/db.mjs";
 import { createAuth } from "./lib/auth.mjs";
-import { parseInquiry, FormError, display } from "./lib/forms.mjs";
+import { parseInquiry, FormError, display, FORMS } from "./lib/forms.mjs";
 import { notifyOwner } from "./lib/notify.mjs";
 import { normalizeMenu, publicMenu, checkoutIndex } from "./lib/menu.mjs";
 import { normalizeContent, mergeContent } from "./lib/content.mjs";
@@ -219,6 +219,8 @@ export function createServer(env = process.env) {
   const PAGES = ["/", "/large-orders", "/rent-the-cafe", "/privacy", "/support"];
 
   /* ---- staff dashboard API ---- */
+  /** A request as the dashboard shows it: the stored values plus readable label/value pairs. */
+  const withView = (r) => ({ ...r, view: Object.entries(r.fields).map(([k, v]) => [FORMS[r.type]?.fields[k]?.[0] || k, display(k, v)]) });
   const csvCell = (v) => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
   async function adminApi(req, res, url, ip) {
@@ -258,7 +260,7 @@ export function createServer(env = process.env) {
       if (status && !STATUSES.includes(status)) throw new HttpError(400, "Unknown status.");
       if (type && type !== "large-order" && type !== "event") throw new HttpError(400, "Unknown type.");
       const { total, rows } = db.listInquiries({ status, type, q, limit, offset: (page - 1) * limit });
-      return out(200, { ok: true, total, page, pages: Math.max(1, Math.ceil(total / limit)), rows, counts: db.counts(), statuses: STATUS_LABELS });
+      return out(200, { ok: true, total, page, pages: Math.max(1, Math.ceil(total / limit)), rows: rows.map(withView), counts: db.counts(), statuses: STATUS_LABELS });
     }
     if (route === "inquiries.csv" && method === "GET") {
       const { rows } = db.listInquiries({ limit: 100000 });
@@ -269,7 +271,7 @@ export function createServer(env = process.env) {
       return out(200, lines.join("\r\n"), { type: "text/csv; charset=utf-8", headers: { "Content-Disposition": 'attachment; filename="maruf-cafe-requests.csv"' } });
     }
     let m = /^inquiries\/([0-9a-f-]{36})$/.exec(route);
-    if (m && method === "GET") { const r = db.getInquiry(m[1]); if (!r) throw new HttpError(404, "Request not found."); return out(200, { ok: true, request: r }); }
+    if (m && method === "GET") { const r = db.getInquiry(m[1]); if (!r) throw new HttpError(404, "Request not found."); return out(200, { ok: true, request: withView(r) }); }
     if (m && method === "PATCH") {
       const b = await readBody(req, 10000), patch = {};
       if (b.status !== undefined) { if (!STATUSES.includes(b.status)) throw new HttpError(400, "Unknown status."); patch.status = b.status; }
@@ -277,7 +279,7 @@ export function createServer(env = process.env) {
       const r = db.updateInquiry(m[1], patch, who);
       if (!r) throw new HttpError(404, "Request not found.");
       db.audit(who, "request.update", `${m[1].slice(0, 8)} ${patch.status ? `status=${patch.status}` : ""}${patch.notes !== undefined ? " notes" : ""}`.trim());
-      return out(200, { ok: true, request: r, counts: db.counts() });
+      return out(200, { ok: true, request: withView(r), counts: db.counts() });
     }
 
     /* menu, content, photos (owner, or staff when STAFF_CAN_EDIT_SITE=1) */

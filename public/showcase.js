@@ -115,22 +115,32 @@ function countUp(node) {
   requestAnimationFrame(tick);
 }
 
-/* ---------- open now (cafe is in New York) ---------- */
+/* ---------- open now (cafe is in New York; the hours come from the page, which gets them from the dashboard) ---------- */
 {
-  const HOURS = { 0: [7, 16] };                       // Sunday; every other day is 7 AM to 10 PM
-  const hoursFor = (d) => HOURS[d] || [7, 22];
-  const fmt = (h) => `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
-  const now = new Date();
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(now).map((p) => [p.type, p.value]));
-  const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
-  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
-  const [open, close] = hoursFor(day);
-  const isOpen = minutes >= open * 60 && minutes < close * 60;
-  document.querySelectorAll("#hours li").forEach((li) => { if (li.dataset.days.split(",").map(Number).includes(day)) li.dataset.today = ""; });
+  const rows = [...document.querySelectorAll("#hours li")].map((li) => ({ days: li.dataset.days.split(",").filter(Boolean).map(Number), open: Number(li.dataset.open), close: Number(li.dataset.close) }));
+  const hoursFor = (d) => rows.find((r) => r.days.includes(d));
+  const fmt = (h) => { const w = Math.floor(h) % 24, m = Math.round((h % 1) * 60); return `${w % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""} ${w < 12 ? "AM" : "PM"}`; };
+  const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const badge = document.getElementById("open-now");
-  badge.dataset.open = isOpen ? "1" : "0";
-  badge.textContent = isOpen ? `Open now · until ${fmt(close)}` : minutes < open * 60 ? `Closed · opens ${fmt(open)}` : `Closed · opens ${fmt(hoursFor((day + 1) % 7)[0])} tomorrow`;
-  badge.hidden = false;
+  if (rows.length && badge) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(new Date()).map((p) => [p.type, p.value]));
+    const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
+    const minutes = Number(parts.hour) * 60 + Number(parts.minute);
+    const today = hoursFor(day);
+    const isOpen = !!today && minutes >= today.open * 60 && minutes < today.close * 60;
+    document.querySelectorAll("#hours li").forEach((li) => { if (li.dataset.days.split(",").map(Number).includes(day)) li.dataset.today = ""; });
+    let text;
+    if (isOpen) text = `Open now · until ${fmt(today.close)}`;
+    else if (today && minutes < today.open * 60) text = `Closed · opens ${fmt(today.open)}`;
+    else {
+      let n = 1; while (n < 8 && !hoursFor((day + n) % 7)) n++;
+      const next = hoursFor((day + n) % 7);
+      text = next ? `Closed · opens ${fmt(next.open)} ${n === 1 ? "tomorrow" : names[(day + n) % 7]}` : "Closed";
+    }
+    badge.dataset.open = isOpen ? "1" : "0";
+    badge.textContent = text;
+    badge.hidden = false;
+  }
 }
 
 /* ---------- procedural surface textures and lighting, shared by both 3D scenes ---------- */

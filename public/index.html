@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Maruf Cafe</title>
-<meta name="description" content="Maruf Cafe. Coffee with no excuses.">
+<title>Maruf Cafe | Coffee, Food, Large Orders &amp; Catering in Staten Island, NY</title>
+<meta name="description" content="Maruf Cafe in Staten Island, NY: coffee, breakfast, burgers and more. Request a quote for large orders and catering, or ask about renting the café for a private event.">
+<!--HEAD-->
 <meta name="theme-color" content="#0a0907">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icon-180.png">
@@ -16,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="showcase.css">
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
 <div class="grain" aria-hidden="true"></div>
@@ -24,7 +26,8 @@
   <a class="logo" href="#top" aria-label="Maruf Cafe, back to top"><img src="/logo.svg" alt="Maruf Cafe" width="530" height="390"></a>
   <nav>
     <a href="#menu">Menu</a>
-    <a href="#story">Story</a>
+    <a href="/large-orders">Large orders</a>
+    <a href="/rent-the-cafe">Rent the café</a>
     <a href="#visit">Visit</a>
     <a class="nav-cta" href="https://www.marufcafe.com/s/order">Order online</a>
   </nav>
@@ -39,6 +42,7 @@
       <p class="lede">Strong coffee. Zero noise. Built for people who move in silence.</p>
       <a class="btn" href="#menu">See the menu</a>
       <a class="btn ghost" href="https://www.marufcafe.com/s/order">Order online</a>
+      <a class="btn ghost" href="/large-orders#request">Large orders</a>
     </div>
     <a class="scroll-cue" href="#menu" aria-label="Scroll to menu"><span></span></a>
   </section>
@@ -95,25 +99,66 @@
     </div>
   </section>
 
+  <section id="large-orders" class="section split pitch">
+    <div>
+      <p class="eyebrow reveal">Large orders &amp; catering</p>
+      <h2 class="reveal">Feeding a <em>crowd?</em></h2>
+      <p class="reveal">Birthdays, offices, family gatherings, school and community events. Tell us the date, how many people and what you need, and Maruf Cafe will get back to you with the details and a price.</p>
+      <p class="cta-row reveal"><a class="btn" href="/large-orders#request">Request a quote</a><a class="btn ghost" href="tel:{{phoneTel}}">Call {{phone}}</a></p>
+    </div>
+    <div>
+      <!--PHOTO:largeOrders-->
+      <ul class="tick reveal">
+        <li>Pickup or delivery requests</li>
+        <li>Tell us about allergies and dietary needs</li>
+        <li>No payment when you send a request</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="rent" class="section split pitch">
+    <div>
+      <p class="eyebrow reveal">Private events</p>
+      <h2 class="reveal">Rent the <em>café.</em></h2>
+      <p class="reveal">Planning a birthday, engagement, family dinner, business meeting or community event? Send your date and guest count and Maruf Cafe will tell you what is possible.</p>
+      <p class="cta-row reveal"><a class="btn" href="/rent-the-cafe#request">Ask about renting</a><a class="btn ghost" href="tel:{{phoneTel}}">Call {{phone}}</a></p>
+    </div>
+    <div>
+      <!--PHOTO:event-->
+      <ul class="tick reveal">
+        <li>Availability depends on your date and group size</li>
+        <li>Nothing is booked until Maruf Cafe confirms with you</li>
+        <li>Food and catering can be part of your request</li>
+      </ul>
+    </div>
+  </section>
+
+  <!--GALLERY-->
+  <!--REVIEWS-->
+
+  <section id="faq" class="section">
+    <p class="eyebrow reveal">Questions</p>
+    <h2 class="reveal">Good to <em>know.</em></h2>
+    <!--FAQ-->
+  </section>
+
   <section id="visit" class="section">
     <p class="eyebrow reveal">Visit</p>
     <h2 class="reveal">Show <em>up.</em></h2>
     <div class="info">
       <div class="reveal"><h4>Address</h4>
-        <address><a href="https://www.google.com/maps/search/?api=1&amp;query=365+Veterans+Rd+W+Staten+Island+NY+10309" target="_blank" rel="noopener">365 Veterans Rd W<br>Staten Island, NY 10309</a></address></div>
+        <address><a href="{{mapsUrl}}" target="_blank" rel="noopener">{{addressHtml}}</a></address></div>
       <div class="reveal"><h4>Hours</h4>
         <p id="open-now" class="open-now" hidden></p>
-        <ul class="hours" id="hours">
-          <li data-days="1,2,3,4,5,6"><span>Mon – Sat</span><span>7 AM – 10 PM</span></li>
-          <li data-days="0"><span>Sunday</span><span>7 AM – 4 PM</span></li>
-        </ul></div>
-      <div class="reveal"><h4>Phone</h4><p><a href="tel:+19293353296">(929) 335-3296</a></p>
+        <ul class="hours" id="hours">{{hoursHtml}}</ul></div>
+      <div class="reveal"><h4>Contact</h4><p><a href="tel:{{phoneTel}}">{{phone}}</a></p>
+      <p><a data-needs="email" href="mailto:{{email}}">{{email}}</a></p>
       <div class="social" aria-label="Social media">
-        <a href="https://www.instagram.com/maruf.cafe/" target="_blank" rel="noopener" aria-label="Instagram" data-social="instagram">
+        <a data-needs="instagram" href="{{instagram}}" target="_blank" rel="noopener" aria-label="Instagram" data-social="instagram">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none"/></svg>
           <span>Instagram</span>
         </a>
-        <a href="https://www.tiktok.com/@marufsi1" target="_blank" rel="noopener" aria-label="TikTok" data-social="tiktok">
+        <a data-needs="tiktok" href="{{tiktok}}" target="_blank" rel="noopener" aria-label="TikTok" data-social="tiktok">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
           <span>TikTok</span>
         </a>
@@ -122,20 +167,20 @@
   </section>
 </main>
 
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"CafeOrCoffeeShop","name":"Maruf Cafe","url":"https://www.marufcafe.com/","telephone":"+1-929-335-3296",
- "address":{"@type":"PostalAddress","streetAddress":"365 Veterans Rd W","addressLocality":"Staten Island","addressRegion":"NY","postalCode":"10309","addressCountry":"US"},
- "openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"opens":"07:00","closes":"22:00"},{"@type":"OpeningHoursSpecification","dayOfWeek":"Sunday","opens":"07:00","closes":"16:00"}],
- "sameAs":["https://www.instagram.com/maruf.cafe/","https://www.tiktok.com/@marufsi1"]}
-</script>
-
 <footer>
   <span>© <span id="year"></span> Maruf Cafe</span>
-  <a href="https://www.instagram.com/maruf.cafe/" target="_blank" rel="noopener">Instagram</a>
-  <a href="https://www.tiktok.com/@marufsi1" target="_blank" rel="noopener">TikTok</a>
+  <a data-needs="instagram" href="{{instagram}}" target="_blank" rel="noopener">Instagram</a>
+  <a data-needs="tiktok" href="{{tiktok}}" target="_blank" rel="noopener">TikTok</a>
+  <a href="/privacy">Privacy</a>
+  <a href="/support">Support</a>
   <button type="button" id="install" class="install" hidden>Get the app</button>
   <a href="#top">Back to top ↑</a>
 </footer>
+<div class="mobile-bar" role="navigation" aria-label="Quick actions">
+  <a class="mb-call" href="tel:{{phoneTel}}">Call</a>
+  <a href="/large-orders#request">Large orders</a>
+  <a href="/rent-the-cafe#request">Rent the café</a>
+</div>
 <p id="install-hint" class="install-hint" hidden>On iPhone: tap the Share button, then Add to Home Screen.</p>
 
 <script type="module" src="showcase.js"></script>

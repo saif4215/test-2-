@@ -24,7 +24,7 @@ export async function hookServer(status = 200) {
     res.statusCode = status; res.end("{}");
   });
   await new Promise((r) => s.listen(0, r));
-  return { hooks, url: `http://localhost:${s.address().port}`, close: () => s.close() };
+  return { hooks, unref: () => s.unref(), url: `http://localhost:${s.address().port}`, close: () => s.close() };
 }
 
 /** Start the site. Returns helpers; call close() when done. `extra` overrides or adds environment settings. */
@@ -38,6 +38,7 @@ export async function startSite(extra = {}, { notify = true } = {}) {
   };
   const server = createServer(env);
   await new Promise((r) => server.listen(0, r));
+  server.unref(); hook.unref();   // a failing test must not keep the process alive
   const u = `http://localhost:${server.address().port}`;
   const json = async (r) => ({ status: r.status, json: await r.json().catch(() => null), headers: r.headers });
   const api = {
