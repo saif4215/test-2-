@@ -18,7 +18,7 @@ import { normalizeMenu, publicMenu, checkoutIndex } from "./lib/menu.mjs";
 import { normalizeContent, mergeContent } from "./lib/content.mjs";
 import { detectImage, MAX_UPLOAD_BYTES, MAX_UPLOADS } from "./lib/uploads.mjs";
 import { renderPage, robotsTxt, sitemapXml } from "./lib/render.mjs";
-import { cleanMessages, ask } from "./lib/assistant.mjs";
+import { cleanMessages, ask, provider } from "./lib/assistant.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -184,7 +184,7 @@ export function createServer(env = process.env) {
   }
 
   /* ---- the app's assistant: needs ANTHROPIC_API_KEY; capped per visitor and per day so it cannot run up a bill ---- */
-  const assistantOn = !!env.ANTHROPIC_API_KEY;
+  const assistantOn = !!provider(env);
   const assistantPerMin = Number(env.ASSISTANT_RATE_LIMIT_PER_MIN) || 6, assistantPerDay = Number(env.ASSISTANT_DAILY_LIMIT) || 300;
   let assistantDay = "", assistantCount = 0;
   async function assistant(body) {

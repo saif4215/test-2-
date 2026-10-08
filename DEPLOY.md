@@ -123,6 +123,24 @@ To turn it on:
 2. In Render add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
 3. Redeploy. The "Ask Maruf Cafe AI" button on the app's Home screen now opens a chat.
 
+### Free option (any OpenAI-style service)
+
+No AI is completely free without an account, because every service needs a key so it knows who is asking. But several
+services (for example **Groq**, **OpenRouter** and **Google Gemini**) offer a free tier with a free key, and they all work here:
+
+1. Sign up on the service's website and create an API key (no card needed on most free tiers; check theirs).
+2. In Render add three variables instead of `ANTHROPIC_API_KEY`:
+   - `AI_API_KEY` = the key
+   - `AI_BASE_URL` = the service's OpenAI-compatible address, which must start with `https://`
+     (examples: `https://api.groq.com/openai/v1`, `https://openrouter.ai/api/v1`; check the service's docs for the exact address)
+   - `AI_MODEL` = a model name from the service's list. Pick one marked free. Model names change, so copy it from their site.
+3. Redeploy and test it like above.
+
+Things to know about free tiers: they have low limits (the assistant says "busy" when you hit them), they can change or end,
+and some free services may keep or use what people type to improve their products. The privacy page says this. The answers may also
+follow the café's rules less reliably than a stronger paid model, so test it with tricky questions (dates, allergies, prices) first.
+If both are set, the free service is used.
+
 Cost control: each visitor is limited to 6 questions a minute, and the whole assistant stops at 300 questions a day
 (`ASSISTANT_DAILY_LIMIT`). Set your own monthly spending limit in the Anthropic console too. The key stays on the server.
 Chats are not stored, and the privacy page says that questions are sent to Anthropic. Check Anthropic's pricing page for current costs.

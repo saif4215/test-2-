@@ -66,6 +66,35 @@ test("the assistant sees the live menu: hidden items and edited prices", async (
   m.close(); t.close();
 });
 
+test("a free OpenAI-style service (Groq, OpenRouter, Gemini...) works too, with its own key and model", async () => {
+  const calls = [];
+  const s = http.createServer(async (req, res) => {
+    let raw = ""; for await (const c of req) raw += c;
+    calls.push({ url: req.url, auth: req.headers.authorization, body: JSON.parse(raw) });
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ choices: [{ message: { role: "assistant", content: "We open at 7 AM." } }] }));
+  });
+  await new Promise((r) => s.listen(0, r)); s.unref();
+  const t = await startSite({ AI_API_KEY: "free-key", AI_MODEL: "some-free-model", AI_BASE_URL: `http://localhost:${s.address().port}/v1/` });
+  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true });
+  const r = await ask(t, [{ role: "user", content: "When do you open?" }]);
+  assert.equal(r.json.reply, "We open at 7 AM.");
+  const c = calls[0];
+  assert.equal(c.url, "/v1/chat/completions"); assert.equal(c.auth, "Bearer free-key"); assert.equal(c.body.model, "some-free-model");
+  assert.equal(c.body.messages[0].role, "system"); assert.match(c.body.messages[0].content, /365 Veterans Rd W/);
+  assert.deepEqual(c.body.messages.slice(1), [{ role: "user", content: "When do you open?" }]);
+  assert.doesNotMatch(JSON.stringify(r.json), /free-key/);
+  s.close(); t.close();
+});
+
+test("the free service needs all three settings, and an https address, or the assistant stays off", async () => {
+  for (const env of [{ AI_API_KEY: "k", AI_MODEL: "m" }, { AI_API_KEY: "k", AI_BASE_URL: "https://x.example/v1" }, { AI_MODEL: "m", AI_BASE_URL: "https://x.example/v1" }, { AI_API_KEY: "k", AI_MODEL: "m", AI_BASE_URL: "http://evil.example/v1" }]) {
+    const t = await startSite(env);
+    assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: false }, JSON.stringify(Object.keys(env)) + (env.AI_BASE_URL || ""));
+    t.close();
+  }
+});
+
 test("a customer cannot sneak in their own instructions as the system or assistant", async () => {
   const m = await claudeMock();
   const t = await startSite({ ANTHROPIC_API_KEY: "k", ANTHROPIC_API_BASE: m.base });
