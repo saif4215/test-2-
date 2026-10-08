@@ -133,6 +133,88 @@ function countUp(node) {
   badge.hidden = false;
 }
 
+/* ---------- procedural surface textures and lighting, shared by both 3D scenes ---------- */
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+function makeNoise(seed) {
+  const r = rng(seed), P = new Float32Array(65536);
+  for (let i = 0; i < P.length; i++) P[i] = r();
+  const at = (x, y) => P[((y & 255) << 8) | (x & 255)];
+  return (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    return (at(xi, yi) * (1 - u) + at(xi + 1, yi) * u) * (1 - v) + (at(xi, yi + 1) * (1 - u) + at(xi + 1, yi + 1) * u) * v;
+  };
+}
+/** fractal noise, values 0..1, size x size */
+function fbm(size, { seed = 1, scale = 8, octaves = 5, gain = 0.5 } = {}) {
+  const n = makeNoise(seed), out = new Float32Array(size * size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    let v = 0, a = 1, f = scale, s = 0;
+    for (let o = 0; o < octaves; o++) { v += a * n((x / size) * f, (y / size) * f); s += a; a *= gain; f *= 2; }
+    out[y * size + x] = v / s;
+  }
+  return out;
+}
+/** texture from a per-pixel function (i, u, v) -> [r, g, b, a] */
+function pixelTexture(size, pixel, srgb = true) {
+  const cv = document.createElement("canvas"); cv.width = cv.height = size;
+  const g = cv.getContext("2d"), img = g.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) {
+    const [r, gr, b, a = 255] = pixel(i, (i % size) / size, Math.floor(i / size) / size);
+    img.data[i * 4] = r; img.data[i * 4 + 1] = gr; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = a;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(cv);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+const grey = (v) => [v, v, v];
+
+/** latte art seen from above: crema, a rosetta of stacked leaves, a foam ring at the edge */
+function latteArtTexture() {
+  const S = 512, cv = document.createElement("canvas"); cv.width = cv.height = S;
+  const g = cv.getContext("2d"), n = fbm(128, { seed: 5, scale: 5, octaves: 4 });
+  const bg = g.createRadialGradient(S / 2, S / 2, 20, S / 2, S / 2, S / 2);
+  bg.addColorStop(0, "#4b2713"); bg.addColorStop(0.72, "#74401f"); bg.addColorStop(0.93, "#a8703c"); bg.addColorStop(1, "#cf9a60");
+  g.fillStyle = bg; g.fillRect(0, 0, S, S);
+  const mottle = g.getImageData(0, 0, S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const k = 0.86 + n[(y >> 2) * 128 + (x >> 2)] * 0.3, i = (y * S + x) * 4;
+    mottle.data[i] *= k; mottle.data[i + 1] *= k; mottle.data[i + 2] *= k;
+  }
+  g.putImageData(mottle, 0, 0);
+  const art = document.createElement("canvas"); art.width = art.height = S;
+  const a = art.getContext("2d");
+  a.translate(S / 2, S / 2 + 10);
+  const cream = "#f4e7d0", dark = "#6a3818";
+  for (let i = 0; i < 7; i++) {
+    const cy = 150 - i * 46, rx = 138 - i * 15, ry = 40 - i * 1.6;
+    a.fillStyle = cream; a.beginPath(); a.ellipse(0, cy, rx, ry, 0, 0, Math.PI * 2); a.fill();
+    a.fillStyle = dark; a.beginPath(); a.ellipse(0, cy + 15, rx * 0.92, ry * 0.8, 0, 0, Math.PI * 2); a.fill();   // carve the crescent
+  }
+  a.fillStyle = cream; a.beginPath(); a.arc(0, -158, 22, 0, Math.PI * 2); a.fill();
+  a.strokeStyle = dark; a.lineWidth = 7; a.lineCap = "round"; a.beginPath(); a.moveTo(0, -165); a.lineTo(0, 192); a.stroke();
+  g.filter = "blur(2.5px)"; g.globalAlpha = 0.94; g.drawImage(art, 0, 0);
+  g.filter = "none"; g.globalAlpha = 1;
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/** a dark room with a few bright softboxes, baked into a reflection map */
+function studioEnvironment(renderer) {
+  const env = new THREE.Scene();
+  env.background = new THREE.Color(0x0b0907);
+  const box = (w, h, color, k, x, y, z) => {
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(k), side: THREE.DoubleSide }));
+    mesh.position.set(x, y, z); mesh.lookAt(0, 0, 0); env.add(mesh);
+  };
+  box(9, 9, 0xfff1dc, 9, 0, 9, 2);       // overhead softbox
+  box(2.5, 11, 0xdfe8ff, 5, -9, 2, 3);   // cool strip, left
+  box(2.5, 11, 0xffb55a, 7, 9, 1, -2);   // warm strip, right
+  box(10, 3, 0xffe1b0, 3, 0, 2, -9);     // back rim
+  return new THREE.PMREMGenerator(renderer).fromScene(env, 0.02).texture;
+}
+
 /* ---------- hero 3D scene ---------- */
 const canvas = document.getElementById("scene");
 try { initScene(); } catch (err) { console.warn("WebGL unavailable, showing static hero.", err); canvas.remove(); }
@@ -141,27 +223,37 @@ function initScene() {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
   camera.position.set(0, 1.6, 8);
 
-  scene.add(new THREE.HemisphereLight(0xffe2b0, 0x120d08, 0.7));
-  const key = new THREE.DirectionalLight(0xffd9a0, 3);
-  key.position.set(4, 6, 5);
+  scene.environment = studioEnvironment(renderer);
+  scene.environmentIntensity = 0.55;
+  scene.add(new THREE.HemisphereLight(0xffe2b0, 0x120d08, 0.4));
+  const key = new THREE.DirectionalLight(0xffd9a0, 2.6);
+  key.position.set(4, 7, 5);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
+  key.shadow.bias = -0.0005; key.shadow.normalBias = 0.03; key.shadow.radius = 6;
   scene.add(key);
   const rim = new THREE.PointLight(0xd4a24c, 40, 20);
   rim.position.set(-4, 2, -3);
   scene.add(rim);
 
+  const phys = (color, rough, extra = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: rough, ...extra });
+
   /* cup group, built from lathe profiles */
   const cup = new THREE.Group();
-  const ceramic = new THREE.MeshStandardMaterial({ color: 0xf1e8da, roughness: 0.25, metalness: 0.05 });
+  const ceramic = new THREE.MeshPhysicalMaterial({ color: 0xf4ecdf, roughness: 0.18, clearcoat: 0.9, clearcoatRoughness: 0.12 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4a24c, roughness: 0.3, metalness: 0.9 });
-  const coffee = new THREE.MeshStandardMaterial({ color: 0x2a140a, roughness: 0.15, metalness: 0.2 });
+  const coffee = new THREE.MeshPhysicalMaterial({ map: latteArtTexture(), roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.06 });
 
   const body = new THREE.LatheGeometry([
-    [0, 0], [0.55, 0], [0.8, 0.1], [1.05, 0.7], [1.15, 1.45], [1.12, 1.5], [1.02, 1.45], [0.95, 0.75], [0.7, 0.2], [0, 0.15],
+    [0, 0], [0.55, 0], [0.8, 0.1], [1.05, 0.7], [1.15, 1.45], [1.145, 1.49], [1.12, 1.52], [1.085, 1.53], [1.05, 1.5], [1.02, 1.45], [0.95, 0.75], [0.7, 0.2], [0, 0.15],
   ].map(([x, y]) => new THREE.Vector2(x, y)), 64);
   cup.add(new THREE.Mesh(body, ceramic));
   const rimRing = new THREE.Mesh(new THREE.TorusGeometry(1.085, 0.03, 12, 64), gold);
@@ -170,6 +262,9 @@ function initScene() {
   const liquid = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), coffee);
   liquid.rotation.x = -Math.PI / 2; liquid.position.y = 1.3;
   cup.add(liquid);
+  const meniscus = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.022, 10, 64), phys(0xc89558, 0.3, { clearcoat: 1 }));
+  meniscus.rotation.x = Math.PI / 2; meniscus.position.y = 1.305;
+  cup.add(meniscus);
   const handle = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.09, 16, 32, Math.PI * 1.15), ceramic);
   handle.position.set(1.12, 0.85, 0); handle.rotation.z = -Math.PI * 0.58;
   cup.add(handle);
@@ -210,14 +305,22 @@ function initScene() {
   ].map(([x, y]) => new THREE.Vector2(x, y)), 64), ceramic);
   cup.add(saucer);
   cup.position.y = -1.2;
+  /* a dark glossy tabletop that fades into the page, so the cup has something to stand on */
+  const fade = pixelTexture(256, (i, u, v) => { const d = Math.min(1, Math.hypot(u - 0.5, v - 0.5) * 2); const k = Math.pow(1 - d, 1.6) * 255; return [k, k, k]; }, false);
+  const table = new THREE.Mesh(new THREE.CircleGeometry(6, 64), new THREE.MeshStandardMaterial({ color: 0x1d1610, roughness: 0.3, alphaMap: fade, transparent: true }));
+  table.rotation.x = -Math.PI / 2; table.position.y = -0.055;
+  cup.add(table);
+  cup.traverse((o) => { if (o.isMesh) { o.castShadow = o !== table; o.receiveShadow = true; } });
   const rig = new THREE.Group();
   rig.add(cup);
   scene.add(rig);
 
   /* floating coffee beans */
+  const fbm128 = fbm(128, { seed: 11, scale: 6, octaves: 4 });
   const beanGeo = new THREE.SphereGeometry(0.16, 16, 12);
   beanGeo.scale(1, 0.65, 0.7);
-  const beanMat = new THREE.MeshStandardMaterial({ color: 0x4a2a14, roughness: 0.45 });
+  const beanBump = pixelTexture(128, (i) => grey(fbm128[i] * 255), false);
+  const beanMat = new THREE.MeshPhysicalMaterial({ color: 0x4a2a14, roughness: 0.4, clearcoat: 0.4, clearcoatRoughness: 0.35, bumpMap: beanBump, bumpScale: 2 });
   const N = 40;
   const beans = new THREE.InstancedMesh(beanGeo, beanMat, N);
   const seeds = Array.from({ length: N }, () => ({
@@ -228,13 +331,14 @@ function initScene() {
   scene.add(beans);
 
   /* steam sprites */
-  const sc = document.createElement("canvas"); sc.width = sc.height = 64;
-  const g = sc.getContext("2d").createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, "rgba(255,240,215,.55)"); g.addColorStop(1, "rgba(255,240,215,0)");
-  const sctx = sc.getContext("2d"); sctx.fillStyle = g; sctx.fillRect(0, 0, 64, 64);
-  const steamTex = new THREE.CanvasTexture(sc);
+  const wisp = fbm(128, { seed: 7, scale: 3, octaves: 4 });
+  const steamTex = pixelTexture(128, (i, u, v) => {
+    const d = Math.hypot(u - 0.5, v - 0.5) * 2, fall = Math.max(0, 1 - d);
+    const a = Math.min(1, Math.max(0, (wisp[i] - 0.38) * 2.4)) * fall * fall * 150;
+    return [255, 244, 228, a];
+  }, false);
   const steam = Array.from({ length: 18 }, (_, i) => {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex, transparent: true, depthWrite: false }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex, transparent: true, depthWrite: false, rotation: i * 1.7 }));
     s.userData.t = i / 18;
     cup.add(s);
     return s;
@@ -316,22 +420,8 @@ function initBurger() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
 
-  /* studio reflections: a dark room with a few bright softboxes, baked into an environment map */
-  {
-    const env = new THREE.Scene();
-    env.background = new THREE.Color(0x0b0907);
-    const box = (w, h, color, k, x, y, z) => {
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(k), side: THREE.DoubleSide }));
-      mesh.position.set(x, y, z); mesh.lookAt(0, 0, 0); env.add(mesh);
-    };
-    box(9, 9, 0xfff1dc, 9, 0, 9, 2);       // overhead softbox
-    box(2.5, 11, 0xdfe8ff, 5, -9, 2, 3);   // cool strip, left
-    box(2.5, 11, 0xffb55a, 7, 9, 1, -2);   // warm strip, right
-    box(10, 3, 0xffe1b0, 3, 0, 2, -9);     // back rim
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(env, 0.02).texture;
-    scene.environmentIntensity = 0.5;
-  }
+  scene.environment = studioEnvironment(renderer);
+  scene.environmentIntensity = 0.5;
 
   scene.add(new THREE.HemisphereLight(0xffe8c4, 0x1a120a, 0.35));
   const key = new THREE.DirectionalLight(0xffdcae, 2.0);
@@ -359,6 +449,36 @@ function initBurger() {
     return geo;
   }
   const lerpHex = (c, a, b, t) => c.set(a).lerp(new THREE.Color(b), clamp(t, 0, 1));
+
+  /* surface detail: fine pores on the bun, a craggy seared patty, veined lettuce */
+  const poreN = fbm(256, { seed: 21, scale: 28, octaves: 3, gain: 0.55 });
+  const bunBump = pixelTexture(256, (i) => grey(poreN[i] * 255), false);
+  const pattyN = fbm(256, { seed: 31, scale: 9, octaves: 5 }), flecks = rng(77);
+  const pattyMap = pixelTexture(256, (i) => {
+    let v = 150 + pattyN[i] * 105;
+    if (pattyN[i] < 0.36) v *= 0.55;               // charred crust
+    else if (flecks() < 0.012) v = 255;             // fat flecks
+    return [v, v * 0.93, v * 0.88];
+  });
+  const pattyBump = pixelTexture(256, (i) => grey(Math.pow(pattyN[i], 1.4) * 255), false);
+  const veinTex = (() => {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 512;
+    const g = cv.getContext("2d"), r = rng(5);
+    g.fillStyle = "#c9c9c9"; g.fillRect(0, 0, 512, 512);
+    g.lineCap = "round"; g.strokeStyle = "#ffffff";
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2 + r() * 0.2; g.lineWidth = 7;
+      g.beginPath(); g.moveTo(256, 256);
+      let x = 256, y = 256;
+      for (let s = 1; s <= 8; s++) {
+        const aa = a + (r() - 0.5) * 0.25; x += Math.cos(aa) * 32; y += Math.sin(aa) * 32; g.lineTo(x, y);
+        if (s > 2 && s < 8) { g.save(); g.lineWidth = 3; for (const side of [-1, 1]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(aa + side * 0.9) * 26, y + Math.sin(aa + side * 0.9) * 26); g.stroke(); } g.restore(); }
+      }
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    return t;
+  })();
 
   /* tomato slice top: skin ring, flesh, seed chambers */
   function tomatoTexture() {
@@ -403,7 +523,7 @@ function initBurger() {
     const g = layer("Brioche bottom", 0, 0.22);
     const side = paint(lathe([[1.15, 0], [1.42, 0.05], [1.53, 0.17], [1.52, 0.31], [1.4, 0.42], [1.3, 0.45]]),
       (c, x, y) => lerpHex(c, 0xd88a2c, 0xe9aa4a, y / 0.45));
-    g.add(new THREE.Mesh(side, phys(0xffffff, 0.45, { vertexColors: true, clearcoat: 0.5, clearcoatRoughness: 0.4 })));
+    g.add(new THREE.Mesh(side, phys(0xffffff, 0.45, { vertexColors: true, clearcoat: 0.5, clearcoatRoughness: 0.4, bumpMap: bunBump, bumpScale: 0.45 })));
     const top = new THREE.Mesh(new THREE.CircleGeometry(1.3, 56), phys(0xd9a050, 0.85));
     top.rotation.x = -Math.PI / 2; top.position.y = 0.45;
     const bottom = new THREE.Mesh(new THREE.CircleGeometry(1.2, 40), phys(0xc98a34, 0.85));
@@ -432,7 +552,7 @@ function initBurger() {
     }
     geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
     geo.computeVertexNormals();
-    g.add(new THREE.Mesh(geo, phys(0xffffff, 0.7, { vertexColors: true, sheen: 0.4, sheenRoughness: 0.5, sheenColor: new THREE.Color(0x8a3a24) })));
+    g.add(new THREE.Mesh(geo, phys(0xffffff, 0.7, { vertexColors: true, map: pattyMap, bumpMap: pattyBump, bumpScale: 5, sheen: 0.4, sheenRoughness: 0.5, sheenColor: new THREE.Color(0x8a3a24) })));
   }
   // 2 · melted cheese, sagging over the edge
   {
@@ -460,7 +580,7 @@ function initBurger() {
       }
       lg.computeVertexNormals();
       paint(lg, (c, x, y) => lerpHex(c, 0x2a6417, 0x66a834, Math.hypot(x, y) / R * 1.1 - 0.1));
-      const mesh = new THREE.Mesh(lg, phys(0xffffff, 0.35, { vertexColors: true, side: THREE.DoubleSide, clearcoat: 0.35, clearcoatRoughness: 0.4 }));
+      const mesh = new THREE.Mesh(lg, phys(0xffffff, 0.35, { vertexColors: true, map: veinTex, bumpMap: veinTex, bumpScale: 1.4, side: THREE.DoubleSide, clearcoat: 0.35, clearcoatRoughness: 0.4 }));
       mesh.rotation.x = -Math.PI / 2; mesh.position.y = k * 0.06;
       g.add(mesh);
     });
@@ -477,6 +597,7 @@ function initBurger() {
         r.position.set(x, y, z); g.add(r);
       }
     });
+    droplets(g, 26, 0.035, 0.07, 1.0);
   }
   // 5 · tomato: thick slices, wet
   {
@@ -506,7 +627,7 @@ function initBurger() {
       p.setXYZ(i, x * k, y + Math.sin(x * 5 + z * 3) * 0.012 * (y > 0.3 ? 1 : 0), z * k);
     }
     crown.computeVertexNormals();
-    g.add(new THREE.Mesh(crown, phys(0xffffff, 0.35, { vertexColors: true, clearcoat: 0.9, clearcoatRoughness: 0.28 })));
+    g.add(new THREE.Mesh(crown, phys(0xffffff, 0.35, { vertexColors: true, clearcoat: 0.9, clearcoatRoughness: 0.28, bumpMap: bunBump, bumpScale: 0.45 })));
     const under = new THREE.Mesh(new THREE.CircleGeometry(1.4, 48), phys(0xd9a458, 0.85));
     under.rotation.x = Math.PI / 2;
     g.add(under);
