@@ -326,7 +326,9 @@ export function createServer(env = process.env) {
       if (url.pathname === "/admin/requests" && req.method === "GET") return adminPage(req, res);
 
       if (req.method === "GET" || req.method === "HEAD") {
-        const hit = await resolveStatic(url.pathname);
+        let hit = await resolveStatic(url.pathname);
+        // The phone app's own screens (/app/events, /app/menu ...) all load the app's single page.
+        if (!hit && /^\/app\//.test(url.pathname) && !path.extname(url.pathname)) hit = await resolveStatic("/app/index.html");
         if (hit?.redirect) { res.writeHead(301, { Location: hit.redirect }); return res.end(); }
         if (hit) {
           const cache = /^\/(vendor|fonts)\//.test(url.pathname) ? "public, max-age=604800" : "no-cache";

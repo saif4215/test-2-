@@ -3,6 +3,7 @@
 Standalone static site (no build step). Three.js is vendored in `vendor/`.
 
 ## The phone app
+To open it with only a phone, put it online: see `DEPLOY.md` (about 10 minutes, free). It is served at `/app/`.
 The event, catering and large-order app lives in `app/` (Expo / React Native: iPhone, Android and web). See `app/README.md`.
 Its forms send to this server (`POST /api/inquiry`). Set `INQUIRY_WEBHOOK_URL` or `RESEND_API_KEY` + `NOTIFY_EMAIL` to be
 notified, and `ADMIN_PASSWORD` to read requests at `/admin/requests`.

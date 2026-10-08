@@ -220,3 +220,19 @@ test("only files inside public/ are served, including through encoded traversal"
   }
   assert.equal((await fetch(base + "/vendor/three.LICENSE")).status, 404);   // unknown file types are not served
 });
+
+import { existsSync } from "node:fs";
+const appBuilt = existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "public/app/index.html"));
+test("the phone app is served at /app/ and its screens reload on any path", { skip: !appBuilt && "run npm run build first" }, async () => {
+  const index = await fetch(base + "/app/");
+  assert.equal(index.status, 200);
+  assert.match(await index.text(), /manifest\.webmanifest/);
+  for (const screen of ["/app/events", "/app/menu", "/app/quote"]) {
+    const r = await fetch(base + screen);
+    assert.equal(r.status, 200, screen);
+    assert.match(r.headers.get("content-type"), /text\/html/);
+  }
+  assert.equal((await fetch(base + "/app/missing.js")).status, 404);          // real files that do not exist are still 404
+  assert.equal((await fetch(base + "/app", { redirect: "manual" })).status, 301);
+  assert.equal((await fetch(base + "/app/manifest.webmanifest")).headers.get("content-type"), "application/manifest+json");
+});

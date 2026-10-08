@@ -1,0 +1,13 @@
+{
+  "name": "maruf-cafe",
+  "private": true,
+  "description": "Maruf Cafe server and phone app",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build-app.mjs",
+    "start": "node server.mjs",
+    "test": "node --test server.test.mjs"
+  }
+}
