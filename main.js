@@ -231,7 +231,7 @@ function initScene() {
   camera.position.set(0, 1.6, 8);
 
   scene.environment = studioEnvironment(renderer);
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.9;
   scene.add(new THREE.HemisphereLight(0xffe2b0, 0x120d08, 0.4));
   const key = new THREE.DirectionalLight(0xffd9a0, 2.6);
   key.position.set(4, 7, 5);
@@ -240,7 +240,7 @@ function initScene() {
   Object.assign(key.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
   key.shadow.bias = -0.0005; key.shadow.normalBias = 0.03; key.shadow.radius = 6;
   scene.add(key);
-  const rim = new THREE.PointLight(0xd4a24c, 40, 20);
+  const rim = new THREE.PointLight(0xd4a24c, 90, 24);
   rim.position.set(-4, 2, -3);
   scene.add(rim);
 
@@ -252,6 +252,73 @@ function initScene() {
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4a24c, roughness: 0.3, metalness: 0.9 });
   const coffee = new THREE.MeshPhysicalMaterial({ map: latteArtTexture(), roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.06 });
 
+  const TAKEAWAY = true;   // the real Maruf paper cup. Set to false for the ceramic cup with latte art.
+  let steamAt = { x: 0, y: 1.5, z: 0, rise: 2.2, size: 1 };   // where the steam leaves the cup
+
+  /* logo decal: a patch of the cone-shaped cup wall, textured with the logo. wall = [[y, radius], ...] */
+  function addLogoDecal({ wall, y0, y1, arc, src }) {
+    const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 788;
+    const g = cv.getContext("2d");
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const img = new Image();
+    img.onload = () => {
+      const w = 960, h = (w * img.naturalHeight) / img.naturalWidth;
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.drawImage(img, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+      tex.needsUpdate = true;
+    };
+    img.src = src;
+    // outer wall radius at height y: the profile is straight segments
+    const radiusAt = (y) => { for (let i = 0; i < wall.length - 1; i++) { const [ya, ra] = wall[i], [yb, rb] = wall[i + 1]; if (y <= yb) return ra + ((y - ya) / (yb - ya)) * (rb - ra); } return wall[wall.length - 1][1]; };
+    const NU = 40, NV = 16, pos = [], uv = [], idx = [];
+    for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
+      const y = y0 + ((y1 - y0) * j) / NV, ang = (i / NU - 0.5) * arc, r = radiusAt(y) + 0.006;
+      pos.push(Math.sin(ang) * r, y, Math.cos(ang) * r); uv.push(i / NU, j / NV);
+    }
+    for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const p = j * (NU + 1) + i, q = p + NU + 1; idx.push(p, p + 1, q, p + 1, q + 1, q); }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx); geo.computeVertexNormals();
+    cup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
+  }
+  const smoothLathe = (pts, seg = 96) => new THREE.LatheGeometry(new THREE.SplineCurve(pts.map(([x, y]) => new THREE.Vector2(x, y))).getPoints(pts.length * 8), seg);
+
+  if (TAKEAWAY) {
+    /* black paper cup, white base band, glossy black lid with a sip tab */
+    const H = 3.1, R0 = 0.68, R1 = 1.0, YB = 0.38;
+    const rAt = (y) => R0 + (R1 - R0) * (y / H);
+    const grain = fbm(256, { seed: 41, scale: 60, octaves: 2 });
+    const grainBump = pixelTexture(256, (i) => grey(grain[i] * 255), false);
+    grainBump.wrapS = grainBump.wrapT = THREE.RepeatWrapping; grainBump.repeat.set(4, 4);
+    const paperBlack = phys(0x15171a, 0.48, { clearcoat: 0.4, clearcoatRoughness: 0.4, bumpMap: grainBump, bumpScale: 0.22, sheen: 0.5, sheenRoughness: 0.4, sheenColor: new THREE.Color(0x4a5058) });
+    const paperWhite = phys(0xeeeadf, 0.85, { bumpMap: grainBump, bumpScale: 0.3 });
+    const plastic = phys(0x0c0d0e, 0.26, { clearcoat: 0.7, clearcoatRoughness: 0.28 });
+
+    cup.add(new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(rAt(YB), YB), new THREE.Vector2(rAt(H), H)], 96), paperBlack));
+    cup.add(new THREE.Mesh(new THREE.LatheGeometry([
+      new THREE.Vector2(0, 0), new THREE.Vector2(R0 - 0.05, 0), new THREE.Vector2(R0 - 0.02, 0.03), new THREE.Vector2(rAt(YB) - 0.012, YB),
+    ], 96), paperWhite));
+    // lid: skirt over the rim, rolled bead, stepped dome
+    const L = H - 0.12;
+    cup.add(new THREE.Mesh(smoothLathe([
+      [1.05, L - 0.02], [1.13, L + 0.02], [1.21, L + 0.1], [1.25, L + 0.18], [1.22, L + 0.25], [1.13, L + 0.28], [1.05, L + 0.25],
+      [1.0, L + 0.27], [0.95, L + 0.33], [0.9, L + 0.39], [0.78, L + 0.41], [0.4, L + 0.43], [0.0, L + 0.44],
+    ]), plastic));
+    // sip tab on the far side, with the drinking slot and a vent hole
+    const ta = 2.5, tx = Math.sin(ta), tz = Math.cos(ta), lidTop = L + 0.4;
+    const tab = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.5, 0.15, 0.36), plastic);
+    tab.position.set(tx * 0.55, lidTop, tz * 0.55); tab.rotation.y = ta - Math.PI / 2; cup.add(tab);
+    const slot = new THREE.Mesh(new THREE.CircleGeometry(1, 24).scale(0.2, 0.06, 1), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    slot.rotation.x = -Math.PI / 2; slot.rotation.z = -(ta - Math.PI / 2); slot.position.set(tx * 0.86, lidTop - 0.02, tz * 0.86); cup.add(slot);
+    const vent = new THREE.Mesh(new THREE.CircleGeometry(0.035, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    vent.rotation.x = -Math.PI / 2; vent.position.set(-tx * 0.5, lidTop + 0.015, -tz * 0.5); cup.add(vent);
+    // the logo as printed on the cup
+    addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.68, arc: 2.1, src: "logo-cup.svg" });
+    steamAt = { x: tx * 0.86, y: lidTop + 0.1, z: tz * 0.86, rise: 2.5, size: 1.5 };
+    cup.scale.setScalar(0.86);
+  } else {
   const body = new THREE.LatheGeometry([
     [0, 0], [0.55, 0], [0.8, 0.1], [1.05, 0.7], [1.15, 1.45], [1.145, 1.49], [1.12, 1.52], [1.085, 1.53], [1.05, 1.5], [1.02, 1.45], [0.95, 0.75], [0.7, 0.2], [0, 0.15],
   ].map(([x, y]) => new THREE.Vector2(x, y)), 64);
@@ -269,41 +336,12 @@ function initScene() {
   handle.position.set(1.12, 0.85, 0); handle.rotation.z = -Math.PI * 0.58;
   cup.add(handle);
 
-  /* logo decal: a patch of the cone-shaped cup wall, textured with the wordmark */
-  {
-    const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 788;
-    const g = cv.getContext("2d");
-    const tex = new THREE.CanvasTexture(cv);
-    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-    const img = new Image();
-    img.onload = () => {      // dark-ink version of the logo, centred on the decal
-      const w = 960, h = (w * img.naturalHeight) / img.naturalWidth;
-      g.clearRect(0, 0, cv.width, cv.height);
-      g.drawImage(img, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
-      tex.needsUpdate = true;
-    };
-    img.src = "logo-dark.svg";
-
-    // outer wall radius at height y: the lathe profile is straight segments
-    const wall = [[0.1, 0.8], [0.7, 1.05], [1.45, 1.15]];
-    const radiusAt = (y) => { for (let i = 0; i < wall.length - 1; i++) { const [y0, r0] = wall[i], [y1, r1] = wall[i + 1]; if (y <= y1) return r0 + ((y - y0) / (y1 - y0)) * (r1 - r0); } return wall[wall.length - 1][1]; };
-    const NU = 36, NV = 14, Y0 = 0.3, Y1 = 1.16, ARC = 1.15;
-    const pos = [], uv = [], idx = [];
-    for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
-      const y = Y0 + ((Y1 - Y0) * j) / NV, a = (i / NU - 0.5) * ARC, r = radiusAt(y) + 0.006;
-      pos.push(Math.sin(a) * r, y, Math.cos(a) * r); uv.push(i / NU, j / NV);
-    }
-    for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + NU + 1; idx.push(a, a + 1, b, a + 1, b + 1, b); }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-    geo.setIndex(idx); geo.computeVertexNormals();
-    cup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
-  }
+    addLogoDecal({ wall: [[0.1, 0.8], [0.7, 1.05], [1.45, 1.15]], y0: 0.3, y1: 1.16, arc: 1.15, src: "logo-dark.svg" });
   const saucer = new THREE.Mesh(new THREE.LatheGeometry([
     [0, -0.05], [1.4, -0.05], [2.0, 0.08], [2.1, 0.14], [2.0, 0.12], [1.4, 0.0], [0, 0.0],
   ].map(([x, y]) => new THREE.Vector2(x, y)), 64), ceramic);
   cup.add(saucer);
+  }
   cup.position.y = -1.2;
   /* a dark glossy tabletop that fades into the page, so the cup has something to stand on */
   const fade = pixelTexture(256, (i, u, v) => { const d = Math.min(1, Math.hypot(u - 0.5, v - 0.5) * 2); const k = Math.pow(1 - d, 1.6) * 255; return [k, k, k]; }, false);
@@ -356,8 +394,8 @@ function initScene() {
     // push the cup right on wide screens, centre it on narrow ones
     const wide = w / h > 1.1;
     rig.position.x = wide ? 2.4 : 0;
-    baseY = wide ? 0.6 : 4.8;
-    camera.position.z = wide ? 10 : 15;
+    baseY = wide ? 0.6 : 5.9;
+    camera.position.z = wide ? 10 : 16.5;
     camera.updateProjectionMatrix();
   }
   addEventListener("resize", resize);
@@ -391,8 +429,8 @@ function initScene() {
 
     steam.forEach((s) => {
       const k = reduceMotion ? s.userData.t : (s.userData.t + t * 0.12) % 1;
-      s.position.set(Math.sin(k * 9 + s.userData.t * 20) * 0.25, 1.5 + k * 2.2, Math.cos(k * 7 + s.userData.t * 20) * 0.25);
-      s.scale.setScalar(0.35 + k * 0.7);
+      s.position.set(steamAt.x + Math.sin(k * 9 + s.userData.t * 20) * 0.25 * steamAt.size, steamAt.y + k * steamAt.rise, steamAt.z + Math.cos(k * 7 + s.userData.t * 20) * 0.25 * steamAt.size);
+      s.scale.setScalar((0.35 + k * 0.7) * steamAt.size);
       s.material.opacity = Math.sin(k * Math.PI) * 0.45;
     });
 

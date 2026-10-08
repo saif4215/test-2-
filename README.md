@@ -47,10 +47,14 @@ The site is an installable web app (PWA): `manifest.webmanifest`, `sw.js` and th
   want installed copies to drop old assets (pages and scripts already refresh when online).
 - This is not an App Store / Google Play app. Store apps need Apple ($99/yr) and Google ($25 once) developer accounts.
 
+## The hero cup
+The 3D hero cup is modelled on the real Maruf paper cup (black body, white base, black lid with sip tab, logo printed in
+white with a gold ring). To show the ceramic cup with latte art instead, set `TAKEAWAY = false` in `initScene()` in `main.js`.
+
 ## Logo
-`logo.svg` (light ink, for dark backgrounds, used in the nav) and `logo-dark.svg` (dark ink, drawn on the 3D cup) are a
+`logo.svg` (light ink, for dark backgrounds, used in the nav), `logo-dark.svg` (dark ink, for the ceramic cup) and `logo-cup.svg` (white ink with an outlined script, as printed on the paper cup) are a
 vector redraw of the Maruf Cafe logo, made from the image shared in chat, not the original artwork. To use the real files,
-replace both with your own (same names, SVG or PNG with matching extension updated in `index.html`, `main.js`, `server.mjs`).
+replace them with your own (same names, SVG or PNG with matching extension updated in `index.html`, `main.js`, `server.mjs`).
 
 ## Still to fill in
 Nothing required. Hours are in `#visit` in `index.html` and again in `main.js` (open-now badge) and the JSON-LD block; change all three if they change. The Columbus Day note on the cafe's listing was left out as a one-day exception.

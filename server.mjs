@@ -20,6 +20,7 @@ const FILES = {
   "/checkout.js": ["checkout.js", "text/javascript; charset=utf-8"],
   "/logo.svg": ["logo.svg", "image/svg+xml"],
   "/logo-dark.svg": ["logo-dark.svg", "image/svg+xml"],
+  "/logo-cup.svg": ["logo-cup.svg", "image/svg+xml"],
   "/manifest.webmanifest": ["manifest.webmanifest", "application/manifest+json"],
   "/sw.js": ["sw.js", "text/javascript; charset=utf-8"],
   "/icon-180.png": ["icon-180.png", "image/png"],
