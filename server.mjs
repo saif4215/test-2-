@@ -329,6 +329,8 @@ export function createServer(env = process.env) {
         let hit = await resolveStatic(url.pathname);
         // The phone app's own screens (/app/events, /app/menu ...) all load the app's single page.
         if (!hit && /^\/app\//.test(url.pathname) && !path.extname(url.pathname)) hit = await resolveStatic("/app/index.html");
+        // Plain addresses for simple pages: /privacy serves privacy.html, /support serves support.html.
+        if (!hit && !path.extname(url.pathname) && url.pathname !== "/") hit = await resolveStatic(`${url.pathname.replace(/\/$/, "")}.html`);
         if (hit?.redirect) { res.writeHead(301, { Location: hit.redirect }); return res.end(); }
         if (hit) {
           const cache = /^\/(vendor|fonts)\//.test(url.pathname) ? "public, max-age=604800" : "no-cache";

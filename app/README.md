@@ -44,6 +44,8 @@ Every photo slot shows a tidy placeholder until you add a picture, so nothing lo
 `largeOrders`, `catering`, `interior`, `interior2`, `event` and one per catering card.
 
 ## Put it in the App Store and Google Play
+See `../STORE.md` for the full checklist, the store text to paste, and screenshots.
+
 
 You need an Apple Developer account ($99 a year) and a Google Play developer account ($25 once).
 

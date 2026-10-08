@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Chip, Eyebrow, Grid, H1, H3, Screen, Section, Small } from "../../components/ui";
-import { placeholderCategories } from "../../config";
+import { placeholderCategories, showPlaceholders } from "../../config";
 import menu from "../../data/menu.json";
 import { money, priceText, useOrder } from "../../lib/order";
 import { colors } from "../../theme";
@@ -35,9 +35,11 @@ export default function Menu() {
                 const qty = order.lines[it.id] || 0;
                 return (
                   <Card key={it.id} style={{ padding: 14, flexDirection: "row", gap: 14, alignItems: "center" }}>
-                    <View accessibilityLabel={`Photo placeholder: ${it.name}`} style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="image-outline" size={24} color={colors.goldText} />
-                    </View>
+                    {showPlaceholders ? (
+                      <View accessibilityLabel={`Photo placeholder: ${it.name}`} style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="image-outline" size={24} color={colors.goldText} />
+                      </View>
+                    ) : null}
                     <View style={{ flex: 1, gap: 4 }}>
                       <H3>{it.name}</H3>
                       {it.desc ? <Small>{it.desc}</Small> : null}

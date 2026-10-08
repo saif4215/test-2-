@@ -20,6 +20,10 @@ export const business = {
   ],
 };
 
+// Store builds set EXPO_PUBLIC_SHOW_PLACEHOLDERS=0: empty photo slots, menu thumbnails and the "[ADD EMAIL]" line are
+// then hidden instead of shown, because app stores reject apps that show placeholder content.
+export const showPlaceholders = process.env.EXPO_PUBLIC_SHOW_PLACEHOLDERS !== "0";
+
 // Where quote and event requests are sent. Set EXPO_PUBLIC_API_URL when building (see README).
 export const apiUrl = process.env.EXPO_PUBLIC_API_URL || "";
 

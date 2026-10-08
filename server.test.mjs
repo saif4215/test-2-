@@ -236,3 +236,14 @@ test("the phone app is served at /app/ and its screens reload on any path", { sk
   assert.equal((await fetch(base + "/app", { redirect: "manual" })).status, 301);
   assert.equal((await fetch(base + "/app/manifest.webmanifest")).headers.get("content-type"), "application/manifest+json");
 });
+
+test("simple pages have plain addresses (/privacy, /support)", async () => {
+  for (const p of ["/privacy", "/support"]) {
+    const r = await fetch(base + p);
+    assert.equal(r.status, 200, p);
+    assert.match(r.headers.get("content-type"), /text\/html/);
+  }
+  assert.match(await (await fetch(base + "/privacy")).text(), /Privacy Policy/);
+  assert.equal((await fetch(base + "/nothing-here")).status, 404);
+  assert.equal((await fetch(base + "/server")).status, 404);   // server.mjs is never reachable this way
+});

@@ -15,7 +15,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.marufcafe.app"
+      "bundleIdentifier": "com.marufcafe.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.marufcafe.app",
@@ -23,7 +27,8 @@
         "backgroundColor": "#0A0907",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -39,6 +44,7 @@
     ],
     "experiments": {
       "baseUrl": "/app"
-    }
+    },
+    "description": "Large orders, catering and event rental at Maruf Cafe in Staten Island."
   }
 }

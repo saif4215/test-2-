@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, Text, TextInput, View, useWindowDimension
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, shadow, text } from "../theme";
 import { photos } from "../photos";
+import { showPlaceholders } from "../config";
 
 /** Scrolling screen with a centred, readable column on tablets and the web. */
 export function Screen({ children, bottomPad = 120 }) {
@@ -88,6 +89,7 @@ export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.car
   const { width } = useWindowDimensions();
   const box = { width: "100%", aspectRatio: width >= 768 ? ratio * 1.6 : ratio, borderRadius: radiusSize, overflow: "hidden" };
   if (source) return <Image source={source} accessibilityLabel={label} resizeMode="cover" style={[box, style]} />;
+  if (!showPlaceholders) return null;   // store builds show nothing rather than a placeholder
   return (
     <View accessibilityLabel={`Photo placeholder: ${label}`} style={[box, { backgroundColor: colors.tint, alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: colors.line, borderStyle: "dashed" }, style]}>
       <Ionicons name="image-outline" size={30} color={colors.goldText} />

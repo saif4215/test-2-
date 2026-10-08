@@ -3,7 +3,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Eyebrow, Grid, H1, H2, H3, IconBadge, Screen, Section, Small } from "../../components/ui";
-import { business, faq } from "../../config";
+import { business, faq, showPlaceholders } from "../../config";
 import { openStatus } from "../../lib/dates";
 import { colors } from "../../theme";
 
@@ -42,7 +42,7 @@ export default function Contact() {
           <Grid min={300} gap={14}>
             <InfoCard icon="location-outline" title="Address">{business.address.map((l) => <Body key={l}>{l}</Body>)}</InfoCard>
             <InfoCard icon="call-outline" title="Phone"><Body>{business.phone}</Body></InfoCard>
-            <InfoCard icon="mail-outline" title="Email"><Body>{business.email || "[ADD EMAIL]"}</Body></InfoCard>
+            {business.email || showPlaceholders ? <InfoCard icon="mail-outline" title="Email"><Body>{business.email || "[ADD EMAIL]"}</Body></InfoCard> : null}
             <InfoCard icon="time-outline" title="Hours">
               {business.hours.map((h) => <Body key={h.label}>{h.label}: {fmt(h.open)} – {fmt(h.close)}</Body>)}
               <Small style={{ fontWeight: "700", color: status.open ? colors.success : colors.muted }}>{status.text}</Small>

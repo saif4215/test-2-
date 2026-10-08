@@ -1,0 +1,23 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://REPLACE-WITH-YOUR-RENDER-ADDRESS"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://REPLACE-WITH-YOUR-RENDER-ADDRESS",
+        "EXPO_PUBLIC_SHOW_PLACEHOLDERS": "0"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
