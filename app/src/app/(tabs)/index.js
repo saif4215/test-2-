@@ -2,18 +2,22 @@ import { Image, Linking, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Display, Eyebrow, Grid, H1, H2, H3, IconBadge, Photo, Screen, Section, Small } from "../../components/ui";
+import { MenuBrowser, OrderBar } from "../../components/MenuBrowser";
+import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
 import { openStatus } from "../../lib/dates";
 import { colors, radius, text } from "../../theme";
 
 export default function Home() {
   const { business, reviews, gallery } = useSite();
+  const order = useOrder();
   const status = openStatus(business.hours);
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
   return (
-    <Screen>
-      {/* hero */}
-      <View style={{ marginTop: 12, gap: 20 }}>
+    <View style={{ flex: 1 }}>
+    <Screen bottomPad={order.count ? 150 : 120}>
+      {/* the food comes first */}
+      <View style={{ marginTop: 12, gap: 16 }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.surface, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.line }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: status.open ? colors.success : colors.muted }} />
@@ -24,18 +28,23 @@ export default function Home() {
             <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }}>Staten Island, NY</Text>
           </View>
         </View>
-        <Display>Maruf Cafe — Great Food. Great Gatherings.</Display>
-        <Text style={[text.h3, { color: colors.goldText, fontWeight: "600", lineHeight: 26 }]}>Large Orders, Catering & Private Event Space in Staten Island</Text>
-        <View style={{ gap: 12 }}>
-          <Button title="Order for a large group" variant="primary" icon="basket-outline" onPress={() => router.push("/quote")} />
-          <Button title="Rent our space" variant="gold" icon="calendar-outline" onPress={() => router.push("/event-request")} />
+        <H1>What are you having today?</H1>
+        <Body>Add what you like, then send it as a large-order quote or order pickup on Square Online.</Body>
+        <Photo slot="hero" label="Add a hero photo: food spread or café interior" ratio={2} />
+      </View>
+
+      <Section style={{ marginTop: 24 }}>
+        <MenuBrowser />
+        <View style={{ marginTop: 20, gap: 12 }}>
+          <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" onPress={() => Linking.openURL(business.orderUrl)} />
         </View>
-        <View accessibilityRole="toolbar" accessibilityLabel="Quick actions" style={{ flexDirection: "row", gap: 10 }}>
-          <Button title="Call" size="medium" variant="outline" icon="call-outline" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} style={{ flex: 1 }} />
-          <Button title="Large Orders" size="medium" variant="outline" onPress={() => router.push("/orders")} style={{ flex: 1.2 }} />
-          <Button title="Rent the Cafe" size="medium" variant="outline" onPress={() => router.push("/events")} style={{ flex: 1.2 }} />
-        </View>
-        <Photo slot="hero" label="Add a hero photo: food spread or café interior" ratio={1.35} />
+      </Section>
+
+      {/* quick actions */}
+      <View accessibilityRole="toolbar" accessibilityLabel="Quick actions" style={{ flexDirection: "row", gap: 10, marginTop: 32 }}>
+        <Button title="Call" size="medium" variant="outline" icon="call-outline" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} style={{ flex: 1 }} />
+        <Button title="Large Orders" size="medium" variant="outline" onPress={() => router.push("/orders")} style={{ flex: 1.2 }} />
+        <Button title="Rent the Cafe" size="medium" variant="outline" onPress={() => router.push("/events")} style={{ flex: 1.2 }} />
       </View>
 
       {/* planning band */}
@@ -108,5 +117,7 @@ export default function Home() {
         </Card>
       </Section>
     </Screen>
+    <OrderBar />
+    </View>
   );
 }
