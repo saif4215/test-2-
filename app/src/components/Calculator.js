@@ -16,7 +16,7 @@ export default function Calculator() {
     : "";
 
   return (
-    <Card style={{ padding: 18, gap: 16 }}>
+    <Card style={{ padding: 22, gap: 18 }}>
       <H2>Planning Food for a Group?</H2>
       <Body>Tell us how many people you're feeding and what kind of food you're thinking about. This is a planning guide only. Maruf Cafe confirms quantities and pricing with you.</Body>
       <Field label="Number of guests" value={guests} onChangeText={(t) => setGuests(t.replace(/[^0-9]/g, ""))} keyboardType="number-pad" placeholder="For example, 25" maxLength={4} />
@@ -30,7 +30,7 @@ export default function Calculator() {
         </View>
       </View>
       {result.valid && result.lines.length > 0 ? (
-        <View style={{ backgroundColor: colors.tint, borderRadius: 12, padding: 14, gap: 10 }}>
+        <View style={{ backgroundColor: colors.tint, borderRadius: 16, padding: 16, gap: 10 }}>
           {result.lines.map((l) => (
             <View key={l.key} style={{ gap: 2 }}>
               <Text style={{ fontWeight: "800", color: colors.ink }}>{l.label}</Text>

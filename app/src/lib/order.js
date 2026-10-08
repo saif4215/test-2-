@@ -16,7 +16,6 @@ const Ctx = createContext(null);
 /** The customer's running order list (kept in memory while the app is open). */
 export function OrderProvider({ children }) {
   const [lines, setLines] = useState({});   // id -> qty
-  const [mode, setMode] = useState("pickup");   // "pickup" | "delivery": the default on quote forms
   const change = useCallback((id, d) => setLines((cur) => {
     const next = { ...cur }, q = Math.max(0, Math.min(50, (cur[id] || 0) + d));
     if (q) next[id] = q; else delete next[id];
@@ -29,8 +28,8 @@ export function OrderProvider({ children }) {
     const high = entries.reduce((s, l) => s + (l.cents ?? l.max) * l.qty, 0);
     const count = entries.reduce((s, l) => s + l.qty, 0);
     const summary = entries.map((l) => `${l.qty} x ${l.name}`).join("\n");
-    return { lines, entries, count, low, high, exact: low === high, summary, change, clear, mode, setMode };
-  }, [lines, change, clear, mode]);
+    return { lines, entries, count, low, high, exact: low === high, summary, change, clear };
+  }, [lines, change, clear]);
   return createElement(Ctx.Provider, { value }, children);
 }
 

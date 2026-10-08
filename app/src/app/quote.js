@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { useOrder } from "../lib/order";
 import { Body, Button, Choice, Field, FormGroup, H1 } from "../components/ui";
 import { FormShell, SendError, ThankYou } from "../components/FormShell";
 import { QUOTE_THANKS, buildQuote } from "../lib/forms";
@@ -8,8 +7,7 @@ import { submitInquiry } from "../lib/inquiry";
 
 export default function Quote() {
   const params = useLocalSearchParams();
-  const { mode } = useOrder();
-  const [v, setV] = useState({ fullName: "", phone: "", email: "", dateNeeded: "", fulfillment: mode, people: params.people || "", pickupTime: "", foodItems: params.foodItems || "", specialRequests: "", budget: "", notes: "", occasion: params.occasion || "" });
+  const [v, setV] = useState({ fullName: "", phone: "", email: "", dateNeeded: "", fulfillment: "", people: params.people || "", pickupTime: "", foodItems: params.foodItems || "", specialRequests: "", budget: "", notes: "", occasion: params.occasion || "" });
   const [errors, setErrors] = useState({});
   const [state, setState] = useState({ busy: false, done: false, error: "" });
   const set = (k) => (t) => { setV((cur) => ({ ...cur, [k]: t })); if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined })); };
