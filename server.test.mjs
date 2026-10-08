@@ -92,6 +92,14 @@ test("serves only allow-listed files", async () => {
   }
 });
 
+test("serves the app manifest, service worker and icons", async () => {
+  const m = await fetch(base + "/manifest.webmanifest");
+  assert.equal(m.status, 200);
+  assert.equal((await m.json()).display, "standalone");
+  assert.equal((await fetch(base + "/sw.js")).status, 200);
+  assert.equal((await fetch(base + "/icon-512.png")).headers.get("content-type"), "image/png");
+});
+
 test("checkout is off without Square settings", async () => {
   const off = createServer({});
   await new Promise((r) => off.listen(0, r));

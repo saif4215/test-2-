@@ -75,6 +75,23 @@ document.querySelectorAll("[data-goto]").forEach((a) => a.addEventListener("clic
 }));
 renderMenu();
 
+/* ---------- installable app: offline support + "Get the app" button ---------- */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+}
+{
+  const btn = document.getElementById("install"), hint = document.getElementById("install-hint");
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  let deferred = null;
+  addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; if (!standalone) btn.hidden = false; });
+  addEventListener("appinstalled", () => { btn.hidden = true; hint.hidden = true; });
+  if (!standalone && /iphone|ipad|ipod/i.test(navigator.userAgent)) btn.hidden = false;   // iOS has no install prompt
+  btn.addEventListener("click", async () => {
+    if (deferred) { deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; btn.hidden = true; }
+    else hint.hidden = !hint.hidden;
+  });
+}
+
 /* ---------- scroll reveal + stat counters ---------- */
 const io = new IntersectionObserver((entries) => {
   for (const e of entries) {

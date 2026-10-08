@@ -216,3 +216,8 @@ footer a:hover { color: var(--gold-2); }
 
 .logo img { display: block; height: 62px; width: auto; }
 @media (max-width: 760px) { .logo img { height: 50px; } }
+
+.install { font: 600 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-2); background: transparent; border: 1px solid var(--gold); border-radius: 99px; padding: 8px 16px; cursor: pointer; }
+.install:hover { background: var(--gold); color: var(--bg); }
+.install-hint { padding: 0 max(16px, 4vw) 28px; color: var(--muted); font-size: 14px; text-align: right; }
+.install-hint[hidden], .install[hidden] { display: none; }

@@ -38,6 +38,15 @@ Not covered yet:
 - The menu is `menu.json` (prices in cents). Ids must stay unique. The menu was copied from marufcafe.com.
 - "Order online" and "Gift cards" link to the cafe's real pages on marufcafe.com.
 
+## Install it as an app
+The site is an installable web app (PWA): `manifest.webmanifest`, `sw.js` and the `icon-*.png` files.
+- Android / Chrome: a "Get the app" button appears in the footer. The browser asks to install.
+- iPhone: "Get the app" shows Add to Home Screen steps (Safari has no install prompt).
+- It opens full screen with the Maruf icon and the menu, hours and logo work offline. Ordering needs a connection.
+- Must be served over HTTPS (or localhost) by `server.mjs`. After changing site files, bump `CACHE` in `sw.js` if you
+  want installed copies to drop old assets (pages and scripts already refresh when online).
+- This is not an App Store / Google Play app. Store apps need Apple ($99/yr) and Google ($25 once) developer accounts.
+
 ## Logo
 `logo.svg` (light ink, for dark backgrounds, used in the nav) and `logo-dark.svg` (dark ink, drawn on the 3D cup) are a
 vector redraw of the Maruf Cafe logo, made from the image shared in chat, not the original artwork. To use the real files,

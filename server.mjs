@@ -20,6 +20,12 @@ const FILES = {
   "/checkout.js": ["checkout.js", "text/javascript; charset=utf-8"],
   "/logo.svg": ["logo.svg", "image/svg+xml"],
   "/logo-dark.svg": ["logo-dark.svg", "image/svg+xml"],
+  "/manifest.webmanifest": ["manifest.webmanifest", "application/manifest+json"],
+  "/sw.js": ["sw.js", "text/javascript; charset=utf-8"],
+  "/icon-180.png": ["icon-180.png", "image/png"],
+  "/icon-192.png": ["icon-192.png", "image/png"],
+  "/icon-512.png": ["icon-512.png", "image/png"],
+  "/icon-maskable-512.png": ["icon-maskable-512.png", "image/png"],
   "/menu.json": ["menu.json", "application/json; charset=utf-8"],
   "/vendor/three.module.min.js": ["vendor/three.module.min.js", "text/javascript; charset=utf-8"],
 };
@@ -160,9 +166,9 @@ export function createServer(env = process.env) {
     return recent.length > rateMax;
   }
 
-  function send(res, status, body, type = "application/json; charset=utf-8") {
+  function send(res, status, body, type = "application/json; charset=utf-8", cache = "no-store") {
     res.writeHead(status, {
-      "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+      "Content-Type": type, "Cache-Control": cache, "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY",
     });
     res.end(typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body));
@@ -189,7 +195,7 @@ export function createServer(env = process.env) {
       const file = FILES[url.pathname];
       if (file && (req.method === "GET" || req.method === "HEAD")) {
         const data = await readFile(path.join(ROOT, file[0]));
-        return send(res, 200, req.method === "HEAD" ? "" : data, file[1]);
+        return send(res, 200, req.method === "HEAD" ? "" : data, file[1], url.pathname.startsWith("/vendor/") ? "public, max-age=86400" : "no-cache");
       }
       throw new HttpError(404, "Not found.");
     } catch (err) {
