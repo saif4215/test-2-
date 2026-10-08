@@ -1,8 +1,8 @@
 // Offline support. Pages and assets: try the network first so updates show immediately, fall back to the
 // cached copy when offline. The 3D library is cached first (it never changes without a CACHE bump).
 // Orders and payments (/api/*) and anything cross-origin (Square, fonts) are never touched.
-const CACHE = "maruf-v2";
-const SHELL = ["/", "/style.css", "/main.js", "/checkout.js", "/menu.json", "/logo.svg", "/logo-dark.svg", "/logo-cup.svg", "/manifest.webmanifest", "/icon-192.png", "/vendor/three.module.min.js"];
+const CACHE = "maruf-v3";
+const SHELL = ["/", "/showcase.css", "/showcase.js", "/checkout.js", "/menu.json", "/logo.svg", "/logo-dark.svg", "/logo-cup.svg", "/manifest.webmanifest", "/icon-192.png", "/vendor/three.module.min.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

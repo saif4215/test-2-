@@ -1,12 +1,12 @@
-import * as THREE from "./vendor/three.module.min.js";
-import { initCheckout } from "./checkout.js";
+import * as THREE from "/vendor/three.module.min.js";
+import { initCheckout } from "/checkout.js";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 document.getElementById("year").textContent = new Date().getFullYear();
 
 /* ---------- menu data (menu.json is shared with the checkout server) ---------- */
 const money = (c) => `$${(c / 100).toFixed(2)}`;
-const MENU = (await fetch("menu.json").then((r) => r.json())).groups;
+const MENU = (await fetch("/menu.json").then((r) => r.json())).groups;
 const ORDER_URL = "https://www.marufcafe.com/s/order";
 const orderable = new Map();   // items with one fixed price can go in the cart; size-based prices are ordered on Square Online
 for (const cats of Object.values(MENU)) for (const items of Object.values(cats)) for (const it of items) if (it.cents != null) orderable.set(it.id, it);
@@ -333,7 +333,7 @@ function initScene() {
     const vent = new THREE.Mesh(new THREE.CircleGeometry(0.03, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
     vent.rotation.x = -Math.PI / 2; vent.position.set(-tx * 0.45, lidTop + 0.004, -tz * 0.45); cup.add(vent);
     // the logo as printed on the cup
-    addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.68, arc: 2.1, src: "logo-cup.svg" });
+    addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.68, arc: 2.1, src: "/logo-cup.svg" });
     steamAt = { x: tx * 0.84, y: lidTop + 0.1, z: tz * 0.84, rise: 2.5, size: 1.5 };
     cup.scale.setScalar(0.86);
   } else {
@@ -354,7 +354,7 @@ function initScene() {
   handle.position.set(1.12, 0.85, 0); handle.rotation.z = -Math.PI * 0.58;
   cup.add(handle);
 
-    addLogoDecal({ wall: [[0.1, 0.8], [0.7, 1.05], [1.45, 1.15]], y0: 0.3, y1: 1.16, arc: 1.15, src: "logo-dark.svg" });
+    addLogoDecal({ wall: [[0.1, 0.8], [0.7, 1.05], [1.45, 1.15]], y0: 0.3, y1: 1.16, arc: 1.15, src: "/logo-dark.svg" });
   const saucer = new THREE.Mesh(new THREE.LatheGeometry([
     [0, -0.05], [1.4, -0.05], [2.0, 0.08], [2.1, 0.14], [2.0, 0.12], [1.4, 0.0], [0, 0.0],
   ].map(([x, y]) => new THREE.Vector2(x, y)), 64), ceramic);
