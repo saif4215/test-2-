@@ -2,6 +2,11 @@
 
 Standalone static site (no build step). Three.js is vendored in `vendor/`.
 
+## The phone app
+The event, catering and large-order app lives in `app/` (Expo / React Native: iPhone, Android and web). See `app/README.md`.
+Its forms send to this server (`POST /api/inquiry`). Set `INQUIRY_WEBHOOK_URL` or `RESEND_API_KEY` + `NOTIFY_EMAIL` to be
+notified, and `ADMIN_PASSWORD` to read requests at `/admin/requests`.
+
 ## Run it
 
     cd maruf-cafe
@@ -26,7 +31,7 @@ Set up:
    (https://developer.squareup.com/docs/devtools/sandbox/payments). Switch to `production` only after that.
 4. Set `TAX_PERCENT` to your real sales tax rate. The server adds it to the Square order, which is the amount charged.
 
-Tests: `node --test` (runs against a mock Square, no keys needed).
+Tests: `node --test server.test.mjs` (runs against a mock Square, no keys needed).
 
 Not covered yet:
 - Items with a price range (sizes, e.g. Lemonade $3.00 - $4.00) link to Square Online, because the size names are not in `menu.json`.

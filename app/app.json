@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Maruf Cafe",
+    "slug": "maruf-cafe",
+    "scheme": "marufcafe",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0907"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marufcafe.app"
+    },
+    "android": {
+      "package": "com.marufcafe.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0907",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

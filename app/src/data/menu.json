@@ -1,0 +1,414 @@
+{
+ "currency": "USD",
+ "groups": {
+  "Drinks": {
+   "Coffee": [
+    {
+     "id": "drinks-coffee-americano",
+     "name": "Americano",
+     "cents": 300
+    },
+    {
+     "id": "drinks-coffee-cappuccino",
+     "name": "Cappuccino",
+     "cents": 400
+    },
+    {
+     "id": "drinks-coffee-cortado",
+     "name": "Cortado",
+     "cents": 375
+    },
+    {
+     "id": "drinks-coffee-flat-white",
+     "name": "Flat White",
+     "cents": 400
+    },
+    {
+     "id": "drinks-coffee-mocha",
+     "name": "Mocha",
+     "cents": 525
+    },
+    {
+     "id": "drinks-coffee-oat-brown-sugar",
+     "name": "Oat Brown Sugar",
+     "cents": 650
+    },
+    {
+     "id": "drinks-coffee-spanish-latte",
+     "name": "Spanish Latte",
+     "cents": 550
+    },
+    {
+     "id": "drinks-coffee-dirty-chai",
+     "name": "Dirty Chai",
+     "cents": 600
+    },
+    {
+     "id": "drinks-coffee-latte",
+     "name": "Latte",
+     "cents": 450
+    },
+    {
+     "id": "drinks-coffee-drip",
+     "name": "Drip",
+     "cents": 300
+    },
+    {
+     "id": "drinks-coffee-espresso",
+     "name": "Espresso",
+     "cents": 300
+    },
+    {
+     "id": "drinks-coffee-biscoff-latte",
+     "name": "Biscoff Latte",
+     "cents": 650
+    },
+    {
+     "id": "drinks-coffee-maple-honey-almond-latte",
+     "name": "Maple Honey Almond Latte",
+     "cents": 650
+    },
+    {
+     "id": "drinks-coffee-white-mocha",
+     "name": "White Mocha",
+     "cents": 525
+    },
+    {
+     "id": "drinks-coffee-hazelnut-mocha",
+     "name": "Hazelnut Mocha",
+     "cents": 550
+    },
+    {
+     "id": "drinks-coffee-honey-vanilla",
+     "name": "Honey Vanilla",
+     "cents": 500
+    },
+    {
+     "id": "drinks-coffee-pistachio-latte",
+     "name": "Pistachio Latte",
+     "cents": 600
+    },
+    {
+     "id": "drinks-coffee-pumpkin-spice",
+     "name": "Pumpkin Spice",
+     "cents": 650
+    },
+    {
+     "id": "drinks-coffee-banana-bread-latte",
+     "name": "Banana Bread Latte",
+     "cents": 600
+    }
+   ],
+   "Refreshers": [
+    {
+     "id": "drinks-refreshers-berry-blast",
+     "name": "Berry Blast",
+     "min": 300,
+     "max": 450
+    },
+    {
+     "id": "drinks-refreshers-kiwi-lemongrass",
+     "name": "Kiwi Lemongrass",
+     "cents": 550
+    },
+    {
+     "id": "drinks-refreshers-lemonade",
+     "name": "Lemonade",
+     "min": 300,
+     "max": 400
+    },
+    {
+     "id": "drinks-refreshers-mango-dragonfruit",
+     "name": "Mango Dragonfruit",
+     "cents": 550
+    },
+    {
+     "id": "drinks-refreshers-mango-passion-fruit",
+     "name": "Mango Passion Fruit",
+     "cents": 550
+    },
+    {
+     "id": "drinks-refreshers-strawberry-acai",
+     "name": "Strawberry Acai",
+     "cents": 550
+    },
+    {
+     "id": "drinks-refreshers-tropical-splash",
+     "name": "Tropical Splash",
+     "min": 300,
+     "max": 450
+    },
+    {
+     "id": "drinks-refreshers-watermelon-cucumber",
+     "name": "Watermelon Cucumber",
+     "cents": 550
+    },
+    {
+     "id": "drinks-refreshers-white-peach",
+     "name": "White Peach",
+     "min": 300,
+     "max": 450
+    },
+    {
+     "id": "drinks-refreshers-lychee-blackberry",
+     "name": "Lychee Blackberry",
+     "min": 550,
+     "max": 600
+    }
+   ],
+   "Tea": [
+    {
+     "id": "drinks-tea-earl-grey",
+     "name": "Earl Grey",
+     "cents": 300
+    },
+    {
+     "id": "drinks-tea-chai-latte",
+     "name": "Chai Latte",
+     "min": 500,
+     "max": 600
+    },
+    {
+     "id": "drinks-tea-london-fog",
+     "name": "London Fog",
+     "min": 450,
+     "max": 550
+    },
+    {
+     "id": "drinks-tea-matcha",
+     "name": "Matcha",
+     "min": 500,
+     "max": 600
+    },
+    {
+     "id": "drinks-tea-yuzu-peach-green-tea",
+     "name": "Yuzu Peach Green Tea",
+     "cents": 300
+    },
+    {
+     "id": "drinks-tea-peppermint-tea",
+     "name": "Peppermint Tea",
+     "cents": 350
+    },
+    {
+     "id": "drinks-tea-blueberry-hibiscus",
+     "name": "Blueberry Hibiscus",
+     "cents": 350
+    },
+    {
+     "id": "drinks-tea-chamomile-medley",
+     "name": "Chamomile Medley",
+     "cents": 350
+    }
+   ],
+   "Smoothies / Others": [
+    {
+     "id": "drinks-smoothies-others-strawberry-banana-smoothie",
+     "name": "Strawberry Banana Smoothie",
+     "cents": 650
+    },
+    {
+     "id": "drinks-smoothies-others-hot-chocolate",
+     "name": "Hot Chocolate",
+     "cents": 300
+    }
+   ]
+  },
+  "Food": {
+   "Breakfast": [
+    {
+     "id": "food-breakfast-bagel-and-cream-cheese",
+     "name": "Bagel & Cream Cheese",
+     "cents": 300
+    },
+    {
+     "id": "food-breakfast-egg-and-cheese",
+     "name": "Egg & Cheese",
+     "cents": 350
+    },
+    {
+     "id": "food-breakfast-zaatar-avocado-toast",
+     "name": "Zaatar Avocado Toast",
+     "cents": 800
+    },
+    {
+     "id": "food-breakfast-breakfast-wrap",
+     "name": "Breakfast Wrap",
+     "cents": 1000
+    },
+    {
+     "id": "food-breakfast-breakfast-sandwich",
+     "name": "Breakfast Sandwich",
+     "cents": 800
+    }
+   ],
+   "Sandwiches": [
+    {
+     "id": "food-sandwiches-cheesesteak",
+     "name": "Cheesesteak",
+     "cents": 1400
+    },
+    {
+     "id": "food-sandwiches-turkey-sandwich",
+     "name": "Turkey Sandwich",
+     "cents": 1200
+    },
+    {
+     "id": "food-sandwiches-chicken-parmesan",
+     "name": "Chicken Parmesan",
+     "cents": 1200
+    },
+    {
+     "id": "food-sandwiches-fried-chicken-sandwich",
+     "name": "Fried Chicken Sandwich",
+     "cents": 800
+    },
+    {
+     "id": "food-sandwiches-grilled-cheese",
+     "name": "Grilled Cheese",
+     "cents": 600
+    },
+    {
+     "id": "food-sandwiches-hot-chicken-sandwich",
+     "name": "Hot Chicken Sandwich",
+     "cents": 1000
+    },
+    {
+     "id": "food-sandwiches-pesto-grilled-chicken",
+     "name": "Pesto Grilled Chicken",
+     "cents": 1200
+    },
+    {
+     "id": "food-sandwiches-buffalo-chicken",
+     "name": "Buffalo Chicken",
+     "cents": 1200
+    },
+    {
+     "id": "food-sandwiches-chipotle-chicken",
+     "name": "Chipotle Chicken",
+     "cents": 1200
+    },
+    {
+     "id": "food-sandwiches-sandwich-meal-combo",
+     "name": "Sandwich Meal Combo",
+     "cents": 1800
+    }
+   ],
+   "Burgers": [
+    {
+     "id": "food-burgers-classic-burger",
+     "name": "Classic Burger",
+     "cents": 1000
+    },
+    {
+     "id": "food-burgers-icsi-burger",
+     "name": "ICSI Burger",
+     "cents": 1400
+    }
+   ],
+   "Bowls": [
+    {
+     "id": "food-bowls-garden-salad",
+     "name": "Garden Salad",
+     "cents": 800
+    },
+    {
+     "id": "food-bowls-chicken-caesar-salad",
+     "name": "Chicken Caesar Salad",
+     "cents": 1000
+    }
+   ],
+   "Chicken & Wings": [
+    {
+     "id": "food-chicken-and-wings-chicken-tenders",
+     "name": "Chicken Tenders",
+     "min": 600,
+     "max": 1500
+    },
+    {
+     "id": "food-chicken-and-wings-wings",
+     "name": "Wings",
+     "cents": 1000
+    },
+    {
+     "id": "food-chicken-and-wings-chicken-nuggets",
+     "name": "Chicken Nuggets",
+     "cents": 600
+    }
+   ],
+   "Salads / Others": [
+    {
+     "id": "food-salads-others-personal-pizza",
+     "name": "Personal Pizza",
+     "cents": 700
+    }
+   ],
+   "Sides": [
+    {
+     "id": "food-sides-chips",
+     "name": "Chips",
+     "cents": 250
+    },
+    {
+     "id": "food-sides-french-fries",
+     "name": "French Fries",
+     "min": 400,
+     "max": 600
+    },
+    {
+     "id": "food-sides-mac-and-cheese",
+     "name": "Mac & Cheese",
+     "cents": 600
+    },
+    {
+     "id": "food-sides-mozzarella-sticks",
+     "name": "Mozzarella Sticks",
+     "cents": 800
+    },
+    {
+     "id": "food-sides-coleslaw",
+     "name": "Coleslaw",
+     "cents": 300
+    },
+    {
+     "id": "food-sides-hash-brown",
+     "name": "Hash Brown",
+     "cents": 200
+    }
+   ],
+   "Sweets": [
+    {
+     "id": "food-sweets-brownie",
+     "name": "Brownie",
+     "cents": 300
+    },
+    {
+     "id": "food-sweets-muffin",
+     "name": "Muffin",
+     "cents": 300
+    },
+    {
+     "id": "food-sweets-cookie",
+     "name": "Cookie",
+     "cents": 300
+    },
+    {
+     "id": "food-sweets-banana-pudding",
+     "name": "Banana Pudding",
+     "cents": 500
+    },
+    {
+     "id": "food-sweets-dubai-chocolate",
+     "name": "Dubai Chocolate",
+     "min": 600,
+     "max": 1600
+    },
+    {
+     "id": "food-sweets-dubai-chocolate-cake",
+     "name": "Dubai Chocolate Cake",
+     "cents": 500
+    }
+   ]
+  }
+ }
+}
