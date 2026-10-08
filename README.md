@@ -38,5 +38,10 @@ Not covered yet:
 - The menu is `menu.json` (prices in cents). Ids must stay unique. The menu was copied from marufcafe.com.
 - "Order online" and "Gift cards" link to the cafe's real pages on marufcafe.com.
 
+## Logo
+`logo.svg` (light ink, for dark backgrounds, used in the nav) and `logo-dark.svg` (dark ink, drawn on the 3D cup) are a
+vector redraw of the Maruf Cafe logo, made from the image shared in chat, not the original artwork. To use the real files,
+replace both with your own (same names, SVG or PNG with matching extension updated in `index.html`, `main.js`, `server.mjs`).
+
 ## Still to fill in
 Nothing required. Hours are in `#visit` in `index.html` and again in `main.js` (open-now badge) and the JSON-LD block; change all three if they change. The Columbus Day note on the cafe's listing was left out as a one-day exception.

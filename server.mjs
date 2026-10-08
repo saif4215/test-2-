@@ -18,6 +18,8 @@ const FILES = {
   "/style.css": ["style.css", "text/css; charset=utf-8"],
   "/main.js": ["main.js", "text/javascript; charset=utf-8"],
   "/checkout.js": ["checkout.js", "text/javascript; charset=utf-8"],
+  "/logo.svg": ["logo.svg", "image/svg+xml"],
+  "/logo-dark.svg": ["logo-dark.svg", "image/svg+xml"],
   "/menu.json": ["menu.json", "application/json; charset=utf-8"],
   "/vendor/three.module.min.js": ["vendor/three.module.min.js", "text/javascript; charset=utf-8"],
 };

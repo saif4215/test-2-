@@ -213,3 +213,6 @@ footer a:hover { color: var(--gold-2); }
 .hours li[data-today] { color: var(--text); }
 .open-now { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; color: var(--gold-2); }
 .open-now[data-open="0"] { color: var(--muted); }
+
+.logo img { display: block; height: 62px; width: auto; }
+@media (max-width: 760px) { .logo img { height: 50px; } }

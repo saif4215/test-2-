@@ -156,6 +156,38 @@ function initScene() {
   const handle = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.09, 16, 32, Math.PI * 1.15), ceramic);
   handle.position.set(1.12, 0.85, 0); handle.rotation.z = -Math.PI * 0.58;
   cup.add(handle);
+
+  /* logo decal: a patch of the cone-shaped cup wall, textured with the wordmark */
+  {
+    const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 788;
+    const g = cv.getContext("2d");
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const img = new Image();
+    img.onload = () => {      // dark-ink version of the logo, centred on the decal
+      const w = 960, h = (w * img.naturalHeight) / img.naturalWidth;
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.drawImage(img, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+      tex.needsUpdate = true;
+    };
+    img.src = "logo-dark.svg";
+
+    // outer wall radius at height y: the lathe profile is straight segments
+    const wall = [[0.1, 0.8], [0.7, 1.05], [1.45, 1.15]];
+    const radiusAt = (y) => { for (let i = 0; i < wall.length - 1; i++) { const [y0, r0] = wall[i], [y1, r1] = wall[i + 1]; if (y <= y1) return r0 + ((y - y0) / (y1 - y0)) * (r1 - r0); } return wall[wall.length - 1][1]; };
+    const NU = 36, NV = 14, Y0 = 0.3, Y1 = 1.16, ARC = 1.15;
+    const pos = [], uv = [], idx = [];
+    for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
+      const y = Y0 + ((Y1 - Y0) * j) / NV, a = (i / NU - 0.5) * ARC, r = radiusAt(y) + 0.006;
+      pos.push(Math.sin(a) * r, y, Math.cos(a) * r); uv.push(i / NU, j / NV);
+    }
+    for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + NU + 1; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx); geo.computeVertexNormals();
+    cup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
+  }
   const saucer = new THREE.Mesh(new THREE.LatheGeometry([
     [0, -0.05], [1.4, -0.05], [2.0, 0.08], [2.1, 0.14], [2.0, 0.12], [1.4, 0.0], [0, 0.0],
   ].map(([x, y]) => new THREE.Vector2(x, y)), 64), ceramic);
@@ -203,8 +235,8 @@ function initScene() {
     // push the cup right on wide screens, centre it on narrow ones
     const wide = w / h > 1.1;
     rig.position.x = wide ? 2.4 : 0;
-    baseY = wide ? 0.6 : 2.6;
-    camera.position.z = wide ? 10 : 13;
+    baseY = wide ? 0.6 : 4.8;
+    camera.position.z = wide ? 10 : 15;
     camera.updateProjectionMatrix();
   }
   addEventListener("resize", resize);
@@ -222,7 +254,7 @@ function initScene() {
 
     smooth.x += (mouse.x - smooth.x) * 0.05;
     smooth.y += (mouse.y - smooth.y) * 0.05;
-    rig.rotation.y = t * 0.4 + smooth.x * 1.2 + sy * 2;
+    rig.rotation.y = Math.sin(t * 0.5) * 0.6 + smooth.x * 1.2 + sy * 2;   // sway so the logo stays in view
     rig.rotation.x = 0.35 + smooth.y * 0.4;
     rig.position.y += (baseY + Math.sin(t) * 0.12 - sy * 1.2 - rig.position.y) * 0.1;
     camera.position.x = smooth.x * 0.8;
