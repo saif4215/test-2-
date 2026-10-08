@@ -25,7 +25,7 @@ const mk = async () => { const ctx = await b.newContext({ viewport: { width: 390
   const big = await p.getByRole("button", { name: "Start an order" }).boundingBox(), small = await p.getByRole("button", { name: /^Catering:/ }).boundingBox();
   ok(big.height > small.height * 1.4 && big.width > small.width * 1.7, "start-an-order is clearly the big one");
   await p.screenshot({ path: `${OUT}/ai-1-home.png` });
-  await p.getByRole("button", { name: "Ask Maruf Cafe AI" }).click();
+  await p.getByRole("button", { name: "Ask a question (AI helper)" }).click();
   await p.getByText("isn't switched on yet").waitFor();
   ok(await p.getByRole("button", { name: /Call \(929\) 335-3296/ }).isVisible(), "when off it says so and offers the phone");
   ok((await p.getByRole("textbox", { name: "Your question" }).count()) === 0, "no fake chat box when off");
@@ -37,7 +37,7 @@ const mk = async () => { const ctx = await b.newContext({ viewport: { width: 390
   const site = await startSite({ ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_API_BASE: `http://localhost:${claude.address().port}` }); const p = await mk();
   await p.goto(site.u + "/app/", { waitUntil: "load" });
   await p.getByRole("button", { name: "Start an order" }).waitFor();
-  await p.getByRole("button", { name: "Ask Maruf Cafe AI" }).click();
+  await p.getByRole("button", { name: "Ask a question (AI helper)" }).click();
   await p.getByText("How can I help?").waitFor();
   await p.screenshot({ path: `${OUT}/ai-3-chat.png` });
   await p.getByRole("button", { name: "Help me plan food for 30 people" }).click();

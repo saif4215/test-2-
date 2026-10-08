@@ -44,14 +44,14 @@ export function Button({ title, onPress, variant = "primary", size = "large", ic
       accessibilityRole="button" accessibilityLabel={accessibilityLabel || title} accessibilityState={{ disabled: !!disabled }}
       onPress={disabled ? undefined : onPress}
       style={({ pressed, hovered }) => [{
-        backgroundColor: v.bg, borderColor: v.border, borderWidth: 1.5, borderRadius: radius.button,
-        paddingVertical: big ? 18 : 11, paddingHorizontal: big ? 24 : 16, minHeight: big ? 56 : 44,
+        backgroundColor: v.bg, borderColor: v.border, borderWidth: 1, borderRadius: radius.button,
+        paddingVertical: big ? 16 : 10, paddingHorizontal: big ? 22 : 14, minHeight: big ? 54 : 44,
         flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
         opacity: disabled ? 0.5 : pressed ? 0.85 : hovered ? 0.93 : 1, transform: [{ scale: pressed ? 0.985 : 1 }],
       }, style]}
     >
       {icon ? <Ionicons name={icon} size={big ? 20 : 17} color={v.fg} /> : null}
-      <Text style={{ color: v.fg, fontSize: big ? 15 : 14, fontWeight: "800", letterSpacing: big ? 1.1 : 0.6, textTransform: "uppercase", textAlign: "center", flexShrink: 1 }}>{title}</Text>
+      <Text style={{ color: v.fg, fontSize: big ? 17 : 15, fontWeight: "700", textAlign: "center", flexShrink: 1 }}>{title}</Text>
     </Pressable>
   );
 }
@@ -66,7 +66,7 @@ export function Chip({ label, active, onPress }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: !!active }} onPress={onPress}
       style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: radius.chip, borderWidth: 1.5, borderColor: active ? colors.ink : colors.line, backgroundColor: active ? colors.ink : colors.surface, minHeight: 44, justifyContent: "center" }}>
-      <Text style={{ color: active ? colors.cream : colors.ink, fontWeight: "700", fontSize: 14 }}>{label}</Text>
+      <Text style={{ color: active ? colors.cream : colors.ink, fontWeight: "600", fontSize: 15 }}>{label}</Text>
     </Pressable>
   );
 }

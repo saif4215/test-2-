@@ -34,7 +34,7 @@ export default function Assistant() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
-      <Stack.Screen options={{ title: "Ask Maruf Cafe" }} />
+      <Stack.Screen options={{ title: "Ask a question" }} />
       <ScrollView ref={scroller} keyboardShouldPersistTaps="handled" contentContainerStyle={{ alignItems: "center", padding: 20, paddingBottom: 12 }}>
         <View style={{ width: "100%", maxWidth: 640, gap: 12 }}>
           {enabled === null ? <Body>Checking…</Body> : null}

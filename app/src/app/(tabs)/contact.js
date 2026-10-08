@@ -3,18 +3,17 @@ import { Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
-import { Body, Button, Card, Eyebrow, Grid, H1, H2, H3, IconBadge, Screen, Section, Small } from "../../components/ui";
+import { Body, Button, Card, Grid, H1, Screen, Section, Small } from "../../components/ui";
 import { showPlaceholders } from "../../config";
 import { useSite } from "../../lib/site";
 import { openStatus } from "../../lib/dates";
 import { colors } from "../../theme";
 
-function InfoCard({ icon, title, children }) {
+function InfoCard({ title, children }) {
   return (
-    <Card style={{ padding: 20, flexDirection: "row", gap: 16 }}>
-      <IconBadge name={icon} />
-      <View style={{ flex: 1, gap: 4 }}><H3>{title}</H3>{children}</View>
-    </Card>
+    <View style={{ borderTopWidth: 1, borderColor: colors.line, paddingVertical: 14, gap: 2 }}>
+      <Small style={{ fontWeight: "700" }}>{title}</Small>{children}
+    </View>
   );
 }
 
@@ -37,14 +36,13 @@ export default function Contact() {
   return (
     <Screen>
       <Section style={{ marginTop: 16 }}>
-        <Eyebrow>Get in touch</Eyebrow>
-        <H1 style={{ marginTop: 8 }}>Contact Maruf Cafe</H1>
+        <H1>Contact</H1>
         <View style={{ marginTop: 20 }}>
           <Grid min={300} gap={14}>
-            <InfoCard icon="location-outline" title="Address">{business.address.map((l) => <Body key={l}>{l}</Body>)}</InfoCard>
-            <InfoCard icon="call-outline" title="Phone"><Body>{business.phone}</Body></InfoCard>
-            {business.email || showPlaceholders ? <InfoCard icon="mail-outline" title="Email"><Body>{business.email || "[ADD EMAIL]"}</Body></InfoCard> : null}
-            <InfoCard icon="time-outline" title="Hours">
+            <InfoCard title="Address">{business.address.map((l) => <Body key={l}>{l}</Body>)}</InfoCard>
+            <InfoCard title="Phone"><Body>{business.phone}</Body></InfoCard>
+            {business.email || showPlaceholders ? <InfoCard title="Email"><Body>{business.email || "[ADD EMAIL]"}</Body></InfoCard> : null}
+            <InfoCard title="Hours">
               {business.hours.map((h) => <Body key={h.label}>{h.label}: {fmt(h.open)} – {fmt(h.close)}</Body>)}
               <Small style={{ fontWeight: "700", color: status.open ? colors.success : colors.muted }}>{status.text}</Small>
             </InfoCard>
@@ -64,8 +62,7 @@ export default function Contact() {
       </Section>
 
       <Section>
-        <Eyebrow>Good to know</Eyebrow>
-        <H1 style={{ marginTop: 8, marginBottom: 20 }}>Frequently Asked Questions</H1>
+        <H1 style={{ marginBottom: 16 }}>Questions people ask</H1>
         <View style={{ gap: 12 }}>{faq.map((f) => <Question key={f.q} {...f} />)}</View>
       </Section>
     </Screen>

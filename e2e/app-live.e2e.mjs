@@ -15,7 +15,7 @@ await p.goto(site.u + "/app/", { waitUntil: "load" });
 await p.getByText("Start an order").first().waitFor();
 ok(await p.getByRole("button", { name: /Call Maruf Cafe at \(929\) 335-3296/ }).first().isVisible(), "Call quick action on Home");
 ok(await p.getByRole("button", { name: "Large Orders" }).first().isVisible() && await p.getByRole("button", { name: "Rent the Cafe" }).first().isVisible(), "Large Orders and Rent the Cafe quick actions on Home");
-ok((await p.getByText("What customers say").count()) === 0 && (await p.getByText("Take a look").count()) === 0, "no reviews or gallery until the café adds real ones");
+ok((await p.getByText("What customers say").count()) === 0 && (await p.getByText("Photos").count()) === 0, "no reviews or gallery until the café adds real ones");
 
 // the café edits things in the dashboard
 const content = (await a.get("content")).json.content;
@@ -34,7 +34,7 @@ await a.put("menu", { menu });
 await p.reload({ waitUntil: "load" });
 await p.getByText("What customers say").first().waitFor({ timeout: 10000 });
 ok(await p.getByText("Great trays for our office party.").first().isVisible(), "real review shows in the app");
-ok(await p.getByText("Take a look").first().isVisible(), "gallery shows in the app");
+ok(await p.getByText("Photos").first().isVisible(), "gallery shows in the app");
 ok(await p.getByRole("button", { name: /Call Maruf Cafe at \(718\) 555-0100/ }).first().isVisible(), "new phone number in the app");
 ok(await p.locator('img[src*="/uploads/"]').count() > 0, "uploaded photo is loaded from the café's server");
 await p.getByRole("tab", { name: /Menu/ }).first().click();

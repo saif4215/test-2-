@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = path.join(ROOT, "app"), DIST = path.join(APP, "dist"), OUT = path.join(ROOT, "public", "app");
-const env = { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", EXPO_OFFLINE: "1" };
+// The live web app never shows "add a photo" boxes or "[ADD EMAIL]": a photo spot with no photo is simply left out.
+const env = { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", EXPO_OFFLINE: "1", EXPO_PUBLIC_SHOW_PLACEHOLDERS: "0" };
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: APP, stdio: "inherit", env, shell: process.platform === "win32" });
 
 run("npm", ["install", "--no-audit", "--no-fund"]);
