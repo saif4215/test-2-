@@ -5,8 +5,12 @@ home screen. No computer needed. The built app is already in `public/app`, so th
 
 You'll use **Render** (render.com). Its free plan is enough to try it.
 
-1. On your phone, open **render.com** and sign up with **GitHub** (the account that has this project).
-2. Tap **New** then **Web Service**. Choose the repository **test-one**. Allow Render to see it if asked.
+1. On your phone, open **render.com** and tap **Sign up**. Use your **email and a password** (you do not need GitHub),
+   then open the verification email Render sends you. (Signing up with GitHub also works if you prefer.)
+2. Tap **New** then **Web Service**. Open the **Public Git Repository** tab and paste
+   `https://github.com/saif4215/test-one`, then tap **Continue**. (This repository is public, so Render can read it
+   without a GitHub login. With the public-repository option Render does not redeploy by itself when the code changes:
+   tap **Manual Deploy** to update.)
 3. Fill in:
    - **Name:** `maruf-cafe` (this becomes part of your address)
    - **Branch:** `claude/maruf-cafe-redesign-5ulf0y`
