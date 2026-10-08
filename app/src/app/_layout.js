@@ -13,7 +13,6 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="quote" options={{ presentation: "modal", title: "Large order quote" }} />
           <Stack.Screen name="event-request" options={{ presentation: "modal", title: "Event rental request" }} />
-          <Stack.Screen name="order" options={{ presentation: "modal", title: "My order" }} />
         </Stack>
       </OrderProvider>
     </SafeAreaProvider>

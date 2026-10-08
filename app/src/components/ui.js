@@ -24,14 +24,15 @@ export const Small = ({ children, style }) => <Text style={[text.small, style]}>
 
 /** A page section with generous whitespace above it. */
 export function Section({ children, style, tone }) {
-  return <View style={[{ marginTop: 44 }, tone === "dark" && { backgroundColor: colors.espresso, borderRadius: radius.card, padding: 24 }, style]}>{children}</View>;
+  return <View style={[{ marginTop: 44 }, tone === "dark" && { backgroundColor: colors.ink, borderRadius: radius.card, padding: 24 }, style]}>{children}</View>;
 }
 
 const variants = {
-  primary: { bg: colors.ink, fg: colors.cream, border: colors.ink },
-  gold: { bg: colors.gold, fg: colors.ink, border: colors.gold },
+  primary: { bg: colors.ink, fg: "#FFFFFF", border: colors.ink },
+  gold: { bg: colors.accent, fg: colors.ink, border: colors.accent },   // the green call-to-action
+  accent: { bg: colors.accent, fg: colors.ink, border: colors.accent },
   outline: { bg: "transparent", fg: colors.ink, border: colors.ink },
-  light: { bg: colors.surface, fg: colors.ink, border: colors.line },
+  light: { bg: colors.tint, fg: colors.ink, border: colors.tint },
 };
 
 export function Button({ title, onPress, variant = "primary", size = "large", icon, disabled, style, accessibilityLabel }) {
@@ -43,19 +44,19 @@ export function Button({ title, onPress, variant = "primary", size = "large", ic
       onPress={disabled ? undefined : onPress}
       style={({ pressed, hovered }) => [{
         backgroundColor: v.bg, borderColor: v.border, borderWidth: 1.5, borderRadius: radius.button,
-        paddingVertical: big ? 18 : 11, paddingHorizontal: big ? 24 : 16, minHeight: big ? 56 : 44,
+        paddingVertical: big ? 16 : 10, paddingHorizontal: big ? 24 : 16, minHeight: big ? 54 : 44,
         flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
         opacity: disabled ? 0.5 : pressed ? 0.85 : hovered ? 0.93 : 1, transform: [{ scale: pressed ? 0.985 : 1 }],
       }, style]}
     >
       {icon ? <Ionicons name={icon} size={big ? 20 : 17} color={v.fg} /> : null}
-      <Text style={{ color: v.fg, fontSize: big ? 15 : 14, fontWeight: "800", letterSpacing: big ? 1.1 : 0.6, textTransform: "uppercase", textAlign: "center", flexShrink: 1 }}>{title}</Text>
+      <Text style={{ color: v.fg, fontSize: big ? 16 : 14, fontWeight: "800", letterSpacing: 0, textAlign: "center", flexShrink: 1 }}>{title}</Text>
     </Pressable>
   );
 }
 
 export function Card({ children, style, onPress, label }) {
-  const base = [{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line, overflow: "hidden" }, shadow, style];
+  const base = [{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line, overflow: "hidden" }, style];
   if (!onPress) return <View style={base}>{children}</View>;
   return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.9 }]}>{children}</Pressable>;
 }
@@ -63,8 +64,8 @@ export function Card({ children, style, onPress, label }) {
 export function Chip({ label, active, onPress }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: !!active }} onPress={onPress}
-      style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: radius.chip, borderWidth: 1.5, borderColor: active ? colors.ink : colors.line, backgroundColor: active ? colors.ink : colors.surface, minHeight: 44, justifyContent: "center" }}>
-      <Text style={{ color: active ? colors.cream : colors.ink, fontWeight: "700", fontSize: 14 }}>{label}</Text>
+      style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: radius.chip, borderWidth: 0, backgroundColor: active ? colors.ink : colors.tint, minHeight: 44, justifyContent: "center" }}>
+      <Text style={{ color: active ? "#FFFFFF" : colors.ink, fontWeight: "700", fontSize: 14 }}>{label}</Text>
     </Pressable>
   );
 }
@@ -89,17 +90,17 @@ export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.car
   const box = { width: "100%", aspectRatio: width >= 768 ? ratio * 1.6 : ratio, borderRadius: radiusSize, overflow: "hidden" };
   if (source) return <Image source={source} accessibilityLabel={label} resizeMode="cover" style={[box, style]} />;
   return (
-    <View accessibilityLabel={`Photo placeholder: ${label}`} style={[box, { backgroundColor: colors.tint, alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: colors.line, borderStyle: "dashed" }, style]}>
-      <Ionicons name="image-outline" size={30} color={colors.goldText} />
-      <Text style={{ color: colors.goldText, fontSize: 12, fontWeight: "700", letterSpacing: 0.4, textAlign: "center", paddingHorizontal: 12 }}>{label}</Text>
+    <View accessibilityLabel={`Photo placeholder: ${label}`} style={[box, { backgroundColor: colors.tint, alignItems: "center", justifyContent: "center", gap: 8 }, style]}>
+      <Ionicons name="image-outline" size={30} color={colors.faint} />
+      <Text style={{ color: colors.faint, fontSize: 12, fontWeight: "700", textAlign: "center", paddingHorizontal: 12 }}>{label}</Text>
     </View>
   );
 }
 
 export function IconBadge({ name, size = 22 }) {
   return (
-    <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
-      <Ionicons name={name} size={size} color={colors.goldText} />
+    <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
+      <Ionicons name={name} size={size} color={colors.faint} />
     </View>
   );
 }

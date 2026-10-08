@@ -3,9 +3,16 @@
 A phone app (iPhone and Android) for Maruf Cafe, focused on large orders, catering, event rental and easy contact.
 Built with Expo and React Native. The same code also exports to a web app.
 
-Screens: Home · Orders (large orders, catering, group-size calculator) · Events (venue rental, event options) ·
-Menu (with an order list) · Contact (with FAQ). Two forms open as sheets: the large order quote form and the event
-rental form.
+Styled like a food-delivery app: Pickup/Delivery switch and search at the top, round category icons, promo cards,
+menu rows with a photo and a "+" button, a sticky category bar and a "View basket" bar. It keeps Maruf Cafe's own
+name and logo and is not affiliated with any delivery company.
+
+Tabs: **Home** (search, categories, promos, menu carousels) · **Menu** (the store page, with a sticky category bar) ·
+**Group** (large orders with the group-size planner, catering, space rental and event options) · **Basket** · **More**
+(contact details, hours, FAQ). Two forms open as sheets: the large order quote form and the event rental form.
+
+The Pickup/Delivery switch sets the default on the quote form. Delivery is arranged with the café when a quote is
+confirmed, so the app shows no delivery times, fees or ratings (none were provided).
 
 ## Run it on your phone (no accounts needed)
 
