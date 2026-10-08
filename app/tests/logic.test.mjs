@@ -144,3 +144,13 @@ test("chat history sent to the assistant: recent turns only, errors left out, lo
   assert.equal(trimHistory([{ role: "user", content: "x".repeat(900) }])[0].content.length, 600);
   assert.deepEqual(Object.keys(trimHistory([{ role: "user", content: "a", extra: 1 }])[0]), ["role", "content"], "nothing but role and text leaves the phone");
 });
+
+test("direction links use the address text only, for Google Maps, Apple Maps and Waze", async () => {
+  const { mapLinks } = await import("../src/lib/maps.js");
+  const l = mapLinks(["365 Veterans Rd W", "Staten Island, NY 10309"]);
+  const q = encodeURIComponent("365 Veterans Rd W, Staten Island, NY 10309");
+  assert.equal(l.google, `https://www.google.com/maps/dir/?api=1&destination=${q}`);
+  assert.equal(l.apple, `https://maps.apple.com/?daddr=${q}`);
+  assert.equal(l.waze, `https://waze.com/ul?q=${q}&navigate=yes`);
+  assert.doesNotMatch(JSON.stringify(l), /ll=|lat=|@\d/, "no made-up coordinates");
+});

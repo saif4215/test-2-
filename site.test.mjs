@@ -121,3 +121,20 @@ test("the service worker never caches the dashboard", async () => {
   assert.match(sw, /startsWith\("\/admin"\)/);
   t.close();
 });
+
+test("map and directions: Google, Apple and Waze links for the real address, and a chooser on every public page", async () => {
+  const t = await startSite();
+  for (const p of ["/", "/large-orders", "/rent-the-cafe"]) {
+    const html = await text(await fetch(t.u + p));
+    const addr = encodeURIComponent("365 Veterans Rd W, Staten Island, NY 10309");
+    assert.ok(html.includes(`https://www.google.com/maps/dir/?api=1&amp;destination=${addr}`) || html.includes(`https://www.google.com/maps/dir/?api=1&destination=${addr}`), `${p}: Google Maps`);
+    assert.ok(html.includes(`https://maps.apple.com/?daddr=${addr}`), `${p}: Apple Maps`);
+    assert.ok(html.includes(`https://waze.com/ul?q=${addr}&amp;navigate=yes`) || html.includes(`https://waze.com/ul?q=${addr}&navigate=yes`), `${p}: Waze`);
+    assert.match(html, /<iframe title="Map showing Maruf Cafe" src="https:\/\/www\.google\.com\/maps\?q=/, `${p}: map`);
+    assert.match(html, /<dialog id="directions"/, `${p}: chooser`);
+    assert.match(html, /data-directions/);
+    assert.doesNotMatch(html, /\{\{/);
+  }
+  assert.equal((await fetch(t.u + "/directions.js")).status, 200);
+  t.close();
+});

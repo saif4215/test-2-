@@ -2,6 +2,7 @@ import { Image, Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Display, Eyebrow, Grid, H1, H2, H3, IconBadge, Photo, Screen, Section, Small } from "../../components/ui";
+import { MapCard } from "../../components/MapCard";
 import { MenuBrowser, OrderBar } from "../../components/MenuBrowser";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
@@ -12,7 +13,6 @@ export default function Home() {
   const { business, reviews, gallery } = useSite();
   const order = useOrder();
   const status = openStatus(business.hours);
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
   return (
     <View style={{ flex: 1 }}>
     <Screen bottomPad={order.count ? 150 : 120}>
@@ -138,10 +138,9 @@ export default function Home() {
       <Section>
         <Card style={{ padding: 24, gap: 14 }}>
           <H2>Questions? Talk to us.</H2>
-          <Body>{business.address.join(", ")}</Body>
+          <MapCard />
           <View style={{ gap: 12, marginTop: 4 }}>
             <Button title="Call us" variant="primary" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
-            <Button title="Get directions" variant="outline" icon="navigate-outline" onPress={() => Linking.openURL(mapsUrl)} />
           </View>
         </Card>
       </Section>

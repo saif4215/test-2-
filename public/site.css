@@ -107,3 +107,15 @@ ul.tick li::before { content: "✓"; position: absolute; left: 4px; color: var(-
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 .cta-row .btn.ghost { margin-left: 0; }
+
+/* ---- map and directions ---- */
+.map-wrap { position: relative; margin-top: 32px; border: 1px solid var(--line); overflow: hidden; background: var(--bg-2); }
+.map-wrap iframe { display: block; width: 100%; height: clamp(260px, 40vw, 380px); border: 0; filter: grayscale(.25) contrast(1.05); }
+.map-wrap button.map-btn { position: absolute; left: 12px; bottom: 12px; background-color: var(--bg); }
+.directions { margin: auto; padding: 24px; width: min(92vw, 380px); background: var(--bg-2); color: var(--text); border: 1px solid var(--gold); }
+.directions::backdrop { background: rgba(0, 0, 0, .7); }
+.directions h3 { font: 34px var(--display); text-transform: uppercase; color: var(--gold-2); margin-bottom: 6px; }
+.directions p { color: var(--muted); margin-bottom: 14px; }
+.directions .btn { display: block; width: 100%; margin: 10px 0 0; text-align: center; cursor: pointer; min-height: 52px; }
+.directions .btn.ghost { background: none; }
+button.btn { font-family: var(--body); background-color: transparent; cursor: pointer; }

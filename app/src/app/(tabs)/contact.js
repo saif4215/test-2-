@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { MapCard } from "../../components/MapCard";
 import { Body, Button, Card, Eyebrow, Grid, H1, H2, H3, IconBadge, Screen, Section, Small } from "../../components/ui";
 import { showPlaceholders } from "../../config";
 import { useSite } from "../../lib/site";
@@ -33,7 +34,6 @@ function Question({ q, a }) {
 export default function Contact() {
   const { business, faq, reviews } = useSite();
   const status = openStatus(business.hours);
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(business.address.join(", "))}`;
   return (
     <Screen>
       <Section style={{ marginTop: 16 }}>
@@ -50,9 +50,9 @@ export default function Contact() {
             </InfoCard>
           </Grid>
         </View>
-        <View style={{ marginTop: 22, gap: 12 }}>
+        <View style={{ marginTop: 22 }}><MapCard /></View>
+        <View style={{ marginTop: 16, gap: 12 }}>
           <Button title="Call us" variant="primary" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
-          <Button title="Get directions" variant="outline" icon="navigate-outline" onPress={() => Linking.openURL(mapsUrl)} />
           <Button title="Request a large order" variant="gold" onPress={() => router.push("/quote")} />
           <Button title="Ask about event rental" variant="light" onPress={() => router.push("/event-request")} />
           {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => Linking.openURL(`mailto:${business.email}`)} /> : null}

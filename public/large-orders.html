@@ -73,12 +73,26 @@
     <p class="eyebrow">Find us</p>
     <h2>Visit or <em>call.</em></h2>
     <div class="info">
-      <div><h4>Address</h4><address><a href="{{mapsUrl}}" target="_blank" rel="noopener">{{addressHtml}}</a></address></div>
+      <div><h4>Address</h4><address>{{addressHtml}}</address>
+        <p><button type="button" class="btn" data-directions>Get directions</button></p></div>
       <div><h4>Hours</h4><ul class="hours" id="hours">{{hoursHtml}}</ul></div>
       <div><h4>Contact</h4><p><a href="tel:{{phoneTel}}">{{phone}}</a></p><p><a data-needs="email" href="mailto:{{email}}">{{email}}</a></p></div>
     </div>
+      <div class="map-wrap reveal">
+      <iframe title="Map showing Maruf Cafe" src="{{mapEmbedUrl}}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      <button type="button" class="btn map-btn" data-directions>Get directions</button>
+    </div>
   </section>
 </main>
+
+<dialog id="directions" class="directions" aria-labelledby="dir-title">
+  <h3 id="dir-title">Get directions</h3>
+  <p>{{addressLine}}</p>
+  <a class="btn" href="{{googleMapsUrl}}" target="_blank" rel="noopener">Google Maps</a>
+  <a class="btn" href="{{appleMapsUrl}}" target="_blank" rel="noopener">Apple Maps</a>
+  <a class="btn" href="{{wazeUrl}}" target="_blank" rel="noopener">Waze</a>
+  <button type="button" class="btn ghost" data-close>Cancel</button>
+</dialog>
 
 <footer>
   <span>© <span id="year"></span> Maruf Cafe</span>
@@ -97,5 +111,6 @@
 
 <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
 <script type="module" src="/site.js"></script>
+<script src="/directions.js" defer></script>
 </body>
 </html>
