@@ -18,6 +18,7 @@ import { normalizeMenu, publicMenu, checkoutIndex } from "./lib/menu.mjs";
 import { normalizeContent, mergeContent } from "./lib/content.mjs";
 import { detectImage, MAX_UPLOAD_BYTES, MAX_UPLOADS } from "./lib/uploads.mjs";
 import { renderPage, robotsTxt, sitemapXml } from "./lib/render.mjs";
+import { cleanMessages, ask } from "./lib/assistant.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -182,6 +183,22 @@ export function createServer(env = process.env) {
     return { ok: true, id: rec.id };
   }
 
+  /* ---- the app's assistant: needs ANTHROPIC_API_KEY; capped per visitor and per day so it cannot run up a bill ---- */
+  const assistantOn = !!env.ANTHROPIC_API_KEY;
+  const assistantPerMin = Number(env.ASSISTANT_RATE_LIMIT_PER_MIN) || 6, assistantPerDay = Number(env.ASSISTANT_DAILY_LIMIT) || 300;
+  let assistantDay = "", assistantCount = 0;
+  async function assistant(body) {
+    if (!assistantOn) throw new HttpError(503, "The assistant is not switched on yet. Please call us or send a request.");
+    const clean = cleanMessages(body?.messages);
+    if (clean.error) throw new HttpError(400, clean.error);
+    const day = new Date().toISOString().slice(0, 10);
+    if (day !== assistantDay) { assistantDay = day; assistantCount = 0; }
+    if (assistantCount >= assistantPerDay) throw new HttpError(429, "The assistant has reached its limit for today. Please call us or send a request.");
+    assistantCount++;
+    try { return { ok: true, ...(await ask(env, getContent(), publicMenu(getMenu()), clean.messages)) }; }
+    catch (err) { throw new HttpError(502, err.message); }
+  }
+
   /* ---- rate limits, responses, bodies ---- */
   const rateMax = Number(env.RATE_LIMIT_PER_MIN) || 10;
   const inquiryMax = Number(env.INQUIRY_RATE_LIMIT_PER_MIN) || 5;
@@ -338,7 +355,7 @@ export function createServer(env = process.env) {
     if (route === "status" && method === "GET") {
       ownerOnly();
       return out(200, {
-        ok: true,
+        ok: true, assistant: assistantOn,
         email: !!(env.RESEND_API_KEY && env.NOTIFY_EMAIL), webhook: !!env.INQUIRY_WEBHOOK_URL, storage: true,
         square: enabled ? cfg.environment : "off", publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
         staffCanEditSite: env.STAFF_CAN_EDIT_SITE === "1", warnings: auth.warnings, counts: db.counts(),
@@ -370,7 +387,7 @@ export function createServer(env = process.env) {
       const url = new URL(req.url, "http://localhost");
       const ip = clientIp(req);
       const p = url.pathname;
-      cors = p === "/api/inquiry" || p === "/api/config" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
+      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
       if (cors && req.method === "OPTIONS") {
         res.writeHead(204, { "Access-Control-Allow-Origin": allowOrigin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" });
         return res.end();
@@ -388,6 +405,12 @@ export function createServer(env = process.env) {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
         if (limited("inquiry", ip, inquiryMax)) throw new HttpError(429, "Too many requests. Please wait a minute or call us.");
         return send(res, 200, await inquiry(await readBody(req)), { cors: true });
+      }
+      if (p === "/api/assistant") {
+        if (req.method === "GET") return send(res, 200, { enabled: assistantOn }, { cors: true });
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
+        if (limited("assistant", ip, assistantPerMin)) throw new HttpError(429, "Too many questions. Wait a minute and try again.");
+        return send(res, 200, await assistant(await readBody(req, 12000)), { cors: true });
       }
       if (p.startsWith("/admin/api/")) return await adminApi(req, res, url, ip);
       if (p === "/admin/requests") { res.writeHead(301, { Location: "/admin/" }); return res.end(); }

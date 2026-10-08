@@ -1,4 +1,4 @@
-import { Image, Linking, Text, View } from "react-native";
+import { Image, Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Display, Eyebrow, Grid, H1, H2, H3, IconBadge, Photo, Screen, Section, Small } from "../../components/ui";
@@ -28,12 +28,41 @@ export default function Home() {
             <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }}>Staten Island, NY</Text>
           </View>
         </View>
-        <H1>What are you having today?</H1>
-        <Body>Add what you like, then send it as a large-order quote or order pickup on Square Online.</Body>
+        {/* start here: one big way in, two smaller ones */}
+        <Pressable accessibilityRole="button" accessibilityLabel="Start an order" onPress={() => router.push("/menu")}
+          style={({ pressed }) => ({ backgroundColor: colors.espresso, borderRadius: radius.card, padding: 26, minHeight: 215, gap: 14, justifyContent: "space-between", opacity: pressed ? 0.92 : 1 })}>
+          <Text style={[text.eyebrow, { color: colors.gold }]}>Order food</Text>
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 44, lineHeight: 48, fontWeight: "900", color: colors.cream, letterSpacing: -1 }}>Start an order</Text>
+            <Text style={{ fontSize: 16, lineHeight: 23, color: "#D9CFBF" }}>Pick your food from the menu and send it to Maruf Cafe.</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="arrow-forward" size={22} color={colors.ink} /></View>
+            <Text style={{ color: colors.gold, fontWeight: "800", fontSize: 15 }}>See the menu</Text>
+          </View>
+        </Pressable>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          {[["Catering", "Food for groups", "restaurant-outline", () => router.push({ pathname: "/quote", params: { occasion: "Catering" } })],
+            ["Rent the spot", "Private events", "calendar-outline", () => router.push("/event-request")]].map(([title, sub, icon, go]) => (
+            <Pressable key={title} accessibilityRole="button" accessibilityLabel={`${title}: ${sub}`} onPress={go}
+              style={({ pressed }) => ({ flex: 1, backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1, borderRadius: radius.card, padding: 16, gap: 10, minHeight: 112, opacity: pressed ? 0.92 : 1 })}>
+              <IconBadge name={icon} />
+              <View><Text style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>{title}</Text><Text style={{ fontSize: 13, color: colors.muted }}>{sub}</Text></View>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Ask Maruf Cafe AI" onPress={() => router.push("/assistant")}
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.tint, borderRadius: radius.card, paddingVertical: 14, paddingHorizontal: 16, opacity: pressed ? 0.92 : 1 })}>
+          <Ionicons name="sparkles" size={22} color={colors.goldText} />
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink }}>Ask Maruf Cafe AI</Text><Text style={{ fontSize: 13, color: colors.muted }}>Menu help, planning for a group, renting the café</Text></View>
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+        </Pressable>
         <Photo slot="hero" label="Add a hero photo: food spread or café interior" ratio={2} />
       </View>
 
-      <Section style={{ marginTop: 24 }}>
+      <Section style={{ marginTop: 28 }}>
+        <Eyebrow>The menu</Eyebrow>
+        <H1 style={{ marginTop: 8, marginBottom: 18 }}>Pick your food</H1>
         <MenuBrowser />
         <View style={{ marginTop: 20, gap: 12 }}>
           <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" onPress={() => Linking.openURL(business.orderUrl)} />

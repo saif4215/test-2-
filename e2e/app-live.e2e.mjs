@@ -12,7 +12,7 @@ const up = (await a.call("POST", "uploads", PNG, { "Content-Type": "image/png" }
 
 // before: bundled content, quick actions present
 await p.goto(site.u + "/app/", { waitUntil: "load" });
-await p.getByText("What are you having today").first().waitFor();
+await p.getByText("Start an order").first().waitFor();
 ok(await p.getByRole("button", { name: /Call Maruf Cafe at \(929\) 335-3296/ }).first().isVisible(), "Call quick action on Home");
 ok(await p.getByRole("button", { name: "Large Orders" }).first().isVisible() && await p.getByRole("button", { name: "Rent the Cafe" }).first().isVisible(), "Large Orders and Rent the Cafe quick actions on Home");
 ok((await p.getByText("What customers say").count()) === 0 && (await p.getByText("Take a look").count()) === 0, "no reviews or gallery until the café adds real ones");

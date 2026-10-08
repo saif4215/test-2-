@@ -5,6 +5,7 @@ import { parseDate, parseTime, isPast, openStatus } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu } from "../src/lib/site-merge.js";
+import { trimHistory } from "../src/lib/assistant-util.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -133,4 +134,13 @@ test("the live menu replaces the built-in one, and a removed item is simply gone
   assert.equal(indexMenu(m.menu).get("f-b").cents, 1250);
   assert.equal(indexMenu(m.menu).get("d-l").cat, "Coffee");
   assert.equal(mergeSite(BASE, { menu: { groups: {} } }).menu, BASE.menu, "an empty menu from the server never wipes ours");
+});
+
+test("chat history sent to the assistant: recent turns only, errors left out, long text cut", () => {
+  const msgs = Array.from({ length: 14 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `m${i}` }));
+  assert.equal(trimHistory(msgs).length, 10);
+  assert.equal(trimHistory(msgs).at(-1).content, "m13");
+  assert.deepEqual(trimHistory([{ role: "user", content: "hi" }, { role: "assistant", content: "oops", error: true }]), [{ role: "user", content: "hi" }], "failed replies are not sent back");
+  assert.equal(trimHistory([{ role: "user", content: "x".repeat(900) }])[0].content.length, 600);
+  assert.deepEqual(Object.keys(trimHistory([{ role: "user", content: "a", extra: 1 }])[0]), ["role", "content"], "nothing but role and text leaves the phone");
 });

@@ -388,6 +388,7 @@ async function viewSetup(main) {
         check(s.email, "Email alerts are on. New requests are emailed to you.", "Email alerts are OFF. Set RESEND_API_KEY and NOTIFY_EMAIL (see DEPLOY.md), or you will only see requests here."),
         check(s.email || s.webhook, "You are alerted when a request arrives.", "Nothing alerts you when a request arrives. Add email alerts or a webhook."),
         check(s.square !== "off", `Online card checkout is on (${s.square}).`, "Online card checkout is off. That is fine until you set up Square."),
+        check(s.assistant, "The AI assistant in the app is on.", "The AI assistant in the app is off (optional). Set ANTHROPIC_API_KEY to turn it on."),
         check(s.publicUrl, "The website address is set (links in emails and search data are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
         check(s.staffAccount, "A staff account is set up.", "No staff account. Set STAFF_PASSWORD (10+ characters) to give staff their own sign-in."),
         ...s.warnings.map((w) => check(false, "", w)))),

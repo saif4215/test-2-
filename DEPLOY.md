@@ -111,7 +111,25 @@ Until you add these, the site simply leaves them out or shows a neutral line:
 
 ---
 
-## 5. Payments and bookings
+## 5. The AI assistant ("Ask Maruf Cafe" in the app)
+
+The app has an assistant that answers questions about the menu, hours, large orders, catering and renting the café, and helps
+plan how much food a group needs. It reads your live menu, hours, FAQ and event options from the server, so it changes when you
+edit them. It is told never to promise a date, a booking or a price, never to guess capacity, rules or allergies, and to send
+people to the request forms. **It is off until you turn it on**, and the app says so honestly while it is off.
+
+To turn it on:
+1. Create an account at **console.anthropic.com**, add a small amount of credit, and open **API Keys → Create Key**.
+2. In Render add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
+3. Redeploy. The "Ask Maruf Cafe AI" button on the app's Home screen now opens a chat.
+
+Cost control: each visitor is limited to 6 questions a minute, and the whole assistant stops at 300 questions a day
+(`ASSISTANT_DAILY_LIMIT`). Set your own monthly spending limit in the Anthropic console too. The key stays on the server.
+Chats are not stored, and the privacy page says that questions are sent to Anthropic. Check Anthropic's pricing page for current costs.
+
+---
+
+## 6. Payments and bookings
 
 - **Quote and event requests collect no money and confirm nothing.** Every page says so. Take payment and confirm dates yourself,
   after you have decided your deposit and cancellation rules, and write them under Site info → Rent the café.
@@ -122,7 +140,7 @@ Until you add these, the site simply leaves them out or shows a neutral line:
 
 ---
 
-## 6. Local search (Google)
+## 7. Local search (Google)
 
 - Each page has a title, description, address/phone/hours search data (LocalBusiness), FAQ search data, a canonical link,
   share preview image, `robots.txt` and `sitemap.xml` (the last two need `PUBLIC_URL`).
