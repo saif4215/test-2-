@@ -40,5 +40,3 @@ Not covered yet:
 
 ## Still to fill in
 - Address, hours and phone (`#visit` in `index.html`, marked with dashed outlines).
-- The TikTok links currently point to tiktok.com's home page. Replace the two `href`s containing
-  `tiktok.com` in `index.html` with the cafe's profile URL.
