@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { fbm, grey, pixelTexture, rng, studioEnvironment } from "./kit";
+import { disposeScene, fbm, grey, pixelTexture, rng, studioEnvironment } from "./kit";
 
 /** A burger built from layers (bun, patty, cheese, lettuce, onion, tomato, bun). `setExploded(true)` pulls it apart. */
 export function createBurger(canvas, { reduceMotion = false } = {}) {
@@ -265,6 +265,6 @@ export function createBurger(canvas, { reduceMotion = false } = {}) {
       spinner.position.y = reduceMotion ? 0 : Math.sin(t * 1.2) * 0.06 * (1 - e);
       renderer.render(scene, camera);
     },
-    dispose() { renderer.dispose(); scene.traverse((o) => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach((x) => { x.map?.dispose?.(); x.dispose(); }); }); },
+    dispose() { disposeScene(scene, renderer); },
   };
 }

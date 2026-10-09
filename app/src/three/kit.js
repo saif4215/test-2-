@@ -38,6 +38,21 @@ export function pixelTexture(size, pixel, srgb = true) {
 export const grey = (v) => [v, v, v];
 
 
+/** Frees every GPU resource a scene used (geometries, materials, all their textures), then the renderer and its WebGL context. */
+export function disposeScene(scene, renderer) {
+  const seen = new Set();
+  scene.traverse((o) => {
+    o.geometry?.dispose?.();
+    for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) {
+      for (const v of Object.values(m)) if (v?.isTexture && !seen.has(v)) { seen.add(v); v.dispose(); }
+      m.dispose();
+    }
+  });
+  scene.environment?.dispose?.();
+  renderer.dispose();
+  renderer.forceContextLoss();
+}
+
 export function studioEnvironment(renderer) {
   const env = new THREE.Scene();
   env.background = new THREE.Color(0x0b0907);

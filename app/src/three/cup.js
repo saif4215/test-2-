@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import logoCup from "./logoCup";
-import { fbm, grey, pixelTexture, studioEnvironment } from "./kit";
+import { disposeScene, fbm, grey, pixelTexture, studioEnvironment } from "./kit";
 
 /** The Maruf paper cup: open black cup, white base, coffee inside with MARUF poured on top, logo on the wall, steam, and a logo lid floating behind it. */
 export function createCup(canvas, { reduceMotion = false } = {}) {
@@ -129,7 +129,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
 
   /* A black lid with the logo, floating in the background. Its sip flap swings open and shut. Local y is the lid's axis. */
   const lid = new THREE.Group(), lidFlap = new THREE.Group();
-  const plastic = phys(0x1a1c20, 0.34, { clearcoat: 0.5, clearcoatRoughness: 0.3, side: THREE.DoubleSide });
+  const plastic = phys(0x1a1c20, 0.42, { clearcoat: 0.2, clearcoatRoughness: 0.35, specularIntensity: 0.4, side: THREE.DoubleSide });
   const LT = 0.3;   // height of the flat top
   const roundRect = (w, d, r) => {
     const sh = new THREE.Shape();
@@ -142,8 +142,8 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   const lidInk = new THREE.Mesh(new THREE.PlaneGeometry(1.067, 0.821), inkMaterial());
   lidInk.material.emissiveIntensity = 0.7;
   lidInk.rotation.x = -Math.PI / 2; lidInk.position.set(0, LT + 0.004, 0.14); lid.add(lidInk);
-  const sip = new THREE.Mesh(new THREE.ShapeGeometry(roundRect(0.44, 0.22, 0.09)), new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.9 }));
-  sip.rotation.x = -Math.PI / 2; sip.position.set(0, LT + 0.003, -0.52); lid.add(sip);   // the drinking hole, seen from above
+  const sip = new THREE.Mesh(new THREE.ShapeGeometry(roundRect(0.44, 0.22, 0.09)), new THREE.MeshBasicMaterial({ color: 0x030303 }));
+  sip.rotation.x = -Math.PI / 2; sip.position.set(0, LT + 0.003, -0.7); lid.add(sip);   // the drinking hole, seen from above
   const flapGeo = new THREE.ExtrudeGeometry(roundRect(0.5, 0.3, 0.1), { depth: 0.02, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2, curveSegments: 8 });
   const flap = new THREE.Mesh(flapGeo, plastic);
   flap.rotation.x = -Math.PI / 2; flap.position.y = 0.012; lidFlap.add(flap);   // lies flat over the hole when shut, hinged at its far edge
@@ -185,7 +185,8 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     camera.aspect = w / h;
     // fit the cup, its steam and the lid: tall enough for the height, wide enough on a narrow screen
     const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const dist = Math.max(4.1 / (2 * half), 3.7 / (2 * half * camera.aspect));
+    const lidReach = LID_AT.x + 1.06, lidDist = (lidReach * 1.03) / (half * camera.aspect) + LID_AT.z;   // the lid is further back, so its edge must fit the narrower view at that depth
+    const dist = Math.max(4.1 / (2 * half), 3.7 / (2 * half * camera.aspect), lidDist);
     camera.position.set(0, 0.5 + dist * 0.04, dist);
     camera.lookAt(0, 0.4, 0);
     camera.updateProjectionMatrix();
@@ -201,7 +202,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
       spinner.rotation.y = reduceMotion ? 0.12 : yaw;
       lid.position.y = LID_AT.y + Math.sin(t * 0.9) * 0.06;
       lid.rotation.set(1.2 + Math.sin(t * 0.6) * 0.04, 0, reduceMotion ? -0.2 : -0.2 + Math.sin(t * 0.5) * 0.35);
-      lidFlap.rotation.x = -(reduceMotion ? 1.1 : 0.7 + Math.sin(t * 0.8) * 0.6);
+      lidFlap.rotation.x = -(reduceMotion ? 1.1 : 0.65 + Math.sin(t * 0.8) * 0.65);
       steam.forEach((s) => {
         const k = reduceMotion ? s.userData.t : (s.userData.t + t * 0.12) % 1;
         s.position.set(steamAt.x + Math.sin(k * 9 + s.userData.t * 20) * 0.25 * steamAt.size, steamAt.y + k * steamAt.rise, steamAt.z + Math.cos(k * 7 + s.userData.t * 20) * 0.25 * steamAt.size);
@@ -210,6 +211,6 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
       });
       renderer.render(scene, camera);
     },
-    dispose() { renderer.dispose(); scene.traverse((o) => { o.geometry?.dispose?.(); const m = o.material; (Array.isArray(m) ? m : m ? [m] : []).forEach((x) => { x.map?.dispose?.(); x.dispose(); }); }); },
+    dispose() { disposeScene(scene, renderer); },
   };
 }
