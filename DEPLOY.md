@@ -1,7 +1,6 @@
 # Put Maruf Cafe online, set it up, and run it day to day
 
-This one server runs everything: the 3D website (`/`), the Large Orders and Rent the Café pages, the phone app (`/app/`),
-the staff dashboard (`/admin/`), card checkout (Square, optional) and the quote/event request form backend.
+This one server runs everything: the phone app (`/app/`), the staff dashboard (`/admin/`) and the backend for quote and event requests.
 It needs **Node 22.12 or newer** and no `npm install` (the database is built into Node).
 
 You can do all of this from a phone. Part 1 gets it online. Part 2 makes sure **you never miss a request**. Part 3
@@ -29,13 +28,13 @@ is the dashboard. Part 4 is the list of things only the café can fill in.
    |---|---|---|
    | `NODE_VERSION` | `22` | the built-in database needs Node 22 |
    | `ADMIN_PASSWORD` | a long password you choose (**10+ characters**) | switches the staff dashboard on |
-   | `PUBLIC_URL` | `https://maruf-cafe.onrender.com` (your real address, no slash at the end) | links in emails, search data, sitemap |
+   | `PUBLIC_URL` | `https://maruf-cafe.onrender.com` (your real address, no slash at the end) | links in emails and the sitemap |
    | `RESEND_API_KEY`, `NOTIFY_EMAIL` | see Part 2 | email alert for every request |
 
    Optional: `STAFF_PASSWORD` (a second sign-in for staff, 10+ characters), `STAFF_CAN_EDIT_SITE=1` (lets staff also edit site info and photos; they can already edit the menu). The full list with
    explanations is in `.env.example`.
 5. Tap **Create Web Service** and wait for **Live**. Your address looks like `https://maruf-cafe.onrender.com`:
-   - `/` the website, `/large-orders`, `/rent-the-cafe`, `/app/` the phone app, `/admin/` the dashboard.
+   - `/app/` the phone app (the plain address `/` sends people there), `/admin/` the dashboard.
 6. Add the app to your home screen: iPhone Safari → Share → **Add to Home Screen**; Android Chrome → menu → **Install app**.
 
 Nothing is stored in your GitHub repository: requests, edits and photos live only on the server (in `DATA_DIR`).
@@ -44,8 +43,8 @@ Nothing is stored in your GitHub repository: requests, edits and photos live onl
 
 ## 2. Never miss a request (important)
 
-When a customer sends a quote or event request the server **saves it in its database first, then emails you**. The website
-and app only say "received" after that worked. If nothing could be saved and no email/webhook could be sent, the customer
+When a customer sends a quote or event request the server **saves it in its database first, then emails you**. The app
+only says "received" after that worked. If nothing could be saved and no email/webhook could be sent, the customer
 is told it failed and is given your phone number. A form never pretends to work.
 
 **Render's free plan has temporary storage.** Anything saved (the database, uploaded photos, menu edits) is erased
@@ -66,7 +65,7 @@ whenever the service restarts or redeploys, which happens regularly. So:
    email address you used to sign up at Resend. So use that same address for `NOTIFY_EMAIL`.
 4. **For real use:** in Resend open **Domains → Add Domain** (the café's own domain), add the DNS records it shows at your
    domain provider, wait until it says *Verified*, then set `NOTIFY_FROM` to e.g. `Maruf Cafe <requests@your-domain.com>`.
-5. Send yourself a test request from the website. You should get an email with all the details; **Reply** goes to the customer.
+5. Send yourself a test request from the app. You should get an email with all the details; **Reply** goes to the customer.
 
 The key lives only in Render's settings. It is never in the code and never sent to a browser.
 
@@ -87,7 +86,7 @@ Sessions last 12 hours, 5 wrong passwords lock that sign-in for 15 minutes, and 
 | Tab | What you can do | Who |
 |---|---|---|
 | **Requests** | search, filter by status, read every answer, Call / Text / Email buttons, set status (New → Contacted → Quote sent → Accepted → Declined/Closed), private notes, download a spreadsheet | owner and staff |
-| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items. Hidden items disappear from the website, the app and online checkout. | owner and staff |
+| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items. Hidden items disappear from the app and from online checkout. | owner and staff |
 | **Menu reset** | "Reset to the original menu" throws away all menu edits | owner only |
 | **Site info** | phone, email, address, hours, Instagram/TikTok, event options and prices, what the space holds, rental rules, FAQ, **real** customer reviews | owner (or staff, same switch) |
 | **Photos** | upload photos from your phone (they are shrunk automatically), put them in the photo spots and the gallery with a short description | owner (or staff, same switch) |
@@ -101,7 +100,7 @@ Sessions last 12 hours, 5 wrong passwords lock that sign-in for 15 minutes, and 
 
 Until you add these, the site simply leaves them out or shows a neutral line:
 
-- **Email address** (Site info). Shown as "[ADD EMAIL]" on the support/privacy pages until set; hidden on the website.
+- **Email address** (Site info). Shown as "[ADD EMAIL]" on the support/privacy pages until set; hidden in the app.
 - **Real photos** (Photos). Without them, photo spots and the Gallery section are hidden.
 - **Real customer reviews** (Site info → Customer reviews). Only add reviews real customers wrote. No stars or ratings are ever shown or sent to Google.
 - **How many people the space holds, rental rules, deposit/cancellation policy** (Site info → Rent the café). Blank means not shown.
@@ -151,26 +150,20 @@ Chats are not stored, and the privacy page says that questions are sent to Anthr
 
 - **Quote and event requests collect no money and confirm nothing.** Every page says so. Take payment and confirm dates yourself,
   after you have decided your deposit and cancellation rules, and write them under Site info → Rent the café.
-- **Square card checkout** for fixed-price menu items on the 3D site is separate and optional. It stays off until you set
+- **Square card checkout** is a leftover from the old website. The app does not use it (it links to your Square Online store instead), so leave it off. If you ever want it, it is separate and optional. It stays off until you set
   `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` and `SQUARE_APP_ID`. Start with `SQUARE_ENV=sandbox` and Square's test cards, set
   `TAX_PERCENT`, and only then switch to `production`. It has been tested against a mock of Square, not Square itself.
   Checkout always uses the live menu, so a price you change or an item you hide applies to checkout immediately.
 
 ---
 
-## 7. Local search (Google)
+## 7. If you want the website back
 
-- Each page has a title, description, address/phone/hours search data (LocalBusiness), FAQ search data, a canonical link,
-  share preview image, `robots.txt` and `sitemap.xml` (the last two need `PUBLIC_URL`).
-- Claim your **Google Business Profile** for 365 Veterans Rd W and keep its hours the same as the dashboard.
-- Optional: add the site in **Google Search Console** and submit `https://YOUR-ADDRESS/sitemap.xml`.
-- Using your own domain (e.g. marufcafe.com) is a separate step: it currently points to your Square Online store. Add a custom
-  domain in Render only if you want this site to replace it, then update `PUBLIC_URL`.
-
----
+The 3D website, the Large Orders and Rent the Café pages and the Google search setup were removed because only the app is wanted.
+They are still in the project's git history (the commit before "Remove the website"), so they can be restored if you change your mind.
 
 ## Good to know
 
 - **The free plan sleeps** when idle: the first visit after a break can take about a minute.
 - The app's web copy is built into `public/app`. After changing app code run `npm run build` (needs a computer or build service) and commit it.
-- Tests: `npm test` (server, forms, dashboard, search data; no keys needed). Browser tests are in `e2e/` (`node e2e/web.e2e.mjs`, needs `playwright-core` and Chromium).
+- Tests: `npm test` (server, forms, dashboard, search data; no keys needed). Browser tests are in `e2e/` (for example `node e2e/app-live.e2e.mjs`, needs `playwright-core` and Chromium).

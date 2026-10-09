@@ -91,18 +91,22 @@ test("a declined card cancels the unpaid order and says so", async () => {
 });
 
 test("serves only allow-listed files", async () => {
-  assert.equal((await fetch(base + "/")).status, 200);
+  assert.equal((await fetch(base + "/privacy")).status, 200);
   assert.equal((await fetch(base + "/menu.json")).status, 200);
   for (const p of ["/server.mjs", "/server.test.mjs", "/.env", "/../package.json", "/vendor/../server.mjs", "/%2e%2e/server.mjs"]) {
     assert.equal((await fetch(base + p)).status, 404, p);
   }
 });
 
-test("serves the app manifest, service worker and icons", async () => {
-  const m = await fetch(base + "/manifest.webmanifest");
-  assert.equal(m.status, 200);
-  assert.equal((await m.json()).display, "standalone");
-  assert.equal((await fetch(base + "/sw.js")).status, 200);
+test("the website is gone: its addresses lead into the app, and the old service worker removes itself", async () => {
+  for (const [from, to] of [["/", "/app/"], ["/index.html", "/app/"], ["/large-orders", "/app/orders"], ["/rent-the-cafe", "/app/events"]]) {
+    const r = await fetch(base + from, { redirect: "manual" });
+    assert.equal(r.status, 302, from); assert.equal(r.headers.get("location"), to, from);
+  }
+  for (const gone of ["/showcase.js", "/showcase.css", "/checkout.js", "/site.js", "/vendor/three.module.min.js", "/manifest.webmanifest", "/logo.svg"]) assert.equal((await fetch(base + gone)).status, 404, gone);
+  const sw = await fetch(base + "/sw.js");
+  assert.equal(sw.status, 200);
+  assert.match(await sw.text(), /unregister/);
   assert.equal((await fetch(base + "/icon-512.png")).headers.get("content-type"), "image/png");
 });
 

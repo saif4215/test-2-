@@ -1,4 +1,4 @@
-// Maruf Cafe: website + phone app host, Square checkout, quote/event requests and the staff dashboard.
+// Maruf Cafe: hosts the phone app, takes quote/event requests, runs the staff dashboard and the AI helper (and optional Square checkout).
 // No packages to install. Needs Node 22.12 or newer (it uses Node's built-in SQLite).
 //
 //   node server.mjs
@@ -237,7 +237,9 @@ export function createServer(env = process.env) {
     return `${req.headers["x-forwarded-proto"] === "https" ? "https" : "http"}://${host}`;
   };
   const isHttps = (req) => publicUrl.startsWith("https:") || req.headers["x-forwarded-proto"] === "https";
-  const PAGES = ["/", "/large-orders", "/rent-the-cafe", "/privacy", "/support"];
+  const PAGES = ["/app/", "/privacy", "/support"];
+  // The old website is gone: its addresses send people to the matching place in the app, so old links and emails still work.
+  const MOVED = { "/": "/app/", "/index.html": "/app/", "/large-orders": "/app/orders", "/rent-the-cafe": "/app/events" };
 
   /* ---- staff dashboard API ---- */
   /** A request as the dashboard shows it: the stored values plus readable label/value pairs. */
@@ -424,6 +426,7 @@ export function createServer(env = process.env) {
         }
         if (p === "/robots.txt") return send(res, 200, robotsTxt(baseFor(req)), { type: "text/plain; charset=utf-8", cache: "no-cache" });
         if (p === "/sitemap.xml") { const base = baseFor(req); if (!base) throw new HttpError(404, "Not found."); return send(res, 200, sitemapXml(base, PAGES), { type: "application/xml; charset=utf-8", cache: "no-cache" }); }
+        if (MOVED[p]) { res.writeHead(302, { Location: MOVED[p], "Cache-Control": "no-cache" }); return res.end(); }
         let um = /^\/uploads\/([A-Za-z0-9._-]+)$/.exec(p);
         if (um) {
           const rec = db?.getUploadByFile(um[1]);

@@ -97,7 +97,7 @@ async function viewRequests(main) {
       chips.replaceChildren(...[["", "All", r.counts.all], ...Object.entries(r.statuses).map(([k, label]) => [k, label, r.counts[k]])].map(([k, label, n]) =>
         h("button", { type: "button", "aria-pressed": S.status === k ? "true" : "false", text: `${label} (${n})`, onclick: () => { S.status = k; S.page = 1; load(); } })));
       list.replaceChildren();
-      if (!r.rows.length) list.append(h("p", { class: "card", text: S.status || S.q || S.type ? "No requests match." : "No requests yet. New ones from the website and the app will appear here." }));
+      if (!r.rows.length) list.append(h("p", { class: "card", text: S.status || S.q || S.type ? "No requests match." : "No requests yet. New ones from the app will appear here." }));
       for (const row of r.rows) list.append(requestCard(row, r.statuses, load));
       if (r.pages > 1) list.append(h("div", { class: "row end" },
         h("button", { type: "button", text: "← Newer", disabled: S.page <= 1, onclick: () => { S.page--; load(); } }), h("span", { text: `Page ${r.page} of ${r.pages}` }),
@@ -146,7 +146,7 @@ async function viewMenu(main) {
   const filter = h("input", { type: "search", placeholder: "Find an item…", "aria-label": "Find a menu item", oninput: apply });
   const tree = h("div");
   main.append(
-    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the website and app (it also stops online ordering), then press Save. Prices are in dollars. For a size-based price, use the low and high boxes." }),
+    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the app (it also stops online ordering), then press Save. Prices are in dollars. For a size-based price, use the low and high boxes." }),
     h("div", { class: "row" }, h("div", { class: "grow" }, filter), me.role === "owner" && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
       if (!confirm("Throw away all your menu edits and go back to the original menu?")) return;
       try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })),
@@ -211,7 +211,7 @@ async function viewMenu(main) {
     msgBox.replaceChildren();
     if (problems.length) return msgBox.append(h("span", { class: "msg bad", role: "alert", text: problems[0] }));
     save.disabled = true;
-    try { const r = await api("PUT", "menu", { menu }); S.menu = r.menu; build(); apply(); msgBox.append(h("span", { class: "msg ok", role: "status", text: "Saved. The website and app show it now." })); }
+    try { const r = await api("PUT", "menu", { menu }); S.menu = r.menu; build(); apply(); msgBox.append(h("span", { class: "msg ok", role: "status", text: "Saved. The app shows it now." })); }
     catch (err) { msgBox.append(h("span", { class: "msg bad", role: "alert", text: err.message })); } finally { save.disabled = false; }
   } });
   main.append(h("div", { class: "savebar" }, msgBox, save));
@@ -231,7 +231,7 @@ const SLOT_LABELS = { hero: "Top of the home page", largeOrders: "Large orders p
 
 async function saveContent(host, button) {
   button.disabled = true;
-  try { const r = await api("PUT", "content", { content: S.content }); S.content = r.content; flash(host, "Saved. The website and app show it now."); }
+  try { const r = await api("PUT", "content", { content: S.content }); S.content = r.content; flash(host, "Saved. The app shows it now."); }
   catch (err) { flash(host, err.errors?.length > 1 ? `${err.errors[0]} (and ${err.errors.length - 1} more)` : err.message, "bad"); }
   finally { button.disabled = false; }
 }
@@ -288,17 +288,17 @@ async function viewSite(main) {
   const save = h("button", { class: "primary", type: "button", text: "Save changes", onclick: () => { syncAddr(); saveContent(host, save); } });
   host.append(
     h("div", { class: "card" }, h("h2", { text: "Contact" }),
-      ...bind(b, "phone", "Phone number", { mode: "tel", max: "30" }), ...bind(b, "email", "Email address (shown to customers)", { mode: "email", hint: "Leave blank to show no email on the website." }),
+      ...bind(b, "phone", "Phone number", { mode: "tel", max: "30" }), ...bind(b, "email", "Email address (shown to customers)", { mode: "email", hint: "Leave blank to show no email in the app." }),
       ...bind(address, "l1", "Street address", { max: "100" }), ...bind(address, "l2", "City, state ZIP", { max: "100", ph: "Staten Island, NY 10309" }),
       ...bind(b, "instagram", "Instagram link", { ph: "https://www.instagram.com/…", max: "400" }), ...bind(b, "tiktok", "TikTok link", { ph: "https://www.tiktok.com/@…", max: "400" }),
       ...bind(b, "reviewsUrl", "Link to your reviews page (optional)", { ph: "https://…", max: "400" })),
-    h("div", { class: "card" }, h("h2", { text: "Hours" }), h("p", { class: "hint", text: "Used on the website, the app and Google. Hours can change on holidays: update them here." }), hoursBox),
+    h("div", { class: "card" }, h("h2", { text: "Hours" }), h("p", { class: "hint", text: "Used in the app. Hours can change on holidays: update them here." }), hoursBox),
     h("div", { class: "card" }, h("h2", { text: "Rent the café: facts" }), h("p", { class: "hint", text: "These show on the Rent the Café page only when you fill them in. Nothing is guessed." }),
       ...bind(c.venue, "capacity", "How many people the space holds", { max: "80", ph: "for example: up to 40 seated" }), ...bind(c.venue, "notes", "About the space", { area: true, max: "1000" }),
       ...bind(c.venue, "policies", "Rental rules (deposit, cancellation, food rules…)", { area: true, max: "1500", hint: "Write your real policies here before taking bookings." })),
     h("div", { class: "card" }, h("h2", { text: "Event options" }), pkgBox, ...bind(c, "packagesNote", "Note under the options", { area: true, max: "500" })),
     h("div", { class: "card" }, h("h2", { text: "Questions & answers" }), faqBox),
-    h("div", { class: "card" }, h("h2", { text: "Customer reviews" }), h("p", { class: "msg warn", text: "Only add reviews that real customers actually wrote, and use their real words. Never write or change a review yourself. Reviews show on the website only when you add them here." }), revBox),
+    h("div", { class: "card" }, h("h2", { text: "Customer reviews" }), h("p", { class: "msg warn", text: "Only add reviews that real customers actually wrote, and use their real words. Never write or change a review yourself. Reviews show in the app only when you add them here." }), revBox),
     h("div", { class: "savebar" }, save));
   main.append(host);
 }
@@ -389,7 +389,7 @@ async function viewSetup(main) {
         check(s.email || s.webhook, "You are alerted when a request arrives.", "Nothing alerts you when a request arrives. Add email alerts or a webhook."),
         check(s.square !== "off", `Online card checkout is on (${s.square}).`, "Online card checkout is off. That is fine until you set up Square."),
         check(s.assistant, "The AI assistant in the app is on.", "The AI assistant in the app is off (optional). Set ANTHROPIC_API_KEY to turn it on."),
-        check(s.publicUrl, "The website address is set (links in emails and search data are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
+        check(s.publicUrl, "The server address is set (links in emails are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
         check(s.staffAccount, "A staff account is set up.", "No staff account. Set STAFF_PASSWORD (10+ characters) to give staff their own sign-in."),
         ...s.warnings.map((w) => check(false, "", w)))),
       h("div", { class: "card" }, h("h2", { text: "Request counts" }), h("p", { text: Object.entries(s.counts).map(([k, n]) => `${k.replace("_", " ")}: ${n}`).join(" · ") })),
