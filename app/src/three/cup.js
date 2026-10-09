@@ -5,7 +5,6 @@ import { fbm, grey, pixelTexture, studioEnvironment } from "./kit";
 /** The Maruf paper cup: open black cup, white base, coffee inside with MARUF poured on top, logo on the wall, steam. */
 export function createCup(canvas, { reduceMotion = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -20,12 +19,12 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   key.shadow.bias = -0.0005; key.shadow.normalBias = 0.03; key.shadow.radius = 5;
   scene.add(key);
   const fill = new THREE.DirectionalLight(0xd6e4ff, 0.9); fill.position.set(-6, 3, 4); scene.add(fill);
-  const rim = new THREE.PointLight(0xd4a24c, 45, 24); rim.position.set(-3, 3, -4); scene.add(rim);
+  const rim = new THREE.DirectionalLight(0xe8c07a, 2.2); rim.position.set(-5, 2, -3); scene.add(rim);
   const phys = (color, rough, extra = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: rough, ...extra });
   const cup = new THREE.Group();
 
   /* logo decal: a patch of the cone-shaped cup wall, textured with the logo. wall = [[y, radius], ...] */
-  function addLogoDecal({ wall, y0, y1, arc, src }) {
+  function addLogoDecal({ wall, y0, y1, arc, src, rot = 0 }) {
     const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 788;
     const g = cv.getContext("2d");
     const tex = new THREE.CanvasTexture(cv);
@@ -37,12 +36,13 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
       g.drawImage(img, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
       tex.needsUpdate = true;
     };
+    img.onerror = () => console.warn("The cup logo did not load.");
     img.src = src;
     // outer wall radius at height y: the profile is straight segments
     const radiusAt = (y) => { for (let i = 0; i < wall.length - 1; i++) { const [ya, ra] = wall[i], [yb, rb] = wall[i + 1]; if (y <= yb) return ra + ((y - ya) / (yb - ya)) * (rb - ra); } return wall[wall.length - 1][1]; };
     const NU = 40, NV = 16, pos = [], uv = [], idx = [];
     for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
-      const y = y0 + ((y1 - y0) * j) / NV, ang = (i / NU - 0.5) * arc, r = radiusAt(y) + 0.006;
+      const y = y0 + ((y1 - y0) * j) / NV, ang = (i / NU - 0.5) * arc + rot, r = radiusAt(y) + 0.006;
       pos.push(Math.sin(ang) * r, y, Math.cos(ang) * r); uv.push(i / NU, j / NV);
     }
     for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const p = j * (NU + 1) + i, q = p + NU + 1; idx.push(p, p + 1, q, p + 1, q + 1, q); }
@@ -50,7 +50,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
     geo.setIndex(idx); geo.computeVertexNormals();
-    cup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
+    cup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.38, transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
   }
 
   /* black paper cup with a white base band */
@@ -59,8 +59,8 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   const grain = fbm(256, { seed: 41, scale: 60, octaves: 2 });
   const grainBump = pixelTexture(256, (i) => grey(grain[i] * 255), false);
   grainBump.wrapS = grainBump.wrapT = THREE.RepeatWrapping; grainBump.repeat.set(4, 4);
-  const paperBlack = phys(0x1c1f23, 0.46, { clearcoat: 0.45, clearcoatRoughness: 0.35, bumpMap: grainBump, bumpScale: 0.12, sheen: 0.6, sheenRoughness: 0.4, sheenColor: new THREE.Color(0x59616b) });
-  const paperWhite = phys(0xeeeadf, 0.85, { bumpMap: grainBump, bumpScale: 0.15 });
+  const paperBlack = phys(0x23272c, 0.38, { clearcoat: 0.7, clearcoatRoughness: 0.2, bumpMap: grainBump, bumpScale: 0.06, sheen: 0.6, sheenRoughness: 0.4, sheenColor: new THREE.Color(0x59616b) });
+  const paperWhite = phys(0xf0ebe0, 0.85, { bumpMap: grainBump, bumpScale: 0.04 });
 
   cup.add(new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(rAt(YB), YB), new THREE.Vector2(rAt(H), H)], 96), paperBlack));
   cup.add(new THREE.Mesh(new THREE.LatheGeometry([
@@ -87,7 +87,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   /* the coffee seen from above: dark roast with a lighter crema edge, and MARUF poured in cream foam */
   const cv = document.createElement("canvas"); cv.width = cv.height = 512;
   const cg = cv.getContext("2d"), grad = cg.createRadialGradient(256, 256, 20, 256, 256, 256);
-  grad.addColorStop(0, "#3a1d0d"); grad.addColorStop(0.72, "#5a3115"); grad.addColorStop(0.94, "#8a5a30"); grad.addColorStop(1, "#b98a55");
+  grad.addColorStop(0, "#1f0e06"); grad.addColorStop(0.72, "#33190b"); grad.addColorStop(0.94, "#55301a"); grad.addColorStop(1, "#80573a");
   cg.fillStyle = grad; cg.fillRect(0, 0, 512, 512);
   cg.textAlign = "center"; cg.textBaseline = "middle";
   cg.font = "800 98px Arial, Helvetica, sans-serif";
@@ -97,12 +97,12 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   cg.shadowColor = "transparent"; cg.filter = "none"; cg.strokeStyle = "rgba(243,229,202,0.6)"; cg.lineWidth = 7; cg.lineCap = "round";
   cg.beginPath(); cg.moveTo(172, 280); cg.quadraticCurveTo(256, 304, 340, 280); cg.stroke();   // a small foam swoosh under the name
   const coffeeTex = new THREE.CanvasTexture(cv); coffeeTex.colorSpace = THREE.SRGBColorSpace; coffeeTex.anisotropy = 8;
-  const coffee = new THREE.Mesh(new THREE.CircleGeometry(rAt(CY) - 0.034, 64), phys(0xffffff, 0.3, { map: coffeeTex, clearcoat: 0.5, clearcoatRoughness: 0.18, envMapIntensity: 0.3 }));
+  const coffee = new THREE.Mesh(new THREE.CircleGeometry(rAt(CY) - 0.034, 64), phys(0xb8b8b8, 0.3, { map: coffeeTex, clearcoat: 0.5, clearcoatRoughness: 0.28, envMapIntensity: 0.3 }));
   coffee.rotation.x = -Math.PI / 2; coffee.position.y = CY; cup.add(coffee);
   const steamAt = { x: 0, y: CY + 0.05, z: 0, rise: 1.25, size: 1.3 };
 
   // the logo as printed on the cup
-  addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.25, y1: 2.3, arc: 1.62, src: logoCup });
+  for (const rot of [0, Math.PI]) addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.4, arc: 1.85, src: logoCup, rot });
 
   /* the cup is centred on the origin so tilting it keeps it in the middle of the frame */
   const SCALE = 0.86;
@@ -135,15 +135,16 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     return s;
   });
 
-  /* The cup sways gently so the logo and MARUF stay readable. Drag to turn it all the way round; it settles back when let go. */
-  let dragging = false, lastX = 0, offset = 0;
+  /* The cup turns slowly and lingers while the front faces you, so MARUF and the logo are easy to read. Drag to turn it yourself. */
+  let dragging = false, lastX = 0, yaw = -0.5;
   canvas.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener("pointermove", (e) => { if (!dragging) return; offset += (e.clientX - lastX) * 0.012; lastX = e.clientX; });
-  const release = () => { if (dragging) offset = Math.atan2(Math.sin(offset), Math.cos(offset)); dragging = false; };
+  canvas.addEventListener("pointermove", (e) => { if (!dragging) return; yaw += (e.clientX - lastX) * 0.012; lastX = e.clientX; });
+  const release = () => { dragging = false; };
   canvas.addEventListener("pointerup", release); canvas.addEventListener("pointercancel", release);
 
   function resize() {
     const w = canvas.clientWidth || 300, h = canvas.clientHeight || 300;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     // fit the cup and its steam: tall enough for the height, wide enough for the cup on a narrow screen
@@ -159,9 +160,9 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   return {
     resize,
     frame() {
-      const t = reduceMotion ? 0 : clock.getElapsedTime();
-      if (!dragging) offset *= 0.965;
-      spinner.rotation.y = (reduceMotion ? 0.12 : Math.sin(t * 0.55) * 0.32) + offset;
+      const dt = Math.min(clock.getDelta(), 0.1), t = reduceMotion ? 0 : clock.elapsedTime;
+      if (!dragging && !reduceMotion) yaw += dt * (0.2 + 1.0 * Math.pow(Math.sin(yaw / 2), 2));
+      spinner.rotation.y = reduceMotion ? 0.12 : yaw;
       steam.forEach((s) => {
         const k = reduceMotion ? s.userData.t : (s.userData.t + t * 0.12) % 1;
         s.position.set(steamAt.x + Math.sin(k * 9 + s.userData.t * 20) * 0.25 * steamAt.size, steamAt.y + k * steamAt.rise, steamAt.z + Math.cos(k * 7 + s.userData.t * 20) * 0.25 * steamAt.size);
