@@ -38,7 +38,7 @@ The app also loads the live menu (`/menu.json`) and the café's details, FAQ, ev
 | Menu items and prices | `src/data/menu.json` (prices in cents; add `"desc": "..."` to show a description) |
 | Photos | put files in `assets/photos/`, then set the slot in `src/photos.js` |
 
-`src/data/menu.json` is a copy of `../public/menu.json` (the website's menu). Keep them in step when the menu changes.
+`src/data/menu.json` is a copy of `../public/menu.json` (the live menu). Keep them in step when the menu changes.
 
 ## Photos
 
@@ -84,6 +84,6 @@ The server has its own tests: `cd .. && node --test server.test.mjs`.
 
 
 ## 3D models (web app only)
-`src/three/` holds the 3D burger (`burger.js`) and the Maruf paper cup (`cup.js`), drawn with three.js. They are loaded only on the web build
-(`src/components/Model3D.web.js`) the first time they scroll into view, draw only while visible, and are skipped on phones without a web view
+`src/three/` holds the 3D burger (`burger.js`) and the Maruf paper cup (`cup.js`: an open cup with coffee and MARUF poured on top, the logo on both sides, and a logo lid beside it whose sip flap opens and shuts), drawn with three.js. They are loaded only on the web build
+(`src/components/Model3D.web.js`) the first time they scroll into view, draw only while visible, free their graphics memory when closed, and are skipped on phones without a web view
 (`Model3D.js` is an empty stand-in for the iPhone/Android store builds). If a device cannot run WebGL the section simply does not appear.
