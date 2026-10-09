@@ -1,0 +1,33 @@
+// Needs playwright-core and Chromium. WebGL runs in software here (swiftshader), so it is slow but works without a GPU.
+import { chromium } from "playwright-core";
+import { startSite } from "../test-helpers.mjs";
+const OUT = process.env.SHOTS_DIR || "/tmp";
+const fails = [], ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) fails.push(m); };
+const site = await startSite();
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM || "/opt/pw-browsers/chromium", args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+const p = await ctx.newPage();
+const errs = []; p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+await p.goto(site.u + "/app/", { waitUntil: "load" });
+await p.getByRole("button", { name: "Start an order" }).waitFor();
+const burger = p.locator('canvas[aria-label^="A 3D burger"]');
+await burger.scrollIntoViewIfNeeded();
+await p.waitForTimeout(6000);
+ok(await burger.isVisible(), "burger canvas shown on Home");
+await p.screenshot({ path: `${OUT}/3d-1-burger.png` });
+await p.getByRole("button", { name: "Take it apart" }).click();
+await p.waitForTimeout(2500);
+ok(await p.getByRole("button", { name: "Put it back together" }).isVisible(), "button flips to 'Put it back together'");
+await p.screenshot({ path: `${OUT}/3d-2-apart.png` });
+// drag spins
+const box = await burger.boundingBox();
+await p.mouse.move(box.x + 100, box.y + 150); await p.mouse.down(); await p.mouse.move(box.x + 250, box.y + 150, { steps: 6 }); await p.mouse.up();
+await p.waitForTimeout(400);
+await p.getByRole("tab", { name: /Menu/ }).first().click();
+const cup = p.locator('canvas[aria-label^="A 3D Maruf"]');
+await p.waitForTimeout(6000);
+ok(await cup.isVisible(), "cup canvas shown on Menu");
+await p.screenshot({ path: `${OUT}/3d-3-cup.png` });
+ok(!errs.some((e) => !/ERR_|Failed to load resource|fonts/.test(e)), "no page errors: " + errs.filter((e) => !/ERR_|Failed to load resource|fonts/.test(e)).join(" | ").slice(0, 300));
+await b.close(); site.close();
+console.log(fails.length ? "PROBLEMS" : "ALL CHECKS PASSED");

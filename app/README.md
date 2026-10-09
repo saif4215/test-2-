@@ -81,3 +81,9 @@ The server has its own tests: `cd .. && node --test server.test.mjs`.
 - **FAQ:** the first answer is the wording you gave. The others were written to be neutral and should be reviewed.
 - **Not yet run on a real phone.** It was tested as a web build in a phone-sized browser and with unit tests.
   Try it in Expo Go before publishing.
+
+
+## 3D models (web app only)
+`src/three/` holds the 3D burger (`burger.js`) and the Maruf paper cup (`cup.js`), drawn with three.js. They are loaded only on the web build
+(`src/components/Model3D.web.js`) the first time they scroll into view, draw only while visible, and are skipped on phones without a web view
+(`Model3D.js` is an empty stand-in for the iPhone/Android store builds). If a device cannot run WebGL the section simply does not appear.

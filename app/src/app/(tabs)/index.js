@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Grid, H1, H2, Photo, Screen, Section, Small } from "../../components/ui";
 import { MapCard } from "../../components/MapCard";
+import { BurgerViewer } from "../../components/Viewers";
 import { MenuBrowser, OrderBar } from "../../components/MenuBrowser";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
@@ -47,7 +48,9 @@ export default function Home() {
         <Photo slot="hero" label="Add a hero photo: food spread or café interior" ratio={2} />
       </View>
 
-      <Section style={{ marginTop: 28 }}>
+      <Section style={{ marginTop: 32 }}><BurgerViewer /></Section>
+
+      <Section style={{ marginTop: 32 }}>
         <H1 style={{ marginBottom: 16 }}>Menu</H1>
         <MenuBrowser />
         <View style={{ marginTop: 20, gap: 12 }}>
