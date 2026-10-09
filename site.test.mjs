@@ -26,10 +26,10 @@ test("privacy and support pages show the café's own details and no leftover pla
   t.close();
 });
 
-test("privacy page covers the AI chat and directions, in plain words", async () => {
+test("privacy page covers the chat (built-in or AI) and directions, in plain words", async () => {
   const t = await startSite();
   const html = await text(await fetch(t.u + "/privacy"));
-  assert.match(html, /AI assistant/); assert.match(html, /Get directions/); assert.doesNotMatch(html, /embedded|shows a Google map/i);
+  assert.match(html, /The chat/); assert.match(html, /AI service/); assert.match(html, /built on our server from the café/); assert.match(html, /Get directions/); assert.doesNotMatch(html, /embedded|shows a Google map/i);
   t.close();
 });
 
