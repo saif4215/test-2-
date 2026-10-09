@@ -27,19 +27,43 @@ test("message cleaning: only real customer questions get through", () => {
   assert.deepEqual(cleanMessages([{ role: "user", content: "a" }, { role: "user", content: "b" }]).messages, [{ role: "user", content: "a\nb" }]);
 });
 
-test("off by default: the app is told, and a question gets an honest answer, not a fake one", async () => {
+test("no AI key: the chat still works with built-in answers, labelled as such, and says nothing it does not know", async () => {
+  const t = await startSite({ ASSISTANT_RATE_LIMIT_PER_MIN: "100" });
+  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true, mode: "basic" });
+  const q = async (text) => (await ask(t, [{ role: "user", content: text }])).json;
+  const hi = await q("hi"); assert.equal(hi.ok, true); assert.equal(hi.mode, "basic");
+  assert.match((await q("How much is a latte?")).reply, /Latte: \$4\.50/);
+  assert.match((await q("What are your hours?")).reply, /7 AM to 10 PM/);
+  assert.match((await q("where are you")).reply, /365 Veterans Rd W/);
+  assert.match((await q("how do I rent the cafe for a party")).reply, /nothing is booked until Maruf Cafe confirms/i);
+  assert.match((await q("how many people can you fit")).reply, /don't have the seating capacity/i, "capacity is not invented");
+  assert.match((await q("do you need a deposit?")).reply, /aren't listed yet/i, "policies are not invented");
+  assert.match((await q("catering for 40 people")).reply, /large order quote/i);
+  assert.match((await q("is the burger gluten free")).reply, /can't confirm ingredients or allergy/i);
+  assert.match((await q("tell me a joke")).reply, /not sure about that one/i);
+  assert.doesNotMatch(JSON.stringify(await q("is my date available on friday")), /is available|is booked|confirmed for/i);
+  assert.equal((await ask(t, [])).status, 400, "bad input is still rejected");
+  assert.equal((await (await t.login()).get("status")).json.assistant, false, "the dashboard still reports that no AI is connected");
+  t.close();
+});
+
+test("built-in answers follow the live menu and details: edited prices, hidden items, new hours", async () => {
   const t = await startSite();
-  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: false });
-  const r = await ask(t, [{ role: "user", content: "hi" }]);
-  assert.equal(r.status, 503); assert.match(r.json.error, /not switched on/i);
-  assert.equal((await (await t.login()).get("status")).json.assistant, false);
+  const a = await t.login();
+  const menu = (await a.get("menu")).json.menu;
+  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents = 575;
+  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-americano").hidden = true;
+  await a.put("menu", { menu });
+  const q = async (text) => (await ask(t, [{ role: "user", content: text }])).json.reply;
+  assert.match(await q("price of a latte"), /Latte: \$5\.75/);
+  assert.doesNotMatch(await q("how much is an americano"), /Americano: \$/);
   t.close();
 });
 
 test("a question goes to Claude with the café's real details, and the key stays on the server", async () => {
   const m = await claudeMock();
   const t = await startSite({ ANTHROPIC_API_KEY: "sk-ant-secret", ANTHROPIC_API_BASE: m.base });
-  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true });
+  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true, mode: "ai" });
   const r = await ask(t, [{ role: "user", content: "How much is a latte?" }]);
   assert.equal(r.status, 200); assert.equal(r.json.reply, "Hi! A Latte is $4.50.");
   const c = m.calls[0];
@@ -76,7 +100,7 @@ test("a free OpenAI-style service (Groq, OpenRouter, Gemini...) works too, with 
   });
   await new Promise((r) => s.listen(0, r)); s.unref();
   const t = await startSite({ AI_API_KEY: "free-key", AI_MODEL: "some-free-model", AI_BASE_URL: `http://localhost:${s.address().port}/v1/` });
-  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true });
+  assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true, mode: "ai" });
   const r = await ask(t, [{ role: "user", content: "When do you open?" }]);
   assert.equal(r.json.reply, "We open at 7 AM.");
   const c = calls[0];
@@ -87,10 +111,10 @@ test("a free OpenAI-style service (Groq, OpenRouter, Gemini...) works too, with 
   s.close(); t.close();
 });
 
-test("the free service needs all three settings, and an https address, or the assistant stays off", async () => {
+test("the free service needs all three settings, and an https address, or the chat stays on built-in answers", async () => {
   for (const env of [{ AI_API_KEY: "k", AI_MODEL: "m" }, { AI_API_KEY: "k", AI_BASE_URL: "https://x.example/v1" }, { AI_MODEL: "m", AI_BASE_URL: "https://x.example/v1" }, { AI_API_KEY: "k", AI_MODEL: "m", AI_BASE_URL: "http://evil.example/v1" }]) {
     const t = await startSite(env);
-    assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: false }, JSON.stringify(Object.keys(env)) + (env.AI_BASE_URL || ""));
+    assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true, mode: "basic" }, JSON.stringify(Object.keys(env)) + (env.AI_BASE_URL || ""));
     t.close();
   }
 });

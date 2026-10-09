@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, T
 import { router, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Small } from "../components/ui";
-import { askAssistant, assistantEnabled } from "../lib/assistant";
+import { askAssistant, assistantMode } from "../lib/assistant";
 import { useSite } from "../lib/site";
 import { colors, radius } from "../theme";
 
@@ -11,12 +11,13 @@ const STARTERS = ["What's good for breakfast?", "Help me plan food for 30 people
 
 export default function Assistant() {
   const { business } = useSite();
-  const [enabled, setEnabled] = useState(null);   // null = checking
+  const [mode, setMode] = useState(undefined);   // undefined = checking, null = not available, "basic" or "ai"
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const scroller = useRef(null);
-  useEffect(() => { assistantEnabled().then(setEnabled); }, []);
+  useEffect(() => { assistantMode().then(setMode); }, []);
+  const enabled = !!mode;
   useEffect(() => { scroller.current?.scrollToEnd?.({ animated: true }); }, [messages, busy]);
 
   async function send(textIn) {
@@ -37,11 +38,11 @@ export default function Assistant() {
       <Stack.Screen options={{ title: "Ask a question" }} />
       <ScrollView ref={scroller} keyboardShouldPersistTaps="handled" contentContainerStyle={{ alignItems: "center", padding: 20, paddingBottom: 12 }}>
         <View style={{ width: "100%", maxWidth: 640, gap: 12 }}>
-          {enabled === null ? <Body>Checking…</Body> : null}
-          {enabled === false ? (
+          {mode === undefined ? <Body>Checking…</Body> : null}
+          {mode === null ? (
             <View style={{ gap: 14, paddingTop: 20 }}>
               <Ionicons name="chatbubble-ellipses-outline" size={40} color={colors.goldText} />
-              <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>The assistant isn't switched on yet</Text>
+              <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>The chat isn't available right now</Text>
               <Body>You can still ask a person: call us, or send a request and Maruf Cafe will get back to you.</Body>
               <Button title={`Call ${business.phone}`} variant="primary" icon="call-outline" onPress={call} />
               <Button title="Request a large order" variant="gold" onPress={() => router.replace("/quote")} />
@@ -53,7 +54,7 @@ export default function Assistant() {
               {messages.length === 0 ? (
                 <View style={{ gap: 10 }}>
                   <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>How can I help?</Text>
-                  <Body>Ask about the menu, hours, large orders, catering or renting the café. I can help you plan how much food to get for a group.</Body>
+                  <Body>Ask about the menu and prices, our hours, large orders, catering or renting the café.{mode === "basic" ? " Answers come straight from the café's menu and details." : " I can help you plan how much food to get for a group."}</Body>
                   {STARTERS.map((s) => <Button key={s} title={s} size="medium" variant="light" onPress={() => send(s)} />)}
                 </View>
               ) : null}
@@ -62,14 +63,14 @@ export default function Assistant() {
                   <Text selectable accessibilityLabel={`${m.role === "user" ? "You" : "Maruf Cafe assistant"}: ${m.content}`} style={{ fontSize: 16, lineHeight: 23, color: m.role === "user" ? colors.cream : m.error ? colors.danger : colors.ink }}>{m.content}</Text>
                 </View>
               ))}
-              {busy ? <Small>Thinking…</Small> : null}
+              {busy ? <Small>{mode === "ai" ? "Thinking…" : "Looking that up…"}</Small> : null}
               {lastIsAnswer ? (
                 <View style={{ gap: 10, marginTop: 6 }}>
                   <Button title="Start a large order request" size="medium" variant="gold" onPress={() => router.replace("/quote")} />
                   <Button title="Ask about renting the café" size="medium" variant="light" onPress={() => router.replace("/event-request")} />
                 </View>
               ) : null}
-              <Small style={{ marginTop: 8 }}>AI can make mistakes. Maruf Cafe confirms prices, availability and allergies. This chat does not book or charge anything. Don't type card numbers.</Small>
+              <Small style={{ marginTop: 8 }}>{mode === "ai" ? "AI can make mistakes. " : "Automatic answers from the café's details. "}Maruf Cafe confirms prices, availability and allergies. This chat does not book or charge anything. Don't type card numbers.</Small>
             </>
           ) : null}
         </View>

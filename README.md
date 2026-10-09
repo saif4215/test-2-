@@ -3,9 +3,9 @@
 A phone app (also served on the web) for a Staten Island café that takes large orders, catering requests and private event rentals, with a staff dashboard and a small Node server behind it. The server has no packages to install (Node 22.12 or newer); the app is built once with `npm run build`.
 
 ## What is here
-- **The phone app** (`app/`, served on the web at `/app/`): menu and order list, large-order and catering quote requests, event rental requests, directions (Google Maps, Apple Maps, Waze), FAQ, an optional AI helper, and 3D models (a burger you can spin and take apart, and the Maruf cup, open with coffee and a logo lid beside it). The 3D models draw in the web app at `/app/` only; the phone-store builds skip them. See `app/README.md`.
+- **The phone app** (`app/`, served on the web at `/app/`): menu and order list, large-order and catering quote requests, event rental requests, directions (Google Maps, Apple Maps, Waze), FAQ, a chat (built-in answers from your menu and details, or a real AI helper once a key is added), and 3D models (a burger you can spin and take apart, and the Maruf cup, open with coffee and a logo lid beside it). The 3D models draw in the web app at `/app/` only; the phone-store builds skip them. See `app/README.md`.
 - **The staff dashboard** (`/admin/`): requests and statuses, menu and prices, site info, photos. See `DEPLOY.md`.
-- **The backend** (`server.mjs`, `lib/`): saves requests in a SQLite database, emails the owner (Resend) and/or posts to a webhook, serves the live menu and details to the app, runs the AI helper, and an optional Square checkout that the app does not use.
+- **The backend** (`server.mjs`, `lib/`): saves requests in a SQLite database, emails the owner (Resend) and/or posts to a webhook, serves the live menu and details to the app, runs the chat, and an optional Square checkout that the app does not use.
 - **Privacy and support pages** (`/privacy`, `/support`), needed for the App Store and Google Play.
 
 The 3D website that was here before has been removed (it is still in the git history). Its old addresses (`/`, `/large-orders`, `/rent-the-cafe`) now lead into the app.

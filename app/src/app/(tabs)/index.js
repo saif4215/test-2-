@@ -40,10 +40,10 @@ export default function Home() {
           ))}
         </View>
         <FeaturedPicks />
-        <Pressable accessibilityRole="button" accessibilityLabel="Ask a question (AI helper)" onPress={() => router.push("/assistant")}
+        <Pressable accessibilityRole="button" accessibilityLabel="Ask a question" onPress={() => router.push("/assistant")}
           style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
           <Ionicons name="chatbubble-outline" size={20} color={colors.ink} />
-          <View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: "600", color: colors.ink }}>Have a question? Ask here</Text><Text style={{ fontSize: 13, color: colors.muted }}>Answered by an AI helper. It can be wrong, so we confirm anything important.</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: "600", color: colors.ink }}>Have a question? Ask here</Text><Text style={{ fontSize: 13, color: colors.muted }}>Menu, prices, hours, large orders and renting the café. Maruf Cafe confirms anything important.</Text></View>
           <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </Pressable>
         <Photo slot="hero" label="Add a hero photo: food spread or café interior" ratio={2} />

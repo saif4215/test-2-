@@ -110,14 +110,17 @@ Until you add these, the site simply leaves them out or shows a neutral line:
 
 ---
 
-## 5. The AI assistant ("Ask Maruf Cafe" in the app)
+## 5. The chat in the app ("Ask a question")
 
-The app has an assistant that answers questions about the menu, hours, large orders, catering and renting the café, and helps
-plan how much food a group needs. It reads your live menu, hours, FAQ and event options from the server, so it changes when you
-edit them. It is told never to promise a date, a booking or a price, never to guess capacity, rules or allergies, and to send
-people to the request forms. **It is off until you turn it on**, and the app says so honestly while it is off.
+The app has a chat that answers questions about the menu and prices, hours, address, large orders, catering and renting the café.
+It reads your live menu, hours, FAQ and event options from the server, so it changes when you edit them. It never promises a
+date, a booking or a price, never guesses capacity, rules or allergies, and sends people to the request forms or your phone number.
 
-To turn it on:
+**It works from day one with no key and no cost.** Without an AI key it gives built-in answers taken straight from your menu and
+details, and the app says so ("Automatic answers from the café's details"). It does not claim to be AI. It can answer the common
+questions but not open-ended ones; for anything it does not know it says so and points to your phone number.
+
+To upgrade it to a real AI helper that handles open-ended questions and helps plan how much food a group needs:
 1. Create an account at **console.anthropic.com**, add a small amount of credit, and open **API Keys → Create Key**.
 2. In Render add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
 3. Redeploy. The "Ask Maruf Cafe AI" button on the app's Home screen now opens a chat.
