@@ -1,0 +1,27 @@
+# One command to run the café server with automatic https:  docker compose up -d --build
+# Needs a .env file next to this one (see SELF-HOST.md). Both containers restart by themselves after a reboot.
+services:
+  cafe:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TRUST_PROXY: "1"
+      DATA_DIR: /data
+    volumes:
+      - cafe-data:/data
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [cafe]
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  cafe-data:
+  caddy-data:
+  caddy-config:

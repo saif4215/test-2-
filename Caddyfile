@@ -1,0 +1,5 @@
+# Gives the café a normal https address and renews the certificate by itself. DOMAIN comes from the .env file.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy cafe:8080
+}

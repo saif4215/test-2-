@@ -7,7 +7,7 @@ Nothing here has been submitted. Publishing needs your own accounts.
 
 1. **Find your server address.** On Render: your service → Logs (bottom) or Settings. It ends in `.onrender.com`.
    The app sends quote and event requests there. Put it in `app/eas.json` in both places that say
-   `https://REPLACE-WITH-YOUR-RENDER-ADDRESS`.
+   `https://REPLACE-WITH-YOUR-SERVER-ADDRESS`.
 2. **Add your real photos** (hero, food, café interior, events). Put the files in `app/assets/photos/` and set them in
    `app/src/photos.js`. Store builds hide empty photo slots instead of showing placeholders, but real photos make a far
    better listing.

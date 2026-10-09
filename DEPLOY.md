@@ -39,6 +39,24 @@ is the dashboard. Part 4 is the list of things only the café can fill in.
 
 Nothing is stored in your GitHub repository: requests, edits and photos live only on the server (in `DATA_DIR`).
 
+### Not using Render?
+
+Any host that runs Node works. It needs:
+- **Folder and command:** the `maruf-cafe` folder of the repository (the repository root is a different project), started with `node server.mjs`, on **Node 22.12 or newer**. Nothing to install or build: the phone app is already in `public/app`.
+- **Port:** the server listens on the `PORT` setting (default 8080).
+- **A disk that survives restarts:** set `DATA_DIR` to its path. Requests, photos and menu edits live there.
+- **Settings:** the same ones as in the table above. If a proxy or load balancer sits in front of the server (most hosts do), also set `TRUST_PROXY=1` so sign-in lockouts and rate limits see each visitor's real address.
+- **A health check path (if the host asks for one):** `/api/config`.
+
+If the host can build from a Dockerfile, there is one in this folder (`docker build -t maruf-cafe .`, with a volume mounted at `/data`).
+For your own server, `docker-compose.yml` runs the café and a Caddy web server that gets the https certificate by itself:
+put `DOMAIN=your.address`, `ADMIN_PASSWORD=...`, `PUBLIC_URL=https://your.address` (and the other settings from `.env.example`, one `NAME=value`
+per line, no comments) in a file called `.env`, then run `docker compose up -d --build`.
+The Docker files have not been built on a real machine yet (the place they were written had no Docker); the server itself runs fine
+with exactly the files the Dockerfile copies. Check the first deploy.
+
+When the address changes, update `PUBLIC_URL` and, for store builds, the address in `app/eas.json`.
+
 ---
 
 ## 2. Never miss a request (important)

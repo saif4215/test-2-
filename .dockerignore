@@ -1,0 +1,12 @@
+node_modules
+data
+.shots-tmp
+store
+app
+e2e
+scripts
+*.test.mjs
+test-helpers.mjs
+*.md
+.env
+.env.*
