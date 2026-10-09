@@ -2,7 +2,7 @@ import * as THREE from "three";
 import logoCup from "./logoCup";
 import { fbm, grey, pixelTexture, studioEnvironment } from "./kit";
 
-/** The Maruf paper cup: open black cup, white base, coffee inside with MARUF poured on top, logo on the wall, steam. */
+/** The Maruf paper cup: open black cup, white base, coffee inside with MARUF poured on top, logo on the wall, steam, and a logo lid floating behind it. */
 export function createCup(canvas, { reduceMotion = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -23,8 +23,8 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   const phys = (color, rough, extra = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: rough, ...extra });
   const cup = new THREE.Group();
 
-  /* logo decal: a patch of the cone-shaped cup wall, textured with the logo. wall = [[y, radius], ...] */
-  function addLogoDecal({ wall, y0, y1, arc, src, rot = 0 }) {
+  /* the logo as a texture (white ink on transparent), shared by the cup wall and the lid */
+  const logoTex = (() => {
     const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 788;
     const g = cv.getContext("2d");
     const tex = new THREE.CanvasTexture(cv);
@@ -37,7 +37,13 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
       tex.needsUpdate = true;
     };
     img.onerror = () => console.warn("The cup logo did not load.");
-    img.src = src;
+    img.src = logoCup;
+    return tex;
+  })();
+  const inkMaterial = () => new THREE.MeshStandardMaterial({ map: logoTex, emissiveMap: logoTex, emissive: 0xffffff, emissiveIntensity: 0.38, transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+
+  /* logo decal: a patch of the cone-shaped cup wall, textured with the logo. wall = [[y, radius], ...] */
+  function addLogoDecal({ wall, y0, y1, arc, rot = 0 }) {
     // outer wall radius at height y: the profile is straight segments
     const radiusAt = (y) => { for (let i = 0; i < wall.length - 1; i++) { const [ya, ra] = wall[i], [yb, rb] = wall[i + 1]; if (y <= yb) return ra + ((y - ya) / (yb - ya)) * (rb - ra); } return wall[wall.length - 1][1]; };
     const NU = 40, NV = 16, pos = [], uv = [], idx = [];
@@ -50,7 +56,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
     geo.setIndex(idx); geo.computeVertexNormals();
-    cup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.38, transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })));
+    cup.add(new THREE.Mesh(geo, inkMaterial()));
   }
 
   /* black paper cup with a white base band */
@@ -102,7 +108,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   const steamAt = { x: 0, y: CY + 0.05, z: 0, rise: 1.25, size: 1.3 };
 
   // the logo as printed on the cup
-  for (const rot of [0, Math.PI]) addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.4, arc: 1.85, src: logoCup, rot });
+  for (const rot of [0, Math.PI]) addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.4, arc: 1.85, rot });
 
   /* the cup is centred on the origin so tilting it keeps it in the middle of the frame */
   const SCALE = 0.86;
@@ -120,6 +126,36 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   cup.traverse((o) => { if (o.isMesh) { o.castShadow = o !== table && o !== patch; o.receiveShadow = o !== patch; } });
   const spinner = new THREE.Group(); spinner.add(cup); scene.add(spinner);
   spinner.rotation.x = 0.46;
+
+  /* A black lid with the logo, floating in the background. Its sip flap swings open and shut. Local y is the lid's axis. */
+  const lid = new THREE.Group(), lidFlap = new THREE.Group();
+  const plastic = phys(0x1a1c20, 0.34, { clearcoat: 0.5, clearcoatRoughness: 0.3, side: THREE.DoubleSide });
+  const LT = 0.3;   // height of the flat top
+  const roundRect = (w, d, r) => {
+    const sh = new THREE.Shape();
+    sh.moveTo(-w / 2 + r, -d); sh.lineTo(w / 2 - r, -d); sh.quadraticCurveTo(w / 2, -d, w / 2, -d + r); sh.lineTo(w / 2, -r);
+    sh.quadraticCurveTo(w / 2, 0, w / 2 - r, 0); sh.lineTo(-w / 2 + r, 0); sh.quadraticCurveTo(-w / 2, 0, -w / 2, -r);
+    sh.lineTo(-w / 2, -d + r); sh.quadraticCurveTo(-w / 2, -d, -w / 2 + r, -d);
+    return sh;
+  };
+  lid.add(new THREE.Mesh(new THREE.LatheGeometry([[1.06, 0], [1.06, 0.2], [1.09, 0.25], [1.05, LT], [0.97, LT + 0.012], [0.94, LT - 0.03], [0.88, LT - 0.03], [0.85, LT], [0, LT]].map(([r, y]) => new THREE.Vector2(r, y)), 96), plastic));
+  const lidInk = new THREE.Mesh(new THREE.PlaneGeometry(1.067, 0.821), inkMaterial());
+  lidInk.material.emissiveIntensity = 0.7;
+  lidInk.rotation.x = -Math.PI / 2; lidInk.position.set(0, LT + 0.004, 0.14); lid.add(lidInk);
+  const sip = new THREE.Mesh(new THREE.ShapeGeometry(roundRect(0.44, 0.22, 0.09)), new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.9 }));
+  sip.rotation.x = -Math.PI / 2; sip.position.set(0, LT + 0.003, -0.52); lid.add(sip);   // the drinking hole, seen from above
+  const flapGeo = new THREE.ExtrudeGeometry(roundRect(0.5, 0.3, 0.1), { depth: 0.02, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2, curveSegments: 8 });
+  const flap = new THREE.Mesh(flapGeo, plastic);
+  flap.rotation.x = -Math.PI / 2; flap.position.y = 0.012; lidFlap.add(flap);   // lies flat over the hole when shut, hinged at its far edge
+  const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 10), plastic);
+  hinge.rotation.z = Math.PI / 2; lidFlap.add(hinge);
+  lidFlap.position.set(0, LT + 0.01, -0.74); lid.add(lidFlap);
+  lid.traverse((o) => { if (o.isMesh) { o.castShadow = o !== lidInk && o !== sip; o.receiveShadow = true; } });
+  const LID_AT = { x: 1.6, y: 0.62, z: -2.1 };
+  lid.scale.setScalar(0.95);
+  lid.position.set(LID_AT.x, LID_AT.y, LID_AT.z);
+  lid.rotation.set(1.2, 0, -0.2);
+  scene.add(lid);
 
   /* steam sprites */
   const wisp = fbm(128, { seed: 7, scale: 3, octaves: 4 });
@@ -147,9 +183,9 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    // fit the cup and its steam: tall enough for the height, wide enough for the cup on a narrow screen
+    // fit the cup, its steam and the lid: tall enough for the height, wide enough on a narrow screen
     const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const dist = Math.max(4.1 / (2 * half), 2.7 / (2 * half * camera.aspect));
+    const dist = Math.max(4.1 / (2 * half), 3.7 / (2 * half * camera.aspect));
     camera.position.set(0, 0.5 + dist * 0.04, dist);
     camera.lookAt(0, 0.4, 0);
     camera.updateProjectionMatrix();
@@ -163,6 +199,9 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
       const dt = Math.min(clock.getDelta(), 0.1), t = reduceMotion ? 0 : clock.elapsedTime;
       if (!dragging && !reduceMotion) yaw += dt * (0.2 + 1.0 * Math.pow(Math.sin(yaw / 2), 2));
       spinner.rotation.y = reduceMotion ? 0.12 : yaw;
+      lid.position.y = LID_AT.y + Math.sin(t * 0.9) * 0.06;
+      lid.rotation.set(1.2 + Math.sin(t * 0.6) * 0.04, 0, reduceMotion ? -0.2 : -0.2 + Math.sin(t * 0.5) * 0.35);
+      lidFlap.rotation.x = -(reduceMotion ? 1.1 : 0.7 + Math.sin(t * 0.8) * 0.6);
       steam.forEach((s) => {
         const k = reduceMotion ? s.userData.t : (s.userData.t + t * 0.12) % 1;
         s.position.set(steamAt.x + Math.sin(k * 9 + s.userData.t * 20) * 0.25 * steamAt.size, steamAt.y + k * steamAt.rise, steamAt.z + Math.cos(k * 7 + s.userData.t * 20) * 0.25 * steamAt.size);
