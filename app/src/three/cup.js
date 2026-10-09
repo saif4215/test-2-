@@ -68,35 +68,28 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     cup.add(new THREE.Mesh(new THREE.LatheGeometry([
       new THREE.Vector2(0, 0), new THREE.Vector2(R0 - 0.05, 0), new THREE.Vector2(R0 - 0.02, 0.03), new THREE.Vector2(rAt(YB) - 0.012, YB),
     ], 96), paperWhite));
-    // lid: a plain matte black dome lid. It sits over the rim with only a small overhang, and has no knob or panel.
-    const L = H - 0.1;
-    const lidMat = phys(0x0a0b0c, 0.55, { clearcoat: 0.12, clearcoatRoughness: 0.6 });
-    const domeAt = (r) => L + 0.17 + 0.1 * (1 - Math.min(1, r / 0.95) ** 2);   // height of the dome at radius r
-    cup.add(new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve([
-      [1.01, L - 0.04], [1.045, L - 0.03], [1.06, L + 0.0], [1.065, L + 0.07], [1.04, L + 0.12],   // skirt and rolled edge
-      [0.99, L + 0.14], [0.93, domeAt(0.93)], [0.7, domeAt(0.7)], [0.35, domeAt(0.35)], [0, domeAt(0)],
-    ].map(([x, y]) => new THREE.Vector2(x, y))).getPoints(160), 128), lidMat));
-    // the sip opening: an oval slot near the edge with a raised rim around it, and a small raised lip on the outside
-    const ta = 2.5, tx = Math.sin(ta), tz = Math.cos(ta), sr = 0.7, sy = domeAt(sr);
-    const sip = new THREE.Group();
-    const rimRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.2, 12, 40).scale(0.2, 0.36, 0.5), lidMat);
-    rimRing.rotation.x = Math.PI / 2;
-    const hole = new THREE.Mesh(new THREE.CircleGeometry(1, 32).scale(0.17, 0.31, 1), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    hole.rotation.x = -Math.PI / 2; hole.position.y = 0.045;
-    const lip = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.3, 0.1, 0.12), lidMat);
-    lip.position.set(0, 0.0, -0.4);   // the raised edge you drink from, on the rim side of the slot
-    sip.add(rimRing, hole, lip);
-    sip.position.set(tx * sr, sy - 0.01, tz * sr);
-    sip.rotation.y = ta - Math.PI / 2;
-    sip.rotation.z = 0;
-    cup.add(sip);
-    // a tiny steam vent on the other side
-    const vent = new THREE.Mesh(new THREE.CircleGeometry(0.03, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    vent.rotation.x = -Math.PI / 2; vent.position.set(-tx * 0.5, domeAt(0.5) + 0.004, -tz * 0.5); cup.add(vent);
-    const lidTop = sy;
+    // no lid: an open cup. A rolled paper rim, a pale inside wall, and hot coffee a little below the edge.
+    const paperInside = phys(0xe9e2d3, 0.8, { side: THREE.BackSide, bumpMap: grainBump, bumpScale: 0.2 });
+    cup.add(new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(R0 - 0.1, 0.06), new THREE.Vector2(rAt(H) - 0.035, H)], 96), paperInside));
+    const paperRim = new THREE.Mesh(new THREE.TorusGeometry(rAt(H) - 0.012, 0.04, 12, 96), paperBlack);
+    paperRim.rotation.x = Math.PI / 2; paperRim.position.y = H; cup.add(paperRim);
+    const CY = H - 0.42;
+    // the coffee seen from above: dark with a lighter edge, and MARUF poured in cream foam across the middle
+    const cv = document.createElement("canvas"); cv.width = cv.height = 512;
+    const cg = cv.getContext("2d"), grad = cg.createRadialGradient(256, 256, 20, 256, 256, 256);
+    grad.addColorStop(0, "#40220f"); grad.addColorStop(0.7, "#5d3216"); grad.addColorStop(0.93, "#8e5c31"); grad.addColorStop(1, "#bd8d58");
+    cg.fillStyle = grad; cg.fillRect(0, 0, 512, 512);
+    cg.filter = "blur(2.2px)"; cg.fillStyle = "#f1e1c4"; cg.textAlign = "center"; cg.textBaseline = "middle";
+    cg.font = "800 150px Arial, Helvetica, sans-serif"; cg.fillText("MARUF", 256, 250);
+    cg.filter = "none"; cg.strokeStyle = "rgba(241,225,196,0.55)"; cg.lineWidth = 6; cg.lineCap = "round";
+    cg.beginPath(); cg.moveTo(150, 345); cg.quadraticCurveTo(256, 375, 362, 345); cg.stroke();   // a small foam swoosh under the name
+    const coffeeTex = new THREE.CanvasTexture(cv); coffeeTex.colorSpace = THREE.SRGBColorSpace; coffeeTex.anisotropy = 8;
+    const coffee = new THREE.Mesh(new THREE.CircleGeometry(rAt(CY) - 0.04, 64), phys(0xb0a090, 0.4, { map: coffeeTex, clearcoat: 0.25, clearcoatRoughness: 0.35, envMapIntensity: 0.08 }));
+    coffee.rotation.x = -Math.PI / 2; coffee.position.y = CY; cup.add(coffee);
+    const lidTop = CY, tx = 0, tz = 0;
     // the logo as printed on the cup
     addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.68, arc: 2.1, src: logoCup });
-    steamAt = { x: tx * 0.7, y: lidTop + 0.1, z: tz * 0.7, rise: 2.5, size: 1.5 };
+    steamAt = { x: 0, y: lidTop + 0.05, z: 0, rise: 2.4, size: 1.4 };
     cup.scale.setScalar(0.86);
   cup.position.y = -1.55;
   /* a dark glossy tabletop that fades into the page, so the cup has something to stand on */
@@ -109,7 +102,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
   rig.add(cup);
   cup.traverse((o) => { if (o.isMesh) { o.castShadow = o !== table; o.receiveShadow = true; } });
   const spinner = new THREE.Group(); spinner.add(cup); scene.add(spinner);
-  spinner.rotation.x = 0.18;
+  spinner.rotation.x = 0.55;
 
   /* steam sprites */
   const wisp = fbm(128, { seed: 7, scale: 3, octaves: 4 });
@@ -138,7 +131,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.position.set(0, 0.9, Math.max(9.5, 9.5 * (0.85 / camera.aspect)));
-    camera.lookAt(0, 0.9, 0);
+    camera.lookAt(0, 1.1, 0);
     camera.updateProjectionMatrix();
   }
   resize();
