@@ -68,41 +68,35 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     cup.add(new THREE.Mesh(new THREE.LatheGeometry([
       new THREE.Vector2(0, 0), new THREE.Vector2(R0 - 0.05, 0), new THREE.Vector2(R0 - 0.02, 0.03), new THREE.Vector2(rAt(YB) - 0.012, YB),
     ], 96), paperWhite));
-    // lid: skirt over the rim, a rolled bead, and a flat recessed panel (like the real lid)
-    const L = H - 0.12, panelY = L + 0.31;
+    // lid: a plain matte black dome lid. It sits over the rim with only a small overhang, and has no knob or panel.
+    const L = H - 0.1;
+    const lidMat = phys(0x0a0b0c, 0.55, { clearcoat: 0.12, clearcoatRoughness: 0.6 });
+    const domeAt = (r) => L + 0.17 + 0.1 * (1 - Math.min(1, r / 0.95) ** 2);   // height of the dome at radius r
     cup.add(new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve([
-      [1.04, L - 0.03], [1.09, L - 0.015], [1.1, L + 0.03], [1.16, L + 0.05], [1.17, L + 0.1], [1.215, L + 0.125], [1.225, L + 0.175],   // stepped rings under the bead
-      [1.2, L + 0.215], [1.14, L + 0.23], [1.08, L + 0.215], [1.04, L + 0.235], [0.995, L + 0.27], [0.955, L + 0.3], [0.9, L + 0.308], [0.6, L + 0.31], [0, L + 0.314],
-    ].map(([x, y]) => new THREE.Vector2(x, y))).getPoints(200), 128), plastic));
-    const seam = new THREE.Mesh(new THREE.TorusGeometry(0.93, 0.011, 8, 96), plastic);   // edge of the recessed panel
-    seam.rotation.x = Math.PI / 2; seam.position.y = panelY - 0.004; cup.add(seam);
-    // the drinking lip: a low hood that slopes down toward the rim, with the slot just beyond it
-    const ta = 2.5, tx = Math.sin(ta), tz = Math.cos(ta), lidTop = L + 0.31;
-    const hood = new THREE.Mesh(new THREE.SphereGeometry(1, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.3, 0.14, 0.32), plastic);
-    hood.rotation.z = -0.22; hood.position.y = -0.02;
-    const hoodG = new THREE.Group(); hoodG.add(hood);
-    hoodG.position.set(tx * 0.4, lidTop, tz * 0.4); hoodG.rotation.y = ta - Math.PI / 2; cup.add(hoodG);
-    const slot = new THREE.Mesh(new THREE.CircleGeometry(1, 28).scale(0.055, 0.15, 1), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    slot.rotation.x = -Math.PI / 2;
-    const slotG = new THREE.Group(); slotG.add(slot);
-    slotG.position.set(tx * 0.84, lidTop + 0.004, tz * 0.84); slotG.rotation.y = ta - Math.PI / 2; cup.add(slotG);
-    // embossed lettering around the panel, as on the real lid
-    const emb = document.createElement("canvas"); emb.width = emb.height = 512;
-    const eg = emb.getContext("2d");
-    eg.fillStyle = "#000"; eg.fillRect(0, 0, 512, 512);
-    eg.translate(256, 256); eg.fillStyle = "#fff"; eg.textAlign = "center"; eg.textBaseline = "middle";
-    eg.font = "600 26px Inter, Arial, sans-serif";
-    const ring = "MARUF CAFE  \u2022  CAUTION CONTENTS HOT  \u2022  ";
-    for (let i = 0; i < ring.length; i++) { eg.save(); eg.rotate(((i + 0.5) / ring.length) * Math.PI * 2); eg.translate(0, -190); eg.fillText(ring[i], 0, 0); eg.restore(); }
-    eg.font = "700 58px Inter, Arial, sans-serif"; eg.fillText("MARUF", 0, 80);
-    const embTex = new THREE.CanvasTexture(emb); embTex.anisotropy = 8;
-    const panel = new THREE.Mesh(new THREE.CircleGeometry(0.93, 96), phys(0x0e0f10, 0.36, { clearcoat: 0.35, clearcoatRoughness: 0.4, bumpMap: embTex, bumpScale: 2.2, polygonOffset: true, polygonOffsetFactor: -1 }));
-    panel.rotation.x = -Math.PI / 2; panel.position.y = lidTop + 0.002; panel.rotation.z = Math.PI; cup.add(panel);
+      [1.01, L - 0.04], [1.045, L - 0.03], [1.06, L + 0.0], [1.065, L + 0.07], [1.04, L + 0.12],   // skirt and rolled edge
+      [0.99, L + 0.14], [0.93, domeAt(0.93)], [0.7, domeAt(0.7)], [0.35, domeAt(0.35)], [0, domeAt(0)],
+    ].map(([x, y]) => new THREE.Vector2(x, y))).getPoints(160), 128), lidMat));
+    // the sip opening: an oval slot near the edge with a raised rim around it, and a small raised lip on the outside
+    const ta = 2.5, tx = Math.sin(ta), tz = Math.cos(ta), sr = 0.7, sy = domeAt(sr);
+    const sip = new THREE.Group();
+    const rimRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.2, 12, 40).scale(0.2, 0.36, 0.5), lidMat);
+    rimRing.rotation.x = Math.PI / 2;
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(1, 32).scale(0.17, 0.31, 1), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    hole.rotation.x = -Math.PI / 2; hole.position.y = 0.045;
+    const lip = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.3, 0.1, 0.12), lidMat);
+    lip.position.set(0, 0.0, -0.4);   // the raised edge you drink from, on the rim side of the slot
+    sip.add(rimRing, hole, lip);
+    sip.position.set(tx * sr, sy - 0.01, tz * sr);
+    sip.rotation.y = ta - Math.PI / 2;
+    sip.rotation.z = 0;
+    cup.add(sip);
+    // a tiny steam vent on the other side
     const vent = new THREE.Mesh(new THREE.CircleGeometry(0.03, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    vent.rotation.x = -Math.PI / 2; vent.position.set(-tx * 0.45, lidTop + 0.004, -tz * 0.45); cup.add(vent);
+    vent.rotation.x = -Math.PI / 2; vent.position.set(-tx * 0.5, domeAt(0.5) + 0.004, -tz * 0.5); cup.add(vent);
+    const lidTop = sy;
     // the logo as printed on the cup
     addLogoDecal({ wall: [[0, R0], [H, R1]], y0: 1.2, y1: 2.68, arc: 2.1, src: logoCup });
-    steamAt = { x: tx * 0.84, y: lidTop + 0.1, z: tz * 0.84, rise: 2.5, size: 1.5 };
+    steamAt = { x: tx * 0.7, y: lidTop + 0.1, z: tz * 0.7, rise: 2.5, size: 1.5 };
     cup.scale.setScalar(0.86);
   cup.position.y = -1.55;
   /* a dark glossy tabletop that fades into the page, so the cup has something to stand on */
@@ -143,7 +137,7 @@ export function createCup(canvas, { reduceMotion = false } = {}) {
     const w = canvas.clientWidth || 300, h = canvas.clientHeight || 300;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.position.set(0, 0.9, Math.max(11, 11 * (0.85 / camera.aspect)));
+    camera.position.set(0, 0.9, Math.max(9.5, 9.5 * (0.85 / camera.aspect)));
     camera.lookAt(0, 0.9, 0);
     camera.updateProjectionMatrix();
   }

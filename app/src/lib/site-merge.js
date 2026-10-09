@@ -24,6 +24,7 @@ export function mergeSite(base, remote, apiUrl = "") {
   if (list(remote.faq)) out.faq = remote.faq.filter((f) => f && f.q && f.a);
   if (list(remote.packages)) out.packages = remote.packages.filter((p) => p && p.title).map((p) => ({ ...p, includes: Array.isArray(p.includes) ? p.includes : [] }));
   if (text(remote.packagesNote) !== null) out.packagesNote = remote.packagesNote;
+  if (text(remote.featuredTitle)) out.featuredTitle = remote.featuredTitle;
   if (remote.venue && typeof remote.venue === "object") out.venue = { ...BLANK_VENUE, ...Object.fromEntries(Object.entries(remote.venue).filter(([, v]) => typeof v === "string")) };
   if (Array.isArray(remote.gallery)) out.gallery = remote.gallery.filter((g) => g && g.url && g.alt).map((g) => ({ url: absolute(g.url, apiUrl), alt: g.alt, caption: g.caption || "" }));
   if (Array.isArray(remote.reviews)) out.reviews = remote.reviews.filter((r) => r && r.name && r.text);
@@ -38,4 +39,11 @@ export function indexMenu(menu) {
   const map = new Map();
   for (const [group, cats] of Object.entries(menu.groups)) for (const [cat, items] of Object.entries(cats)) for (const it of items) map.set(it.id, { ...it, group, cat });
   return map;
+}
+
+/** The items the café picked for the home screen (up to 4), in menu order. Hidden items never appear. */
+export function featuredItems(menu, max = 4) {
+  const out = [];
+  for (const [group, cats] of Object.entries(menu.groups)) for (const [cat, items] of Object.entries(cats)) for (const it of items) if (it.featured && !it.hidden && out.length < max) out.push({ ...it, group, cat });
+  return out;
 }

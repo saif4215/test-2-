@@ -146,7 +146,7 @@ async function viewMenu(main) {
   const filter = h("input", { type: "search", placeholder: "Find an item…", "aria-label": "Find a menu item", oninput: apply });
   const tree = h("div");
   main.append(
-    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the app (it also stops online ordering), then press Save. Prices are in dollars. For a size-based price, use the low and high boxes." }),
+    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the app, or “Show on Home” to feature up to 4 items on the app’s home screen, then press Save. Prices are in dollars. For a size-based price, use the low and high boxes." }),
     h("div", { class: "row" }, h("div", { class: "grow" }, filter), me.role === "owner" && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
       if (!confirm("Throw away all your menu edits and go back to the original menu?")) return;
       try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })),
@@ -159,9 +159,10 @@ async function viewMenu(main) {
       ? h("div", { class: "range" }, h("input", { inputmode: "decimal", value: money(it.min), "aria-label": "Low price in dollars", "data-f": "min" }), h("input", { inputmode: "decimal", value: money(it.max), "aria-label": "High price in dollars", "data-f": "max" }))
       : h("input", { inputmode: "decimal", value: money(it.cents), "aria-label": "Price in dollars", "data-f": "cents" });
     const desc = h("input", { class: "desc", value: it.desc || "", placeholder: "Description (optional)", "aria-label": "Description", maxlength: "300", "data-f": "desc" });
+    const pick = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.featured, "data-f": "featured" }), "Show on Home");
     const hide = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.hidden, "data-f": "hidden", onchange: (e) => row.classList.toggle("hiddenitem", e.target.checked) }), "Hide");
     const del = h("button", { type: "button", class: "danger", "aria-label": `Delete ${it.name}`, text: "✕", onclick: () => { if (confirm(`Delete “${name.value}”?`)) row.remove(); } });
-    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id }, name, price, del, desc, hide);
+    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id }, name, price, del, desc, h("div", { class: "row" }, pick, hide));
     return row;
   }
 
@@ -198,6 +199,7 @@ async function viewMenu(main) {
           else { it.min = toCents(val("min")); it.max = toCents(val("max")); if (Number.isNaN(it.min) || Number.isNaN(it.max) || it.min > it.max) problems.push(`“${it.name}” needs a low and a high price (low first).`); }
           const d = val("desc").trim(); if (d) it.desc = d;
           if (row.querySelector("[data-f=hidden]").checked) it.hidden = true;
+          else if (row.querySelector("[data-f=featured]").checked) it.featured = true;
           items.push(it);
         }
         out.groups[g][cat.dataset.cat] = items;
@@ -296,6 +298,8 @@ async function viewSite(main) {
     h("div", { class: "card" }, h("h2", { text: "Rent the café: facts" }), h("p", { class: "hint", text: "These show on the Rent the Café page only when you fill them in. Nothing is guessed." }),
       ...bind(c.venue, "capacity", "How many people the space holds", { max: "80", ph: "for example: up to 40 seated" }), ...bind(c.venue, "notes", "About the space", { area: true, max: "1000" }),
       ...bind(c.venue, "policies", "Rental rules (deposit, cancellation, food rules…)", { area: true, max: "1500", hint: "Write your real policies here before taking bookings." })),
+    h("div", { class: "card" }, h("h2", { text: "Home picks" }), h("p", { class: "hint", text: "Items ticked “Show on Home” in the Menu tab appear on the app's home screen under this title. Only call it “Most popular” if your sales show that." }),
+      ...bind(c, "featuredTitle", "Title", { max: "40", ph: "Try these" })),
     h("div", { class: "card" }, h("h2", { text: "Event options" }), pkgBox, ...bind(c, "packagesNote", "Note under the options", { area: true, max: "500" })),
     h("div", { class: "card" }, h("h2", { text: "Questions & answers" }), faqBox),
     h("div", { class: "card" }, h("h2", { text: "Customer reviews" }), h("p", { class: "msg warn", text: "Only add reviews that real customers actually wrote, and use their real words. Never write or change a review yourself. Reviews show in the app only when you add them here." }), revBox),

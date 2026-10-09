@@ -36,7 +36,8 @@
     {
      "id": "drinks-coffee-spanish-latte",
      "name": "Spanish Latte",
-     "cents": 550
+     "cents": 550,
+     "featured": true
     },
     {
      "id": "drinks-coffee-dirty-chai",
@@ -130,7 +131,8 @@
     {
      "id": "drinks-refreshers-strawberry-acai",
      "name": "Strawberry Acai",
-     "cents": 550
+     "cents": 550,
+     "featured": true
     },
     {
      "id": "drinks-refreshers-tropical-splash",
@@ -261,7 +263,8 @@
     {
      "id": "food-sandwiches-fried-chicken-sandwich",
      "name": "Fried Chicken Sandwich",
-     "cents": 800
+     "cents": 800,
+     "featured": true
     },
     {
      "id": "food-sandwiches-grilled-cheese",
@@ -298,7 +301,8 @@
     {
      "id": "food-burgers-classic-burger",
      "name": "Classic Burger",
-     "cents": 1000
+     "cents": 1000,
+     "featured": true
     },
     {
      "id": "food-burgers-icsi-burger",

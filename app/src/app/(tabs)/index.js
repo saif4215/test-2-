@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Grid, H1, H2, Photo, Screen, Section, Small } from "../../components/ui";
 import { MapCard } from "../../components/MapCard";
 import { BurgerViewer } from "../../components/Viewers";
-import { MenuBrowser, OrderBar } from "../../components/MenuBrowser";
+import { FeaturedPicks, MenuBrowser, OrderBar } from "../../components/MenuBrowser";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
 import { openStatus } from "../../lib/dates";
@@ -39,6 +39,7 @@ export default function Home() {
             </Pressable>
           ))}
         </View>
+        <FeaturedPicks />
         <Pressable accessibilityRole="button" accessibilityLabel="Ask a question (AI helper)" onPress={() => router.push("/assistant")}
           style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.line, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
           <Ionicons name="chatbubble-outline" size={20} color={colors.ink} />

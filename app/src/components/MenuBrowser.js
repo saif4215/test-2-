@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, Chip, Grid, H3, Small } from "./ui";
+import { Body, Button, Card, Chip, Grid, H1, H3, Small } from "./ui";
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
+import { featuredItems } from "../lib/site-merge";
 import { colors } from "../theme";
 
 /** Category chips and the items in each, with Add / quantity buttons. Used on Home and on the Menu tab. */
@@ -26,9 +27,26 @@ export function MenuBrowser() {
       <View style={{ marginTop: 22 }}>
         {current ? (
           <Grid min={330} gap={14}>
-            {current.items.map((it) => {
+            {current.items.map((it) => <ItemCard key={it.id} item={it} />)}
+          </Grid>
+        ) : (
+          <Card style={{ padding: 24, gap: 12 }}>
+            <H3>{active}</H3>
+            <Body>We're adding {String(active).toLowerCase()} options. Ask Maruf Cafe for a custom quote for your group and we'll put one together.</Body>
+            <Button title="Request a large order" variant="gold" onPress={() => router.push({ pathname: "/quote", params: { occasion: active } })} />
+          </Card>
+        )}
+      </View>
+    </View>
+  );
+}
+
+
+/** One menu item with its price and Add / quantity buttons. */
+export function ItemCard({ item: it }) {
+  const order = useOrder();
               const qty = order.lines[it.id] || 0;
-              return (
+  return (
                 <Card key={it.id} style={{ padding: 14, flexDirection: "row", gap: 14, alignItems: "center" }}>
                   {showPlaceholders ? (
                     <View accessibilityLabel={`Photo placeholder: ${it.name}`} style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
@@ -51,16 +69,17 @@ export function MenuBrowser() {
                   )}
                 </Card>
               );
-            })}
-          </Grid>
-        ) : (
-          <Card style={{ padding: 24, gap: 12 }}>
-            <H3>{active}</H3>
-            <Body>We're adding {String(active).toLowerCase()} options. Ask Maruf Cafe for a custom quote for your group and we'll put one together.</Body>
-            <Button title="Request a large order" variant="gold" onPress={() => router.push({ pathname: "/quote", params: { occasion: active } })} />
-          </Card>
-        )}
-      </View>
+}
+
+/** The few items the café picked for the home screen, with Add buttons. Hidden when none are picked. */
+export function FeaturedPicks() {
+  const { menu, featuredTitle } = useSite();
+  const picks = useMemo(() => featuredItems(menu), [menu]);
+  if (!picks.length) return null;
+  return (
+    <View style={{ gap: 14 }}>
+      <H1>{featuredTitle}</H1>
+      <Grid min={330} gap={12}>{picks.map((it) => <ItemCard key={it.id} item={it} />)}</Grid>
     </View>
   );
 }

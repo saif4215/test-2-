@@ -421,8 +421,8 @@ export function createServer(env = process.env) {
         const head = req.method === "HEAD";
         if (p === "/menu.json") return send(res, 200, head ? "" : publicMenu(getMenu()), { cors: true, cache: "no-cache" });
         if (p === "/content.json") {
-          const { business, venue, faq, packages, packagesNote, gallery, reviews, photos } = getContent();
-          return send(res, 200, head ? "" : { business, venue, faq, packages, packagesNote, gallery, reviews, photos }, { cors: true, cache: "no-cache" });
+          const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos } = getContent();
+          return send(res, 200, head ? "" : { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos }, { cors: true, cache: "no-cache" });
         }
         if (p === "/robots.txt") return send(res, 200, robotsTxt(baseFor(req)), { type: "text/plain; charset=utf-8", cache: "no-cache" });
         if (p === "/sitemap.xml") { const base = baseFor(req); if (!base) throw new HttpError(404, "Not found."); return send(res, 200, sitemapXml(base, PAGES), { type: "application/xml; charset=utf-8", cache: "no-cache" }); }

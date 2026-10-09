@@ -309,3 +309,29 @@ test("one visitor's wrong passwords do not lock the owner out for everyone else"
   assert.equal(await attempt("8.8.8.8", "owner-pass-12345"), 200, "the real owner is not");
   t.close();
 });
+
+test("home picks: the owner can feature items and rename the section; hidden items are never featured", async () => {
+  const t = await startSite();
+  const a = await t.login();
+  const menu = (await a.get("menu")).json.menu;
+  const pub0 = await (await fetch(t.u + "/menu.json")).json();
+  const picks0 = Object.values(pub0.groups).flatMap((c) => Object.values(c).flat()).filter((i) => i.featured);
+  assert.equal(picks0.length, 4, "starts with two drinks and two foods picked");
+  assert.deepEqual(picks0.map((i) => i.name).sort(), ["Classic Burger", "Fried Chicken Sandwich", "Spanish Latte", "Strawberry Acai"]);
+  const all = Object.values(menu.groups).flatMap((c) => Object.values(c).flat());
+  all.forEach((i) => delete i.featured);
+  const latte = all.find((i) => i.id === "drinks-coffee-latte"); latte.featured = true; latte.hidden = true;
+  all.find((i) => i.id === "drinks-coffee-mocha").featured = true;
+  assert.equal((await a.put("menu", { menu })).status, 200);
+  const after = Object.values((await (await fetch(t.u + "/menu.json")).json()).groups).flatMap((c) => Object.values(c).flat()).filter((i) => i.featured).map((i) => i.id);
+  assert.deepEqual(after, ["drinks-coffee-mocha"]);
+  const content = (await a.get("content")).json.content;
+  assert.equal(content.featuredTitle, "Try these");
+  content.featuredTitle = "Most popular";
+  await a.put("content", { content });
+  assert.equal((await (await fetch(t.u + "/content.json")).json()).featuredTitle, "Most popular");
+  content.featuredTitle = "";
+  await a.put("content", { content });
+  assert.equal((await (await fetch(t.u + "/content.json")).json()).featuredTitle, "Try these", "a blank title falls back");
+  t.close();
+});

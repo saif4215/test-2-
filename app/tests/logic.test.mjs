@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
-import { mergeSite, indexMenu } from "../src/lib/site-merge.js";
+import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -153,4 +153,12 @@ test("direction links use the address text only, for Google Maps, Apple Maps and
   assert.equal(l.apple, `https://maps.apple.com/?daddr=${q}`);
   assert.equal(l.waze, `https://waze.com/ul?q=${q}&navigate=yes`);
   assert.doesNotMatch(JSON.stringify(l), /ll=|lat=|@\d/, "no made-up coordinates");
+});
+
+test("home picks: only items the café marked, never hidden ones, at most four, with a title the café can change", () => {
+  const menu = { groups: { Drinks: { Coffee: [{ id: "a", name: "A", cents: 1, featured: true }, { id: "b", name: "B", cents: 1 }, { id: "c", name: "C", cents: 1, featured: true, hidden: true }] }, Food: { Burgers: [{ id: "d", name: "D", cents: 1, featured: true }, { id: "e", name: "E", cents: 1, featured: true }, { id: "f", name: "F", cents: 1, featured: true }, { id: "g", name: "G", cents: 1, featured: true }] } } };
+  assert.deepEqual(featuredItems(menu).map((i) => i.id), ["a", "d", "e", "f"]);
+  assert.deepEqual(featuredItems({ groups: { X: { Y: [{ id: "z", name: "Z", cents: 1 }] } } }), [], "nothing is shown as a pick unless the café picked it");
+  assert.equal(mergeSite(BASE, { featuredTitle: "Most popular" }).featuredTitle, "Most popular");
+  assert.equal(mergeSite(BASE, { featuredTitle: "" }).featuredTitle, BASE.featuredTitle ?? undefined);
 });
