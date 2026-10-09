@@ -317,7 +317,7 @@ test("home picks: the owner can feature items and rename the section; hidden ite
   const pub0 = await (await fetch(t.u + "/menu.json")).json();
   const picks0 = Object.values(pub0.groups).flatMap((c) => Object.values(c).flat()).filter((i) => i.featured);
   assert.equal(picks0.length, 4, "starts with two drinks and two foods picked");
-  assert.deepEqual(picks0.map((i) => i.name).sort(), ["Classic Burger", "Fried Chicken Sandwich", "Spanish Latte", "Strawberry Acai"]);
+  assert.deepEqual(picks0.map((i) => i.name).sort(), ["Chai Latte", "Classic Burger", "Fried Chicken Sandwich", "Strawberry Acai"]);
   const all = Object.values(menu.groups).flatMap((c) => Object.values(c).flat());
   all.forEach((i) => delete i.featured);
   const latte = all.find((i) => i.id === "drinks-coffee-latte"); latte.featured = true; latte.hidden = true;

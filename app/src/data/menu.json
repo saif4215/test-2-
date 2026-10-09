@@ -36,8 +36,7 @@
     {
      "id": "drinks-coffee-spanish-latte",
      "name": "Spanish Latte",
-     "cents": 550,
-     "featured": true
+     "cents": 550
     },
     {
      "id": "drinks-coffee-dirty-chai",
@@ -168,7 +167,8 @@
      "id": "drinks-tea-chai-latte",
      "name": "Chai Latte",
      "min": 500,
-     "max": 600
+     "max": 600,
+     "featured": true
     },
     {
      "id": "drinks-tea-london-fog",
