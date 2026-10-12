@@ -109,6 +109,12 @@ export default function Home() {
           <MapCard />
           <View style={{ gap: 12, marginTop: 4 }}>
             <Button title="Call us" variant="primary" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
+            {business.instagram || business.tiktok ? (
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
+                {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
+              </View>
+            ) : null}
           </View>
         </Card>
       </Section>
