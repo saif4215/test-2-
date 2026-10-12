@@ -8,54 +8,74 @@ is the dashboard. Part 4 is the list of things only the café can fill in.
 
 ---
 
-## 1. Get it online (Render, about 10 minutes)
+## 1. Get it online (any host you like)
 
-1. On your phone open **render.com**, tap **Sign up** and use your email and a password (GitHub is not needed). Open the
-   verification email Render sends.
-2. Tap **New** then **Web Service**, open the **Public Git Repository** tab, paste `https://github.com/saif4215/test-one`
-   and tap **Continue**. (Render does not redeploy by itself for a public-repository service: tap **Manual Deploy** after changes.)
-3. Fill in:
-   - **Name:** `maruf-cafe`
-   - **Branch:** `claude/maruf-cafe-redesign-5ulf0y`
-   - **Root Directory:** `maruf-cafe`
-   - **Runtime:** Node
-   - **Build Command:** `npm install`
-   - **Start Command:** `node server.mjs`
-   - **Instance Type:** Free to try, **Starter** (paid) to keep requests safely (see Part 2)
-4. Under **Environment Variables** add (names are exact):
+This is a plain Node program, so it runs almost anywhere, and you choose the host. It needs:
 
-   | Name | Value | Why |
-   |---|---|---|
-   | `NODE_VERSION` | `22` | the built-in database needs Node 22 |
-   | `ADMIN_PASSWORD` | a long password you choose (**10+ characters**) | switches the staff dashboard on |
-   | `PUBLIC_URL` | `https://maruf-cafe.onrender.com` (your real address, no slash at the end) | links in emails and the sitemap |
-   | `RESEND_API_KEY`, `NOTIFY_EMAIL` | see Part 2 | email alert for every request |
+- **Folder and command:** the `maruf-cafe` folder of the repository (the repository root is a different project), started with
+  `node server.mjs` on **Node 22.12 or newer**. Nothing to install or build: the phone app is already in `public/app`.
+- **Port:** it listens on the `PORT` setting (default 8080).
+- **A disk that survives restarts**, with `DATA_DIR` set to its path. Requests, photos and menu edits live there.
+- **HTTPS:** most hosts give you this for free. Use an address that looks like the café's, not the host's default one, if you can.
+- **A health check path** (if the host asks for one): `/api/config`.
+- **Settings** (names are exact):
 
-   Optional: `STAFF_PASSWORD` (a second sign-in for staff, 10+ characters), `STAFF_CAN_EDIT_SITE=1` (lets staff also edit site info and photos; they can already edit the menu). The full list with
-   explanations is in `.env.example`.
-5. Tap **Create Web Service** and wait for **Live**. Your address looks like `https://maruf-cafe.onrender.com`:
-   - `/app/` the phone app (the plain address `/` sends people there), `/admin/` the dashboard.
-6. Add the app to your home screen: iPhone Safari → Share → **Add to Home Screen**; Android Chrome → menu → **Install app**.
+  | Name | Value | Why |
+  |---|---|---|
+  | `ADMIN_PASSWORD` | a long password you choose (**10+ characters**) | switches the staff dashboard on |
+  | `PUBLIC_URL` | your real address, no slash at the end, e.g. `https://order.your-domain.com` | links in emails and the sitemap |
+  | `DATA_DIR` | the path of the disk, e.g. `/data` | where requests and photos are kept |
+  | `TRUST_PROXY` | `1` when a proxy or load balancer sits in front (most hosts) | so sign-in lockouts and rate limits see each visitor's real address |
+  | `RESEND_API_KEY`, `NOTIFY_EMAIL` **or** `INQUIRY_WEBHOOK_URL` | see Part 2 | an alert for every request. You do not need Resend: a webhook works too |
 
-Nothing is stored in your GitHub repository: requests, edits and photos live only on the server (in `DATA_DIR`).
+  Optional: `STAFF_PASSWORD` (a second sign-in for staff, 10+ characters), `STAFF_CAN_EDIT_SITE=1` (lets staff also edit site info and photos; they can already edit the menu). The full list with
+  explanations is in `.env.example`.
 
-### Not using Render?
+Three ways to do it:
 
-Any host that runs Node works. It needs:
-- **Folder and command:** the `maruf-cafe` folder of the repository (the repository root is a different project), started with `node server.mjs`, on **Node 22.12 or newer**. Nothing to install or build: the phone app is already in `public/app`.
-- **Port:** the server listens on the `PORT` setting (default 8080).
-- **A disk that survives restarts:** set `DATA_DIR` to its path. Requests, photos and menu edits live there.
-- **Settings:** the same ones as in the table above. If a proxy or load balancer sits in front of the server (most hosts do), also set `TRUST_PROXY=1` so sign-in lockouts and rate limits see each visitor's real address.
-- **A health check path (if the host asks for one):** `/api/config`.
+### Way 1: Docker (works on nearly every host)
 
-If the host can build from a Dockerfile, there is one in this folder (`docker build -t maruf-cafe .`, with a volume mounted at `/data`).
-For your own server, `docker-compose.yml` runs the café and a Caddy web server that gets the https certificate by itself:
-put `DOMAIN=your.address`, `ADMIN_PASSWORD=...`, `PUBLIC_URL=https://your.address` (and the other settings from `.env.example`, one `NAME=value`
-per line, no comments) in a file called `.env`, then run `docker compose up -d --build`.
+There is a `Dockerfile` in this folder. Build it (`docker build -t maruf-cafe .`) or let your host build it, mount a volume at `/data`,
+and set the settings above. For your own server, `docker-compose.yml` runs the café plus a Caddy web server that gets the https certificate
+by itself: put `DOMAIN=your.address`, `ADMIN_PASSWORD=...`, `PUBLIC_URL=https://your.address` (and the other settings, one `NAME=value` per
+line, no comments) in a file called `.env`, then run `docker compose up -d --build`.
 The Docker files have not been built on a real machine yet (the place they were written had no Docker); the server itself runs fine
 with exactly the files the Dockerfile copies. Check the first deploy.
 
-When the address changes, update `PUBLIC_URL` and, for store builds, the address in `app/eas.json`.
+### Way 2: An app host that builds from a repository
+
+Railway, Fly.io, Koyeb, DigitalOcean App Platform, Render and similar hosts all work the same way: create a service from the repository,
+set its folder to `maruf-cafe`, set the start command to `node server.mjs` (or tell it to use the Dockerfile), attach a volume or disk,
+add the settings above, and deploy. The menu names differ from host to host. Check each host's current pricing and whether its
+free plan keeps files (many do not; see Part 2). Some hosts do not redeploy by themselves: redeploy after changes.
+
+### Way 3: Your own server (a small rented Linux server, or a computer at the café)
+
+Install Node 22.12+, copy the `maruf-cafe` folder to the server, put the settings in a file such as `/etc/maruf-cafe.env`, and run it with
+systemd so it restarts by itself:
+
+```ini
+[Unit]
+Description=Maruf Cafe
+After=network.target
+[Service]
+WorkingDirectory=/opt/maruf-cafe
+EnvironmentFile=/etc/maruf-cafe.env
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+User=maruf
+[Install]
+WantedBy=multi-user.target
+```
+
+Put a web server such as Caddy or nginx in front for https (set `TRUST_PROXY=1`). To update: copy the new files and restart the service.
+
+### Then
+- `/app/` is the phone app (the plain address `/` sends people there) and `/admin/` is the dashboard.
+- Add the app to your home screen: iPhone Safari → Share → **Add to Home Screen**; Android Chrome → menu → **Install app**.
+- When the address changes, update `PUBLIC_URL` and, for store builds, the address in `app/eas.json`.
+
+Nothing is stored in your GitHub repository: requests, edits and photos live only on the server (in `DATA_DIR`).
 
 ---
 
@@ -65,19 +85,20 @@ When a customer sends a quote or event request the server **saves it in its data
 only says "received" after that worked. If nothing could be saved and no email/webhook could be sent, the customer
 is told it failed and is given your phone number. A form never pretends to work.
 
-**Render's free plan has temporary storage.** Anything saved (the database, uploaded photos, menu edits) is erased
+**Many hosts' free plans have temporary storage** (check yours). Anything saved (the database, uploaded photos, menu edits) is then erased
 whenever the service restarts or redeploys, which happens regularly. So:
 
 - **Always set up email alerts** (below). The email is your permanent copy of every request.
-- When you are ready to rely on the dashboard, move the service to a **paid instance** and add a **Persistent Disk**
-  (Render → your service → **Disks**, mount path `/var/data`), then set `DATA_DIR=/var/data`. Check Render's pricing page
-  for the current cost. Until then, use the dashboard as an inbox and keep the emails.
+- When you are ready to rely on the dashboard, use a plan with a **persistent disk or volume** (attach it in your host's settings,
+  then set `DATA_DIR` to its path). Check your host's pricing page for the current cost. Until then, use the dashboard as an inbox and keep the emails.
 - Back up any time: dashboard → Requests → **Download spreadsheet**.
 
-### Email alerts with Resend (free tier is enough)
+**You do not have to use Resend.** Pick any of these, or more than one: Resend email (below), a webhook (Slack, Discord, or Zapier/Make, which can send you a Gmail), or just the dashboard on a host that keeps its files.
+
+### Email alerts with Resend (one option; the free tier is enough)
 
 1. Create an account at **resend.com**. Open **API Keys → Create API Key** (permission: *Sending access*). Copy the key.
-2. In Render add `RESEND_API_KEY` = that key and `NOTIFY_EMAIL` = the address that should receive requests
+2. In your host's settings add `RESEND_API_KEY` = that key and `NOTIFY_EMAIL` = the address that should receive requests
    (several allowed, separated by commas).
 3. **Quick test:** leave `NOTIFY_FROM` empty. Resend then sends from `onboarding@resend.dev`, which only delivers to the
    email address you used to sign up at Resend. So use that same address for `NOTIFY_EMAIL`.
@@ -85,7 +106,7 @@ whenever the service restarts or redeploys, which happens regularly. So:
    domain provider, wait until it says *Verified*, then set `NOTIFY_FROM` to e.g. `Maruf Cafe <requests@your-domain.com>`.
 5. Send yourself a test request from the app. You should get an email with all the details; **Reply** goes to the customer.
 
-The key lives only in Render's settings. It is never in the code and never sent to a browser.
+The key lives only in your host's settings. It is never in the code and never sent to a browser.
 
 ### Or a chat message instead (Slack, Discord, Zapier, Make)
 
@@ -140,7 +161,7 @@ questions but not open-ended ones; for anything it does not know it says so and 
 
 To upgrade it to a real AI helper that handles open-ended questions and helps plan how much food a group needs:
 1. Create an account at **console.anthropic.com**, add a small amount of credit, and open **API Keys → Create Key**.
-2. In Render add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
+2. In your host's settings add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
 3. Redeploy. The "Ask Maruf Cafe AI" button on the app's Home screen now opens a chat.
 
 ### Free option (any OpenAI-style service)
@@ -149,7 +170,7 @@ No AI is completely free without an account, because every service needs a key s
 services (for example **Groq**, **OpenRouter** and **Google Gemini**) offer a free tier with a free key, and they all work here:
 
 1. Sign up on the service's website and create an API key (no card needed on most free tiers; check theirs).
-2. In Render add three variables instead of `ANTHROPIC_API_KEY`:
+2. In your host's settings add three variables instead of `ANTHROPIC_API_KEY`:
    - `AI_API_KEY` = the key
    - `AI_BASE_URL` = the service's OpenAI-compatible address, which must start with `https://`
      (examples: `https://api.groq.com/openai/v1`, `https://openrouter.ai/api/v1`; check the service's docs for the exact address)
