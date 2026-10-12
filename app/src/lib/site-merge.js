@@ -21,6 +21,7 @@ export function mergeSite(base, remote, apiUrl = "") {
   const hours = list(rb.hours);
   if (hours && hours.every((h) => Array.isArray(h?.days) && Number.isFinite(h.open) && Number.isFinite(h.close))) out.business.hours = hours;
   if (text(rb.reviewsUrl) !== null) out.business.reviewsUrl = rb.reviewsUrl;
+  if (text(rb.badge) !== null) out.business.badge = rb.badge.trim();   // blank means the café removed it
   if (list(remote.faq)) out.faq = remote.faq.filter((f) => f && f.q && f.a);
   if (list(remote.packages)) out.packages = remote.packages.filter((p) => p && p.title).map((p) => ({ ...p, includes: Array.isArray(p.includes) ? p.includes : [] }));
   if (text(remote.packagesNote) !== null) out.packagesNote = remote.packagesNote;

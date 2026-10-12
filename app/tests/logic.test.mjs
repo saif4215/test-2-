@@ -162,3 +162,9 @@ test("home picks: only items the café marked, never hidden ones, at most four, 
   assert.equal(mergeSite(BASE, { featuredTitle: "Most popular" }).featuredTitle, "Most popular");
   assert.equal(mergeSite(BASE, { featuredTitle: "" }).featuredTitle, BASE.featuredTitle ?? undefined);
 });
+
+test("the badge comes from the café's details; a blank one removes it and a missing one keeps the built-in", () => {
+  assert.equal(mergeSite({ ...BASE, business: { ...BASE.business, badge: "100% Halal" } }, { business: { badge: "Halal chicken" } }).business.badge, "Halal chicken");
+  assert.equal(mergeSite({ ...BASE, business: { ...BASE.business, badge: "100% Halal" } }, { business: { badge: "" } }).business.badge, "");
+  assert.equal(mergeSite({ ...BASE, business: { ...BASE.business, badge: "100% Halal" } }, { business: {} }).business.badge, "100% Halal");
+});

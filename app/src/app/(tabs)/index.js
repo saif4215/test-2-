@@ -1,7 +1,7 @@
 import { Image, Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, Grid, H1, H2, Photo, Screen, Section, Small } from "../../components/ui";
+import { Body, Button, Card, Grid, H1, H2, Photo, Screen, Section, Small, TrustBadge } from "../../components/ui";
 import { MapCard } from "../../components/MapCard";
 import { BurgerViewer } from "../../components/Viewers";
 import { FeaturedPicks, MenuBrowser, OrderBar } from "../../components/MenuBrowser";
@@ -20,6 +20,7 @@ export default function Home() {
       {/* the food comes first */}
       <View style={{ marginTop: 12, gap: 16 }}>
         <Text style={{ fontSize: 14, color: colors.muted }}><Text style={{ color: status.open ? colors.success : colors.muted, fontWeight: "700" }}>{status.text}</Text>{"  ·  Staten Island"}</Text>
+        <TrustBadge label={business.badge} style={{ marginTop: -6 }} />
         {/* start here: one big way in, two smaller ones */}
         <Pressable accessibilityRole="button" accessibilityLabel="Start an order" onPress={() => router.push("/menu")}
           style={({ pressed }) => ({ backgroundColor: colors.espresso, borderRadius: radius.card, padding: 26, minHeight: 215, gap: 14, justifyContent: "space-between", opacity: pressed ? 0.92 : 1 })}>

@@ -100,6 +100,17 @@ export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.car
   );
 }
 
+/** A short trust line such as "100% Halal", shown only when the café has one. */
+export function TrustBadge({ label, style }) {
+  if (!label) return null;
+  return (
+    <View accessible accessibilityLabel={label} style={[{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.tint, borderRadius: 99, paddingVertical: 6, paddingLeft: 10, paddingRight: 14 }, style]}>
+      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+      <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink, letterSpacing: 0.2 }}>{label}</Text>
+    </View>
+  );
+}
+
 export function IconBadge({ name, size = 22 }) {
   return (
     <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>

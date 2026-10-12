@@ -13,6 +13,7 @@ export const business = {
   giftCardsUrl: "https://www.marufcafe.com/s/gift-cards",
   instagram: "https://www.instagram.com/maruf.cafe/",
   tiktok: "https://www.tiktok.com/@marufsi1",
+  badge: "100% Halal",   // shown on Home and Menu; the dashboard can change or remove it
   // Hours in New York time. open/close are 24-hour clock hours. days: 0 = Sunday ... 6 = Saturday.
   hours: [
     { label: "Mon – Sat", days: [1, 2, 3, 4, 5, 6], open: 7, close: 22 },

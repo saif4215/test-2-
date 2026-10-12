@@ -24,6 +24,11 @@ Nothing here has been submitted. Publishing needs your own accounts.
 
 ## 1. Before you build (do these first)
 
+0. **"100% Halal" is on the Home and Menu screens and in the store text above, because you asked for it.** It is the café's own claim. Only keep
+   it if it is true for everything on the menu, and be ready to answer if a customer or reviewer asks about it. To change or remove it, edit
+   "Badge on the Home and Menu screens" under Site info in the dashboard (the built-in fallback is `badge` in `app/src/config.js`). The chat repeats
+   exactly what the badge says and adds nothing about suppliers or certificates.
+
 1. **Know your server address.** It is the https address of wherever the server runs (see `DEPLOY.md`; any host works).
    The app sends quote and event requests and chat questions there. Put it in `app/eas.json` in both places that say
    `https://REPLACE-WITH-YOUR-SERVER-ADDRESS`. If you build some other way, set `EXPO_PUBLIC_API_URL` to it.
@@ -71,8 +76,8 @@ The app ids are `com.marufcafe.app` (change them in `app/app.json` before the fi
 
 - **Name:** Maruf Cafe
 - **Subtitle (28/30):** Large orders & event rentals
-- **Promotional text (133/170):** Feeding a crowd or planning a party? Request a quote for large orders and catering, or ask about renting Maruf Cafe in Staten Island.
-- **Keywords (91/100):** cafe,coffee,catering,large orders,event space,party,birthday,venue,Staten Island,group food
+- **Promotional text (146/170):** 100% halal. Feeding a crowd or planning a party? Request a quote for large orders and catering, or ask about renting Maruf Cafe in Staten Island.
+- **Keywords (97/100):** cafe,coffee,catering,large orders,event space,party,birthday,venue,Staten Island,group food,halal
 - **Category:** Food & Drink
 - **Price:** Free
 - **Age rating:** 4+ (answer "None" to every content question)
@@ -85,7 +90,7 @@ The app ids are `com.marufcafe.app` (change them in `app/app.json` before the fi
 
 **Description**
 
-> Maruf Cafe in Staten Island makes it easy to feed a crowd or host your next gathering.
+> Maruf Cafe in Staten Island makes it easy to feed a crowd or host your next gathering. 100% halal.
 >
 > • Large orders: tell us your date, group size and what you'd like, and we'll put a quote together. Great for family gatherings, birthdays, business meetings, school and community events, and holidays.
 > • Catering for every occasion: birthday parties, business catering, family gatherings, community events and holiday events.

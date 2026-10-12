@@ -335,3 +335,23 @@ test("home picks: the owner can feature items and rename the section; hidden ite
   assert.equal((await (await fetch(t.u + "/content.json")).json()).featuredTitle, "Try these", "a blank title falls back");
   t.close();
 });
+
+test("badge: '100% Halal' shows by default, the owner can change it or remove it, and the chat repeats only what the badge says", async () => {
+  const t = await startSite({ ASSISTANT_RATE_LIMIT_PER_MIN: "100" });
+  const a = await t.login();
+  const live = async () => (await (await fetch(t.u + "/content.json")).json()).business.badge;
+  const chat = async (q) => (await (await fetch(t.u + "/api/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: q }] }) })).json()).reply;
+  assert.equal(await live(), "100% Halal");
+  assert.match(await chat("is everything halal?"), /"100% Halal"/);
+  const content = (await a.get("content")).json.content;
+  assert.equal(content.business.badge, "100% Halal", "the dashboard shows the current badge");
+  content.business.badge = "Halal chicken and beef";
+  assert.equal((await a.put("content", { content })).status, 200);
+  assert.equal(await live(), "Halal chicken and beef");
+  content.business.badge = "";
+  assert.equal((await a.put("content", { content })).status, 200);
+  assert.equal(await live(), "", "a blank badge means none is shown");
+  assert.match(await chat("is it halal"), /don't have halal information/i, "with no badge the chat claims nothing");
+  assert.doesNotMatch(await chat("is it halal"), /100%/);
+  t.close();
+});
