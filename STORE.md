@@ -10,8 +10,9 @@ Nothing here has been submitted. Publishing needs your own accounts.
   The JavaScript for iPhone does bundle without errors, but that is not the same as running on a phone.
 - **The server must be online before you submit.** The forms and the chat talk to it, and App Review will open your Privacy Policy and Support links.
   See `DEPLOY.md`. A server that is asleep or erased during review is the most common reason this app would be rejected.
-- **iPad screenshots.** `app/app.json` has `"supportsTablet": true`, so App Store Connect will ask for iPad screenshots (13-inch).
-  Either make them, or set `ios.supportsTablet` to `false` in `app/app.json` before the first build (iPhone only; it still runs on an iPad, just not full screen).
+- **iPad screenshots.** `app/app.json` has `"supportsTablet": true`, so App Store Connect asks for iPad screenshots (13-inch). Eight are included in
+  `store/screenshots/ipad-13/` (2064 × 2752), taken the same way as the iPhone ones. Or set `ios.supportsTablet` to `false` in `app/app.json`
+  before the first build (iPhone only; it still runs on an iPad, just not full screen) and skip them. Either way, look at the app on a real iPad in TestFlight if you keep iPad support.
 - **Whose account?** The seller shows on the store page as whoever owns the Apple Developer account. If the buyer will run the app, they should
   publish under their own account. An app can be transferred between accounts later in App Store Connect, but it is easier to start right.
   An **organization** account needs a D-U-N-S number and takes longer to approve than an **individual** one.
@@ -115,7 +116,7 @@ The app ids are `com.marufcafe.app` (change them in `app/app.json` before the fi
 
 > No sign-in is needed. The app shows the café's menu, hours and contact details, a group-size planner, and two request forms (Orders → "Get a large order quote", and Events → "Check event availability"). Submitting a form sends the customer's request to the café's server and shows a confirmation. "Ask a question" on the Home screen is a chat that answers from the café's own menu and details. "Order pickup on Square Online" opens the café's existing web store in the browser. There is no in-app payment and no account.
 
-**Screenshots:** `store/screenshots/iphone-6.9/` (eight files, 1320 × 2868: Home, Orders planner, Events, Menu, Ask a question, My order, quote form, thank-you). Apple scales these for smaller iPhones. They are taken from the web version of the app at phone size, which looks the same as the iPhone version for these screens, but replace them with real iPhone screenshots from your TestFlight build if you can. iPad screenshots: see section 0.
+**Screenshots:** `store/screenshots/iphone-6.9/` (eight files, 1320 × 2868: Home, Orders planner, Events, Menu, Ask a question, My order, quote form, thank-you). Apple scales these for smaller iPhones. They are taken from the web version of the app at phone size, which looks the same as the iPhone version for these screens, but replace them with real iPhone screenshots from your TestFlight build if you can. iPad screenshots: `store/screenshots/ipad-13/` (see section 0).
 
 ## 5. Google Play text
 
