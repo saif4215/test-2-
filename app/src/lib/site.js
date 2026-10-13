@@ -2,10 +2,10 @@ import { createContext, createElement, useContext, useEffect, useState } from "r
 import { Platform } from "react-native";
 import { apiUrl, business, faq, packages, packagesNote } from "../config";
 import bundledMenu from "../data/menu.json";
-import { BLANK_VENUE, mergeSite } from "./site-merge";
+import { BLANK_VENUE, mergeSite, withImageUrls } from "./site-merge";
 
 /** What the app ships with. Always usable offline and before the server answers. */
-export const BUNDLED = { business, faq, packages, packagesNote, featuredTitle: "Try these", venue: BLANK_VENUE, gallery: [], reviews: [], photos: {}, menu: bundledMenu };
+export const BUNDLED = { business, faq, packages, packagesNote, featuredTitle: "Try these", venue: BLANK_VENUE, gallery: [], reviews: [], photos: {}, menu: withImageUrls(bundledMenu, "") };
 
 const Ctx = createContext(BUNDLED);
 

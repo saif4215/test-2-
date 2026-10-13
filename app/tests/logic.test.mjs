@@ -191,3 +191,17 @@ test("menu search: every word must match, names first, ignores case and accents,
   assert.deepEqual(searchMenu(cats, "   "), []);
   assert.equal(searchMenu(cats, "brownie")[0]._cat, "Sweets");
 });
+
+test("built-in menu illustrations: chosen by the item's name first, then its category; unknown kinds get none", async () => {
+  const { artKey } = await import("../src/lib/menu-art-key.js");
+  assert.equal(artKey({ name: "Americano", cat: "Coffee" }), "coffee");
+  assert.equal(artKey({ name: "Strawberry Acai", cat: "Refreshers" }), "refresher");
+  assert.equal(artKey({ name: "Hot Chocolate", cat: "Smoothies / Others" }), "tea", "a hot drink in a mug");
+  assert.equal(artKey({ name: "Personal Pizza", cat: "Salads / Others" }), "pizza", "the name wins over the category");
+  assert.equal(artKey({ name: "Garden Salad", cat: "Bowls" }), "bowl");
+  assert.equal(artKey({ name: "Chicken Parmesan", cat: "Sandwiches" }), "sandwich");
+  assert.equal(artKey({ name: "Chicken Tenders", cat: "Chicken & Wings" }), "chicken");
+  assert.equal(artKey({ name: "Dubai Chocolate", cat: "Sweets" }), "sweets");
+  assert.equal(artKey({ name: "Mystery", cat: "Specials" }), null);
+  assert.equal(artKey({}), null);
+});

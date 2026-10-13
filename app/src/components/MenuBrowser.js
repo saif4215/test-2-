@@ -7,6 +7,8 @@ import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
 import { featuredItems, searchMenu } from "../lib/site-merge";
+import { ART } from "../lib/menu-art";
+import { artKey } from "../lib/menu-art-key";
 import { colors, radius } from "../theme";
 
 /** Category chips and the items in each, with Add / quantity buttons. Used on Home and on the Menu tab. */
@@ -73,10 +75,13 @@ export function MenuBrowser() {
 }
 
 
-/** The item's picture if the café added one; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
+/** The item's own picture if the café added one; otherwise a drawn illustration for its kind of food; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
 function ItemPhoto({ item }) {
   const [broken, setBroken] = useState(false);
-  if (item.image && !broken) return <Image source={{ uri: item.image }} accessibilityLabel={item.name} onError={() => setBroken(true)} resizeMode="cover" style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint }} />;
+  const box = { width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint };
+  if (item.image && !broken) return <Image source={{ uri: item.image }} accessibilityLabel={item.name} onError={() => setBroken(true)} resizeMode="cover" style={box} />;
+  const art = ART[artKey(item)];
+  if (art) return <Image source={art} accessible={false} resizeMode="cover" style={box} />;
   if (!showPlaceholders) return null;
   return (
     <View accessibilityLabel={`Photo placeholder: ${item.name}`} style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
