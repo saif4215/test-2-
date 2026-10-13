@@ -176,3 +176,18 @@ test("menu item pictures that point at the café's uploads become absolute; link
   assert.equal(out[0].image, "https://cafe.example/uploads/a.png"); assert.equal(out[1].image, "https://x.example/b.jpg"); assert.equal(out[2].image, undefined);
   assert.equal(menu.groups.Drinks.Coffee[0].image, "/uploads/a.png", "the original is not changed");
 });
+
+test("menu search: every word must match, names first, ignores case and accents, also finds by category", async () => {
+  const { searchMenu } = await import("../src/lib/site-merge.js");
+  const cats = [
+    { name: "Coffee", items: [{ id: "1", name: "Latte", cents: 450 }, { id: "2", name: "Chai Latte", cents: 500 }, { id: "3", name: "Café Mocha", cents: 525, desc: "espresso and chocolate" }] },
+    { name: "Sweets", items: [{ id: "4", name: "Brownie", cents: 300 }, { id: "5", name: "Latte Cake", cents: 600 }] },
+  ];
+  assert.deepEqual(searchMenu(cats, "latte").map((i) => i.id), ["1", "2", "5"]);
+  assert.deepEqual(searchMenu(cats, "CAFE mocha").map((i) => i.id), ["3"], "accents and case do not matter");
+  assert.deepEqual(searchMenu(cats, "chocolate").map((i) => i.id), ["3"], "descriptions count");
+  assert.deepEqual(searchMenu(cats, "sweets").map((i) => i.id), ["4", "5"], "category names count");
+  assert.deepEqual(searchMenu(cats, "chai cake"), [], "every word must match");
+  assert.deepEqual(searchMenu(cats, "   "), []);
+  assert.equal(searchMenu(cats, "brownie")[0]._cat, "Sweets");
+});

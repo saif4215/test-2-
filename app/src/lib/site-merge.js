@@ -40,6 +40,21 @@ export function withImageUrls(menu, apiUrl) {
   return { ...menu, groups: Object.fromEntries(Object.entries(menu.groups).map(([g, cats]) => [g, Object.fromEntries(Object.entries(cats).map(([c, items]) => [c, items.map((it) => (typeof it.image === "string" && it.image ? { ...it, image: absolute(it.image, apiUrl) } : it))]))])) };
 }
 
+const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+/** Items whose name, description or category contain every word typed. Items whose own name matches come first. categories = [{ name, items }] */
+export function searchMenu(categories, query) {
+  const words = norm(query).split(" ").filter(Boolean);
+  if (!words.length) return [];
+  const byName = [], rest = [];
+  for (const c of categories) for (const it of c.items) {
+    const hay = norm(`${it.name} ${it.desc || ""} ${c.name}`);
+    if (!words.every((w) => hay.includes(w))) continue;
+    (words.every((w) => norm(it.name).includes(w)) ? byName : rest).push({ ...it, _cat: c.name });
+  }
+  return [...byName, ...rest];
+}
+
 /** id -> item, for every item on a menu. */
 export function indexMenu(menu) {
   const map = new Map();
