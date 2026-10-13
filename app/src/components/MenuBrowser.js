@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Chip, Grid, H1, H3, Small } from "./ui";
@@ -42,17 +42,25 @@ export function MenuBrowser() {
 }
 
 
+/** The item's picture if the café added one; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
+function ItemPhoto({ item }) {
+  const [broken, setBroken] = useState(false);
+  if (item.image && !broken) return <Image source={{ uri: item.image }} accessibilityLabel={item.name} onError={() => setBroken(true)} resizeMode="cover" style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint }} />;
+  if (!showPlaceholders) return null;
+  return (
+    <View accessibilityLabel={`Photo placeholder: ${item.name}`} style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
+      <Ionicons name="image-outline" size={24} color={colors.goldText} />
+    </View>
+  );
+}
+
 /** One menu item with its price and Add / quantity buttons. */
 export function ItemCard({ item: it }) {
   const order = useOrder();
               const qty = order.lines[it.id] || 0;
   return (
                 <Card key={it.id} style={{ padding: 14, flexDirection: "row", gap: 14, alignItems: "center" }}>
-                  {showPlaceholders ? (
-                    <View accessibilityLabel={`Photo placeholder: ${it.name}`} style={{ width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name="image-outline" size={24} color={colors.goldText} />
-                    </View>
-                  ) : null}
+                  <ItemPhoto item={it} />
                   <View style={{ flex: 1, gap: 4 }}>
                     <H3>{it.name}</H3>
                     {it.desc ? <Small>{it.desc}</Small> : null}

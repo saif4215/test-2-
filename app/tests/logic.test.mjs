@@ -168,3 +168,11 @@ test("the badge comes from the café's details; a blank one removes it and a mis
   assert.equal(mergeSite({ ...BASE, business: { ...BASE.business, badge: "100% Halal" } }, { business: { badge: "" } }).business.badge, "");
   assert.equal(mergeSite({ ...BASE, business: { ...BASE.business, badge: "100% Halal" } }, { business: {} }).business.badge, "100% Halal");
 });
+
+test("menu item pictures that point at the café's uploads become absolute; links and items without one are left alone", async () => {
+  const { withImageUrls } = await import("../src/lib/site-merge.js");
+  const menu = { currency: "USD", groups: { Drinks: { Coffee: [{ id: "a", name: "A", cents: 300, image: "/uploads/a.png" }, { id: "b", name: "B", cents: 400, image: "https://x.example/b.jpg" }, { id: "c", name: "C", cents: 500 }] } } };
+  const out = withImageUrls(menu, "https://cafe.example").groups.Drinks.Coffee;
+  assert.equal(out[0].image, "https://cafe.example/uploads/a.png"); assert.equal(out[1].image, "https://x.example/b.jpg"); assert.equal(out[2].image, undefined);
+  assert.equal(menu.groups.Drinks.Coffee[0].image, "/uploads/a.png", "the original is not changed");
+});

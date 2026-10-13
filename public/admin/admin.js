@@ -162,7 +162,15 @@ async function viewMenu(main) {
     const pick = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.featured, "data-f": "featured" }), "Show on Home");
     const hide = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.hidden, "data-f": "hidden", onchange: (e) => row.classList.toggle("hiddenitem", e.target.checked) }), "Hide");
     const del = h("button", { type: "button", class: "danger", "aria-label": `Delete ${it.name}`, text: "✕", onclick: () => { if (confirm(`Delete “${name.value}”?`)) row.remove(); } });
-    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id }, name, price, del, desc, h("div", { class: "row" }, pick, hide));
+    // an optional picture shown beside the item in the app
+    const thumb = h("img", { class: "thumb", alt: "", src: it.image || "", hidden: !it.image });
+    const file = h("input", { type: "file", accept: "image/jpeg,image/png,image/webp", hidden: true, "aria-label": "Choose a picture for this item", onchange: async (e) => {
+      const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+      try { const r = await api("POST", "uploads", await shrink(f, 700, 2e5), { name: f.name }); row.dataset.image = r.upload.url; thumb.src = r.upload.url; thumb.hidden = false; photoBtn.textContent = "Change picture"; rm.hidden = false; }
+      catch (err) { flash(row, err.message, "bad"); } } });
+    const photoBtn = h("button", { type: "button", text: it.image ? "Change picture" : "Add picture", onclick: () => file.click() });
+    const rm = h("button", { type: "button", text: "Remove picture", hidden: !it.image, onclick: () => { delete row.dataset.image; thumb.hidden = true; rm.hidden = true; photoBtn.textContent = "Add picture"; } });
+    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), h("div", { class: "row" }, pick, hide));
     return row;
   }
 
@@ -198,6 +206,7 @@ async function viewMenu(main) {
           if (row.querySelector("[data-f=cents]")) { it.cents = toCents(val("cents")); if (Number.isNaN(it.cents)) problems.push(`“${it.name}” needs a price like 4.50.`); }
           else { it.min = toCents(val("min")); it.max = toCents(val("max")); if (Number.isNaN(it.min) || Number.isNaN(it.max) || it.min > it.max) problems.push(`“${it.name}” needs a low and a high price (low first).`); }
           const d = val("desc").trim(); if (d) it.desc = d;
+          if (row.dataset.image) it.image = row.dataset.image;
           if (row.querySelector("[data-f=hidden]").checked) it.hidden = true;
           else if (row.querySelector("[data-f=featured]").checked) it.featured = true;
           items.push(it);
@@ -309,13 +318,13 @@ async function viewSite(main) {
 }
 
 /* ---------- photos ---------- */
-async function shrink(file) {
+async function shrink(file, max = 2000, limit = 1.5e6) {
   // Phone photos are big. Shrink them in the browser so uploads are quick and pages load fast.
   if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
   try {
     const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
-    if (scale === 1 && file.size < 1.5e6) return file;
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.size < limit) return file;
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
     canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);

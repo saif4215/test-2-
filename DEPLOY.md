@@ -125,7 +125,7 @@ Sessions last 12 hours, 5 wrong passwords lock that sign-in for 15 minutes, and 
 | Tab | What you can do | Who |
 |---|---|---|
 | **Requests** | search, filter by status, read every answer, Call / Text / Email buttons, set status (New → Contacted → Quote sent → Accepted → Declined/Closed), private notes, download a spreadsheet | owner and staff |
-| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items. Hidden items disappear from the app and from online checkout. | owner and staff |
+| **Menu** | change names, prices (single price or low/high), descriptions, hide items, add or delete items, and give an item a **picture** (Add picture on its row; the picture shows beside it in the app). Hidden items disappear from the app and from online checkout. | owner and staff (staff can add pictures only if you let them edit site info and photos) |
 | **Menu reset** | "Reset to the original menu" throws away all menu edits | owner only |
 | **Site info** | phone, email, address, hours, Instagram/TikTok, event options and prices, what the space holds, rental rules, FAQ, **real** customer reviews | owner (or staff, same switch) |
 | **Photos** | upload photos from your phone (they are shrunk automatically), put them in the photo spots and the gallery with a short description | owner (or staff, same switch) |

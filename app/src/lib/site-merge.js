@@ -31,8 +31,13 @@ export function mergeSite(base, remote, apiUrl = "") {
   if (Array.isArray(remote.reviews)) out.reviews = remote.reviews.filter((r) => r && r.name && r.text);
   if (remote.photos && typeof remote.photos === "object") out.photos = Object.fromEntries(Object.entries(remote.photos).filter(([, u]) => typeof u === "string" && u).map(([k, u]) => [k, absolute(u, apiUrl)]));
   const menu = remote.menu;
-  if (menu && typeof menu === "object" && menu.groups && typeof menu.groups === "object" && Object.keys(menu.groups).length) out.menu = menu;
+  if (menu && typeof menu === "object" && menu.groups && typeof menu.groups === "object" && Object.keys(menu.groups).length) out.menu = withImageUrls(menu, apiUrl);
   return out;
+}
+
+/** Make item pictures that point at the café's own uploads absolute, so the phone can load them. */
+export function withImageUrls(menu, apiUrl) {
+  return { ...menu, groups: Object.fromEntries(Object.entries(menu.groups).map(([g, cats]) => [g, Object.fromEntries(Object.entries(cats).map(([c, items]) => [c, items.map((it) => (typeof it.image === "string" && it.image ? { ...it, image: absolute(it.image, apiUrl) } : it))]))])) };
 }
 
 /** id -> item, for every item on a menu. */

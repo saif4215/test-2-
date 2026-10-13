@@ -355,3 +355,23 @@ test("badge: '100% Halal' shows by default, the owner can change it or remove it
   assert.doesNotMatch(await chat("is it halal"), /100%/);
   t.close();
 });
+
+test("menu item pictures: the café's own uploads and https links are kept, anything else is dropped", async () => {
+  const t = await startSite();
+  const a = await t.login();
+  const menu = (await a.get("menu")).json.menu;
+  const items = Object.values(menu.groups).flatMap((c) => Object.values(c).flat());
+  const up = await a.call("POST", "uploads", PNG, { "Content-Type": "image/png", "X-Filename": "latte.png" });
+  assert.equal(up.status, 200);
+  items[0].image = up.json.upload.url;
+  items[1].image = "https://example.com/espresso.jpg";
+  items[2].image = "javascript:alert(1)";
+  items[3].image = "http://example.com/plain-http.jpg";
+  items[4].image = "/uploads/../../etc/passwd";
+  assert.equal((await a.put("menu", { menu })).status, 200);
+  const live = Object.values((await (await fetch(t.u + "/menu.json")).json()).groups).flatMap((c) => Object.values(c).flat());
+  assert.equal(live[0].image, up.json.upload.url);
+  assert.equal(live[1].image, "https://example.com/espresso.jpg");
+  for (const i of [2, 3, 4]) assert.equal(live[i].image, undefined, `item ${i} keeps no unsafe picture`);
+  t.close();
+});
