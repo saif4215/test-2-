@@ -77,7 +77,7 @@ The server has its own tests: `cd .. && node --test server.test.mjs`.
   payment SDK and a custom build.
 - **Prices are never invented.** Event packages show no prices. The calculator shows quantities and totals only when
   you provide serving sizes and prices.
-- **Menu photos and descriptions** are empty because none were provided.
+- **Menu photos and descriptions** are empty because none were provided. Until the café adds its own, each item shows a generic 3D-rendered picture of its kind of food (`assets/menu/`, chosen by `src/lib/menu-art-key.js`); these are not photos of the café's food.
 - **FAQ:** the first answer is the wording you gave. The others were written to be neutral and should be reviewed.
 - **Not yet run on a real phone.** It was tested as a web build in a phone-sized browser and with unit tests.
   Try it in Expo Go before publishing.

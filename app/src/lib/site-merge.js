@@ -35,7 +35,7 @@ export function mergeSite(base, remote, apiUrl = "") {
   return out;
 }
 
-/** Make item pictures that point at the café's own uploads absolute, so the phone can load them, and remember each item's category (used to pick a built-in illustration). */
+/** Make item pictures that point at the café's own uploads absolute, so the phone can load them, and remember each item's category (used to pick a built-in picture). */
 export function withImageUrls(menu, apiUrl) {
   return { ...menu, groups: Object.fromEntries(Object.entries(menu.groups).map(([g, cats]) => [g, Object.fromEntries(Object.entries(cats).map(([c, items]) => [c, items.map((it) => ({ ...it, cat: c, ...(typeof it.image === "string" && it.image ? { image: absolute(it.image, apiUrl) } : {}) }))]))])) };
 }

@@ -75,7 +75,7 @@ export function MenuBrowser() {
 }
 
 
-/** The item's own picture if the café added one; otherwise a drawn illustration for its kind of food; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
+/** The item's own picture if the café added one; otherwise a generic 3D-rendered picture for its kind of food; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
 function ItemPhoto({ item }) {
   const [broken, setBroken] = useState(false);
   const box = { width: 76, height: 76, borderRadius: 16, backgroundColor: colors.tint };

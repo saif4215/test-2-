@@ -1,6 +1,6 @@
-// Simple drawn illustrations used beside menu items that have no photo of their own. They are drawings, not photos of the café's food.
+// Rendered pictures (3D-rendered food, not photos) used beside menu items that have no photo of their own. They are generic renders, not photos of the café's own food.
 export const ART = {
-  coffee: require("../../assets/menu/coffee.png"), refresher: require("../../assets/menu/refresher.png"), tea: require("../../assets/menu/tea.png"), smoothie: require("../../assets/menu/smoothie.png"),
-  breakfast: require("../../assets/menu/breakfast.png"), sandwich: require("../../assets/menu/sandwich.png"), burger: require("../../assets/menu/burger.png"), bowl: require("../../assets/menu/bowl.png"),
-  chicken: require("../../assets/menu/chicken.png"), pizza: require("../../assets/menu/pizza.png"), sides: require("../../assets/menu/sides.png"), sweets: require("../../assets/menu/sweets.png"),
+  coffee: require("../../assets/menu/coffee.jpg"), refresher: require("../../assets/menu/refresher.jpg"), tea: require("../../assets/menu/tea.jpg"), smoothie: require("../../assets/menu/smoothie.jpg"),
+  breakfast: require("../../assets/menu/breakfast.jpg"), sandwich: require("../../assets/menu/sandwich.jpg"), burger: require("../../assets/menu/burger.jpg"), bowl: require("../../assets/menu/bowl.jpg"),
+  chicken: require("../../assets/menu/chicken.jpg"), pizza: require("../../assets/menu/pizza.jpg"), sides: require("../../assets/menu/sides.jpg"), sweets: require("../../assets/menu/sweets.jpg"),
 };

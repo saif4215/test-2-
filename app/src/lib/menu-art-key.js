@@ -1,4 +1,4 @@
-// Which built-in illustration suits a menu item. Pure, so it is tested without a phone.
+// Which built-in rendered picture suits a menu item. Pure, so it is tested without a phone.
 // The café's own picture for an item always wins over these (see ItemPhoto in MenuBrowser).
 const BY_NAME = [[/pizza/, "pizza"], [/hot chocolate|cocoa/, "tea"], [/burger/, "burger"], [/panini|sandwich/, "sandwich"]];
 const BY_CATEGORY = [[/coffee/, "coffee"], [/refresher/, "refresher"], [/\btea\b/, "tea"], [/smoothie/, "smoothie"], [/breakfast/, "breakfast"], [/sandwich/, "sandwich"], [/burger/, "burger"],
