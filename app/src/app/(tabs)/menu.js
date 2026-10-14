@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { Body, Eyebrow, H1, Reveal, TrustBadge } from "../../components/ui";
+import { Eyebrow, H1, Reveal, TrustBadge } from "../../components/ui";
 import { MenuPage, OrderBar } from "../../components/MenuBrowser";
 import { CupViewer } from "../../components/Viewers";
 import { useOrder } from "../../lib/order";
@@ -13,11 +13,14 @@ export default function Menu() {
       <MenuPage
         bottomPad={order.count ? 150 : 120}
         header={(
-          <Reveal style={{ marginTop: 18, marginBottom: 14, gap: 10 }}>
-            <Eyebrow>Our food</Eyebrow>
-            <H1 style={{ fontSize: 38, lineHeight: 44 }}>Menu</H1>
-            <TrustBadge label={business.badge} />
-            <Body>Swipe a row sideways to see more. Add what you like to your order. Ordering for a big group? Add items here, then send them with a quote request.</Body>
+          <Reveal style={{ marginTop: 18, marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+              <View style={{ gap: 6 }}>
+                <Eyebrow>Our food</Eyebrow>
+                <H1 style={{ fontSize: 38, lineHeight: 44 }}>Menu</H1>
+              </View>
+              <TrustBadge label={business.badge} style={{ alignSelf: "flex-end", marginBottom: 6 }} />
+            </View>
           </Reveal>
         )}
         footer={<View style={{ marginTop: 40 }}><CupViewer /></View>}
