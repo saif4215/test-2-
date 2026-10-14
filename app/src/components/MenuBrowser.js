@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Chip, Grid, H3, SectionHead, Small } from "./ui";
@@ -14,113 +14,180 @@ import { colors, fonts, gradient, radius, shadow } from "../theme";
 const categoryList = (menu) => Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items: items.filter((i) => !i.hidden) }))).filter((c) => c.items.length);
 const artFor = (cat) => ART[artKey({ cat })] || null;
 
-/** Category chips and the items in each, with Add / quantity buttons. Used on the Menu tab. */
-export function MenuBrowser() {
-  const { menu } = useSite();
+/**
+ * The whole menu as one page, like a delivery app: a search bar and category buttons that stay at the top, then one row per
+ * category. Swipe a row sideways to go through its items, scroll down for the next category, tap "See all" to open a row as a grid.
+ */
+export function MenuPage({ header, footer, bottomPad = 120 }) {
+  const { menu, featuredTitle } = useSite();
+  const { width } = useWindowDimensions();
+  const pad = width >= 768 ? 32 : 20;
+  const inner = Math.min(width, 980) - pad * 2;
   const categories = useMemo(() => categoryList(menu), [menu]);
-  const [chosen, setActive] = useState(null);
-  const { cat: wantedCat, n: wantedNonce } = useLocalSearchParams();   // a tile on Home can open the Menu on one category
-  useEffect(() => { if (wantedCat) setActive(String(wantedCat)); }, [wantedCat, wantedNonce]);
-  const [query, setQuery] = useState("");
-  const order = useOrder();
-  const active = categories.some((c) => c.name === chosen) || placeholderCategories.includes(chosen) ? chosen : categories[0]?.name;   // a category the café removed falls back to the first
-  const current = categories.find((c) => c.name === active);
   const names = useMemo(() => [...categories.map((c) => c.name), ...placeholderCategories.filter((p) => !categories.some((c) => c.name === p))], [categories]);
-
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(null);
+  const [grid, setGrid] = useState({});   // categories opened with "See all"
+  const scroller = useRef(null), chipBar = useRef(null), activeRef = useRef(null);
+  const pos = useRef({ body: 0, sticky: 120, rows: {}, chips: {} });
+  const { cat: wantedCat, n: wantedNonce } = useLocalSearchParams();   // a tile on Home can open the Menu on one category
   const q = query.trim();
   const results = useMemo(() => (q ? searchMenu(categories, q) : null), [categories, q]);
+  const picks = useMemo(() => featuredItems(menu), [menu]);
+  const featuredRow = useRowScroll();
+  const current = names.includes(active) ? active : names[0];
 
+  const goTo = (name) => {
+    const y = pos.current.rows[name];
+    if (y == null) return;
+    scroller.current?.scrollTo({ y: Math.max(0, pos.current.body + y - pos.current.sticky - 6), animated: true });
+  };
+  const pick = (name) => { setActive(name); activeRef.current = name; if (q) { setQuery(""); setTimeout(() => goTo(name), 140); } else goTo(name); };
+  useEffect(() => { if (wantedCat) { setQuery(""); setActive(String(wantedCat)); activeRef.current = String(wantedCat); const t = setTimeout(() => goTo(String(wantedCat)), 200); return () => clearTimeout(t); } return undefined; }, [wantedCat, wantedNonce]);
+
+  // keep the highlighted category button in step with the row on screen
+  const onScroll = (e) => {
+    if (q) return;
+    const y = e.nativeEvent.contentOffset.y + pos.current.sticky + 30;
+    let cur = names[0];
+    for (const n of names) { const ry = pos.current.rows[n]; if (ry != null && pos.current.body + ry <= y) cur = n; }
+    if (cur !== activeRef.current) {
+      activeRef.current = cur; setActive(cur);
+      const x = pos.current.chips[cur]; if (x != null) chipBar.current?.scrollTo({ x: Math.max(0, x - 16), animated: true });
+    }
+  };
+
+  const col = { width: "100%", maxWidth: 980, alignSelf: "center", paddingHorizontal: pad };
   return (
-    <View>
-      <View style={[{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.surface, borderColor: "rgba(36,26,18,0.06)", borderWidth: 1, borderRadius: 18, paddingHorizontal: 16, minHeight: 54 }, shadow]}>
-        <Ionicons name="search" size={20} color={colors.muted} />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor="#9A9087" accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoCapitalize="none" maxLength={60}
-          style={{ flex: 1, minHeight: 52, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
-        {query ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
-        ) : null}
+    <ScrollView ref={scroller} stickyHeaderIndices={[1]} onScroll={onScroll} scrollEventThrottle={32} keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: bottomPad }}>
+      <View style={col}>{header}</View>
+
+      <View onLayout={(e) => { pos.current.sticky = e.nativeEvent.layout.height; }} style={{ backgroundColor: colors.bg, paddingTop: 8, paddingBottom: 10, zIndex: 5, boxShadow: "0px 10px 14px -12px rgba(36,26,18,0.28)" }}>
+        <View style={col}>
+          <View style={[{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.surface, borderColor: "rgba(36,26,18,0.06)", borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, minHeight: 50 }, shadow]}>
+            <Ionicons name="search" size={20} color={colors.muted} />
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor="#9A9087" accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoCapitalize="none" maxLength={60}
+              style={{ flex: 1, minHeight: 48, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
+            {query ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
+            ) : null}
+          </View>
+          <ScrollView ref={chipBar} horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Menu categories" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
+            {names.map((n) => (
+              <View key={n} onLayout={(e) => { pos.current.chips[n] = e.nativeEvent.layout.x; }}>
+                <Chip label={n} small active={!q && n === current} thumb={artFor(n)} onPress={() => pick(n)} />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
       </View>
-      {results ? (
-        <View style={{ marginTop: 18, gap: 14 }}>
-          {results.length ? (
-            <>
-              <Small>{results.length} {results.length === 1 ? "item" : "items"} for “{q}”</Small>
-              <Grid min={330} gap={14}>{results.map((it) => <ItemCard key={it.id} item={it} />)}</Grid>
-            </>
+
+      <View onLayout={(e) => { pos.current.body = e.nativeEvent.layout.y; }}>
+        <View style={col}>
+          {results ? (
+            <View style={{ marginTop: 18, gap: 14 }}>
+              {results.length ? (
+                <>
+                  <Small>{results.length} {results.length === 1 ? "item" : "items"} for “{q}”</Small>
+                  <Grid min={330} gap={14}>{results.map((it) => <ItemCard key={it.id} item={it} />)}</Grid>
+                </>
+              ) : (
+                <Card style={{ padding: 24, gap: 12 }}>
+                  <H3>Nothing on the menu for “{q}”</H3>
+                  <Body>Check the spelling, or try a shorter word. Looking for something for a group? Ask Maruf Cafe and we'll put one together.</Body>
+                  <Button title="Request a large order" variant="gold" onPress={() => router.push("/quote")} />
+                </Card>
+              )}
+            </View>
           ) : (
-            <Card style={{ padding: 24, gap: 12 }}>
-              <H3>Nothing on the menu for “{q}”</H3>
-              <Body>Check the spelling, or try a shorter word. Looking for something for a group? Ask Maruf Cafe and we'll put one together.</Body>
-              <Button title="Request a large order" variant="gold" onPress={() => router.push("/quote")} />
-            </Card>
+            <>
+            {picks.length ? (
+              <View style={{ marginTop: 22 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+                  <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink }}>{featuredTitle}</Text>
+                  {featuredRow.arrows}
+                </View>
+                <BleedRow scrollRef={featuredRow.scrollRef} onScroll={featuredRow.onScroll}>{picks.map((it) => <ItemTile key={`pick-${it.id}`} item={it} />)}</BleedRow>
+              </View>
+            ) : null}
+            {names.map((name) => {
+              const cat = categories.find((c) => c.name === name);
+              return (
+                <View key={name} onLayout={(e) => { pos.current.rows[name] = e.nativeEvent.layout.y; }} style={{ marginTop: 26 }}>
+                  {cat ? <MenuRow cat={cat} inner={inner} open={!!grid[name]} onToggle={() => setGrid((g) => ({ ...g, [name]: !g[name] }))} /> : (
+                    <Card style={{ padding: 22, gap: 12 }}>
+                      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 24, lineHeight: 30, color: colors.ink }}>{name}</Text>
+                      <Body>We're adding {name.toLowerCase()} options. Ask Maruf Cafe for a custom quote for your group and we'll put one together.</Body>
+                      <Button title="Request a large order" variant="gold" onPress={() => router.push({ pathname: "/quote", params: { occasion: name } })} />
+                    </Card>
+                  )}
+                </View>
+              );
+            })}
+            </>
           )}
         </View>
+      </View>
+      <View style={col}>{footer}</View>
+    </ScrollView>
+  );
+}
+
+/** One category: its name, then its items to swipe through (or as a grid after "See all"). */
+function MenuRow({ cat, inner, open, onToggle }) {
+  const n = cat.items.length;
+  const gap = 14, cols = Math.max(2, Math.floor((inner + gap) / (160 + gap))), w = Math.floor((inner - gap * (cols - 1)) / cols);
+  const row = useRowScroll();
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+        <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+          <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink }}>{cat.name}</Text>
+          <Text style={{ fontSize: 14, color: colors.muted, fontWeight: "600" }}>{n}</Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingBottom: 2 }}>
+          {!open && n > 2 ? row.arrows : null}
+          {n > 2 ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={open ? `Show fewer ${cat.name}` : `See all ${cat.name}`} onPress={onToggle} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+              <Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>{open ? "Show less" : "See all"}</Text>
+              <Ionicons name={open ? "chevron-up" : "chevron-forward"} size={16} color={colors.goldText} />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+      {open ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, columnGap: gap }}>{cat.items.map((it) => <ItemTile key={it.id} item={it} width={w} />)}</View>
       ) : (
-      <>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
-        {names.map((n) => <Chip key={n} label={n} active={n === active} thumb={artFor(n)} onPress={() => setActive(n)} />)}
-      </View>
-      {current ? <CategoryBanner category={current} /> : null}
-      <View style={{ marginTop: 16 }}>
-        {current ? (
-          <Grid min={330} gap={14}>
-            {current.items.map((it) => <ItemCard key={it.id} item={it} />)}
-          </Grid>
-        ) : (
-          <Card style={{ padding: 24, gap: 12 }}>
-            <H3>{active}</H3>
-            <Body>We're adding {String(active).toLowerCase()} options. Ask Maruf Cafe for a custom quote for your group and we'll put one together.</Body>
-            <Button title="Request a large order" variant="gold" onPress={() => router.push({ pathname: "/quote", params: { occasion: active } })} />
-          </Card>
-        )}
-      </View>
-      </>
+        <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{cat.items.map((it) => <ItemTile key={it.id} item={it} />)}</BleedRow>
       )}
     </View>
   );
 }
 
-
-/** A dark title card for the open category, with its picture. */
-function CategoryBanner({ category }) {
-  const art = artFor(category.name);
-  const n = category.items.length;
-  return (
-    <View style={[{ marginTop: 20, borderRadius: radius.hero, overflow: "hidden", padding: 22, minHeight: 124, flexDirection: "row", alignItems: "center", gap: 12 }, gradient(colors.espresso, "linear-gradient(135deg, #3A2A1C 0%, #241A12 70%)")]}>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase", color: colors.gold }}>{category.group}</Text>
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 35, color: colors.cream }}>{category.name}</Text>
-        <Text style={{ fontSize: 14, color: colors.creamMuted }}>{n} {n === 1 ? "item" : "items"}</Text>
-      </View>
-      {art ? <Image source={art} accessible={false} style={{ width: 104, height: 104, borderRadius: 52, borderWidth: 3, borderColor: "rgba(217,164,65,0.55)", marginRight: -6 }} /> : null}
-    </View>
-  );
-}
-
 /** The item's own picture if the café added one; otherwise a generic 3D-rendered picture for its kind of food; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
-function ItemPhoto({ item, size = 88, box: boxStyle }) {
+function ItemPhoto({ item, size = 88, box: boxStyle, always }) {
   const [broken, setBroken] = useState(false);
   const box = { width: size, height: size, borderRadius: radius.image, backgroundColor: colors.tint, ...boxStyle };
   if (item.image && !broken) return <Image source={{ uri: item.image }} accessibilityLabel={item.name} onError={() => setBroken(true)} resizeMode="cover" style={box} />;
   const art = ART[artKey(item)];
   if (art) return <Image source={art} accessible={false} resizeMode="cover" style={box} />;
-  if (!showPlaceholders) return null;
+  if (!showPlaceholders && !always) return null;
   return (
-    <View accessibilityLabel={`Photo placeholder: ${item.name}`} style={{ ...box, alignItems: "center", justifyContent: "center" }}>
-      <Ionicons name="image-outline" size={24} color={colors.goldText} />
+    <View accessible={!!showPlaceholders} accessibilityLabel={showPlaceholders ? `Photo placeholder: ${item.name}` : undefined} style={{ ...box, alignItems: "center", justifyContent: "center" }}>
+      <Ionicons name={always && !showPlaceholders ? "restaurant-outline" : "image-outline"} size={always ? 34 : 24} color={colors.goldText} />
     </View>
   );
 }
 
 /** Add button that becomes a [ - 2 + ] stepper once the item is in the order. */
-function Adder({ item: it }) {
+function Adder({ item: it, size = 46 }) {
   const order = useOrder();
   const qty = order.lines[it.id] || 0;
   if (!qty) {
     return (
       <Pressable accessibilityRole="button" accessibilityLabel={`Add ${it.name} to order`} onPress={() => order.change(it.id, +1)}
-        style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 23, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }], boxShadow: "0px 6px 14px rgba(185,130,31,0.35)" })}>
-        <Ionicons name="add" size={26} color={colors.ink} />
+        style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }], boxShadow: "0px 6px 14px rgba(185,130,31,0.35)" })}>
+        <Ionicons name="add" size={Math.round(size * 0.57)} color={colors.ink} />
       </Pressable>
     );
   }
@@ -149,6 +216,22 @@ export function ItemCard({ item: it }) {
   );
 }
 
+/** A menu item as a tile for a swipeable row: picture with the add button on it, then price and name. */
+export function ItemTile({ item: it, width = 160 }) {
+  return (
+    <View style={{ width, gap: 9 }}>
+      <View>
+        <ItemPhoto item={it} size={width} always box={{ borderRadius: 20 }} />
+        <View style={{ position: "absolute", right: 8, bottom: 8 }}><Adder item={it} size={40} /></View>
+      </View>
+      <View style={{ gap: 1, paddingHorizontal: 2 }}>
+        <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
+        <Text numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.ink }}>{it.name}</Text>
+      </View>
+    </View>
+  );
+}
+
 /** A tall card for the home screen's horizontal row: big picture, name, price, add. */
 function PickCard({ item: it }) {
   return (
@@ -165,12 +248,30 @@ function PickCard({ item: it }) {
   );
 }
 
+/** Left and right buttons for a sideways row, on wide screens and computers where swiping is awkward. Phones just swipe. */
+function useRowScroll() {
+  const { width } = useWindowDimensions();
+  const ref = useRef(null), x = useRef(0);
+  const go = (dir) => ref.current?.scrollTo({ x: Math.max(0, x.current + dir * 330), animated: true });
+  const arrows = Platform.OS === "web" && width >= 700 ? (
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      {[-1, 1].map((d) => (
+        <Pressable key={d} accessibilityRole="button" accessibilityLabel={d < 0 ? "Scroll left" : "Scroll right"} onPress={() => go(d)} hitSlop={6}
+          style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.7 : 1 })}>
+          <Ionicons name={d < 0 ? "chevron-back" : "chevron-forward"} size={18} color={colors.ink} />
+        </Pressable>
+      ))}
+    </View>
+  ) : null;
+  return { scrollRef: ref, onScroll: (e) => { x.current = e.nativeEvent.contentOffset.x; }, arrows };
+}
+
 /** A row that scrolls sideways and runs out to the screen edges, inside a padded page. */
-function BleedRow({ children, gap = 14 }) {
+function BleedRow({ children, gap = 14, scrollRef, onScroll }) {
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -pad }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 6, gap }}>
+    <ScrollView ref={scrollRef} onScroll={onScroll} scrollEventThrottle={32} horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -pad }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 6, gap }}>
       {children}
     </ScrollView>
   );
@@ -180,11 +281,12 @@ function BleedRow({ children, gap = 14 }) {
 export function CategoryStrip() {
   const { menu } = useSite();
   const categories = useMemo(() => categoryList(menu), [menu]);
+  const row = useRowScroll();
   if (!categories.length) return null;
   return (
     <View style={{ gap: 14 }}>
-      <SectionHead title="Browse the menu" action="See all" onAction={() => router.push("/menu")} />
-      <BleedRow gap={16}>
+      <SectionHead title="Browse the menu" extra={row.arrows} action="See all" onAction={() => router.push("/menu")} />
+      <BleedRow gap={16} scrollRef={row.scrollRef} onScroll={row.onScroll}>
         {categories.map((c) => {
           const art = artFor(c.name);
           return (
@@ -206,11 +308,12 @@ export function CategoryStrip() {
 export function FeaturedPicks() {
   const { menu, featuredTitle } = useSite();
   const picks = useMemo(() => featuredItems(menu), [menu]);
+  const row = useRowScroll();
   if (!picks.length) return null;
   return (
     <View style={{ gap: 14 }}>
-      <SectionHead title={featuredTitle} />
-      <BleedRow>{picks.map((it) => <PickCard key={it.id} item={it} />)}</BleedRow>
+      <SectionHead title={featuredTitle} extra={row.arrows} />
+      <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{picks.map((it) => <PickCard key={it.id} item={it} />)}</BleedRow>
     </View>
   );
 }

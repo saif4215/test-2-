@@ -63,11 +63,11 @@ export function Card({ children, style, onPress, label }) {
 }
 
 /** A filter pill. Give it a picture (a menu art image) to show a small round thumbnail before the label. */
-export function Chip({ label, active, onPress, thumb }) {
+export function Chip({ label, active, onPress, thumb, small }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: !!active }} onPress={onPress}
-      style={({ pressed }) => [{ paddingVertical: 6, paddingLeft: thumb ? 6 : 16, paddingRight: 16, borderRadius: radius.chip, borderWidth: 1.5, borderColor: active ? colors.ink : colors.line, backgroundColor: active ? colors.ink : colors.surface, minHeight: 46, flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.85 : 1 }, active ? { boxShadow: "0px 6px 14px rgba(27,21,17,0.20)" } : null]}>
-      {thumb ? <Image source={thumb} accessible={false} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.tint }} /> : null}
+      style={({ pressed }) => [{ paddingVertical: 6, paddingLeft: thumb ? 6 : 16, paddingRight: 16, borderRadius: radius.chip, borderWidth: 1.5, borderColor: active ? colors.ink : colors.line, backgroundColor: active ? colors.ink : colors.surface, minHeight: small ? 42 : 46, flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.85 : 1 }, active ? { boxShadow: "0px 6px 14px rgba(27,21,17,0.20)" } : null]}>
+      {thumb ? <Image source={thumb} accessible={false} style={{ width: small ? 28 : 32, height: small ? 28 : 32, borderRadius: 16, backgroundColor: colors.tint }} /> : null}
       <Text style={{ color: active ? colors.cream : colors.ink, fontWeight: "700", fontSize: 15 }}>{label}</Text>
     </Pressable>
   );
@@ -86,14 +86,19 @@ export function Reveal({ children, delay = 0, style }) {
 }
 
 /** A heading with an optional action on the right ("See all"). */
-export function SectionHead({ title, action, onAction, style }) {
+export function SectionHead({ title, action, onAction, extra, style }) {
   return (
     <View style={[{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }, style]}>
       <Text accessibilityRole="header" style={[text.h1, { flexShrink: 1 }]}>{title}</Text>
-      {action ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onAction} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 2, paddingBottom: 5 }}>
-          <Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>{action}</Text><Ionicons name="chevron-forward" size={16} color={colors.goldText} />
-        </Pressable>
+      {extra || action ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingBottom: 5 }}>
+          {extra}
+          {action ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onAction} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+              <Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>{action}</Text><Ionicons name="chevron-forward" size={16} color={colors.goldText} />
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
