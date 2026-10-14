@@ -21,6 +21,10 @@ export const business = {
   ],
 };
 
+// The tagline (slogan) shown on the Home screen under "Hungry?". It makes no claim about the café's food. Change the words to use
+// another, or set it to "" to show none.
+export const homeTagline = "Your next craving starts here.";
+
 // Store builds set EXPO_PUBLIC_SHOW_PLACEHOLDERS=0: empty photo slots, menu thumbnails and the "[ADD EMAIL]" line are
 // then hidden instead of shown, because app stores reject apps that show placeholder content.
 export const showPlaceholders = process.env.EXPO_PUBLIC_SHOW_PLACEHOLDERS !== "0";

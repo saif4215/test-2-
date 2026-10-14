@@ -5,6 +5,7 @@ import { ActionTile, Body, Button, Card, Grid, H1, H2, Reveal, Screen, Section, 
 import { MapCard } from "../../components/MapCard";
 import { BurgerViewer } from "../../components/Viewers";
 import { CategoryStrip, FeaturedPicks, OrderBar } from "../../components/MenuBrowser";
+import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
@@ -52,12 +53,12 @@ export default function Home() {
           ) : null}
           <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "stretch" }}>
             <View style={{ flex: 1, paddingBottom: wide ? 40 : 0, alignSelf: wide ? "center" : "auto" }}>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <StatusPill dark open={status.open}>{status.text}</StatusPill>
                 <TrustBadge dark label={business.badge} style={{ paddingVertical: 5 }} />
               </View>
               <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: wide ? 60 : 46, lineHeight: wide ? 64 : 50, color: colors.cream, marginTop: 20, letterSpacing: -0.5 }}>Hungry?</Text>
-              <Text style={{ fontSize: 16, lineHeight: 24, color: colors.creamMuted, marginTop: 6, maxWidth: 330 }}>Pick your food from the menu and send it to Maruf Cafe.</Text>
+              {homeTagline ? <Text style={{ fontFamily: fonts.display, fontSize: 21, lineHeight: 28, color: colors.creamMuted, marginTop: 8, maxWidth: 340 }}>{homeTagline}</Text> : null}
               <View style={{ marginTop: 20, alignItems: "flex-start" }}>
                 <Button title="Start an order" variant="gold" icon="arrow-forward" onPress={() => router.push("/menu")} style={{ paddingHorizontal: 28 }} />
               </View>
