@@ -43,7 +43,11 @@ The app also loads the live menu (`/menu.json`) and the café's details, FAQ, ev
 ## Photos
 
 Every photo slot shows a tidy placeholder until you add a picture, so nothing looks broken. Slots: `hero`,
-`largeOrders`, `catering`, `interior`, `interior2`, `event` and one per catering card.
+`largeOrders`, `catering`, `interior`, `interior2`, `event` and one per catering card. When the café adds a `hero` photo (here or in the dashboard) it replaces the food collage at the top of Home.
+
+## Look and feel
+
+Colours, radii, shadows and type sizes are in `src/theme.js`. Headings use the DM Serif Display font (`assets/fonts/`, SIL Open Font License, copy in `assets/fonts/OFL.txt`); body text uses the phone's own font. The food pictures in the Home collage (`assets/hero/`) and beside menu items (`assets/menu/`) are 3D renders of generic dishes, not photos of the café's food.
 
 ## Put it in the App Store and Google Play
 See `../STORE.md` for the full checklist, the store text to paste, and screenshots.

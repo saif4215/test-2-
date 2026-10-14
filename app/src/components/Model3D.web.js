@@ -37,5 +37,5 @@ export default function Model3D({ kind, exploded = false, height = 320, label, o
     ro.observe(node);
     return () => { alive = false; cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); api.current?.dispose(); api.current = null; canvas.remove(); };
   }, [kind]);
-  return <View ref={host} style={{ height, width: "100%", borderRadius: radius.card, overflow: "hidden", backgroundColor: colors.espresso }} />;
+  return <View ref={host} style={{ height, width: "100%", borderRadius: radius.hero, overflow: "hidden", backgroundColor: colors.espresso }} />;
 }

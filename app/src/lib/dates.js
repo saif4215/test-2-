@@ -33,6 +33,9 @@ export function formatDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
+/** Which weekday it is in New York right now: 0 = Sunday ... 6 = Saturday. */
+export const nyWeekday = (now = new Date()) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now));
+
 /** Is the café open at `now`, in New York time? Returns { open, closesAt|opensAt } using config hours. */
 export function openStatus(hours, now = new Date()) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(now).map((p) => [p.type, p.value]));

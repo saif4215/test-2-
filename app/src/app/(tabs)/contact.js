@@ -3,18 +3,25 @@ import { Linking, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
-import { Body, Button, Card, Grid, H1, Screen, Section, Small } from "../../components/ui";
+import { Body, Button, Card, H1, Reveal, Screen, Section, SectionHead, Small, StatusPill } from "../../components/ui";
 import { showPlaceholders } from "../../config";
 import { useSite } from "../../lib/site";
-import { openStatus } from "../../lib/dates";
+import { nyWeekday, openStatus } from "../../lib/dates";
 import { colors } from "../../theme";
 
-function InfoCard({ title, children }) {
-  return (
-    <View style={{ borderTopWidth: 1, borderColor: colors.line, paddingVertical: 14, gap: 2 }}>
-      <Small style={{ fontWeight: "700" }}>{title}</Small>{children}
+/** One line of contact details: a round icon, a small title, then the details. Tap it to act on it, when it can be acted on. */
+function InfoRow({ icon, title, children, onPress, label, last }) {
+  const inner = (
+    <View style={{ flexDirection: "row", gap: 14, paddingVertical: 16, paddingHorizontal: 18, borderBottomWidth: last ? 0 : 1, borderColor: colors.line, alignItems: "flex-start" }}>
+      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={icon} size={21} color={colors.goldText} /></View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: colors.goldText }}>{title}</Text>
+        {children}
+      </View>
+      {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.muted} style={{ alignSelf: "center" }} /> : null}
     </View>
   );
+  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={label || title} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>{inner}</Pressable> : inner;
 }
 
 function Question({ q, a }) {
@@ -22,8 +29,8 @@ function Question({ q, a }) {
   return (
     <Card>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} style={{ padding: 18, flexDirection: "row", gap: 12, alignItems: "center" }}>
-        <Text style={{ flex: 1, fontWeight: "800", fontSize: 16, color: colors.ink }}>{q}</Text>
-        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={20} color={colors.muted} />
+        <Text style={{ flex: 1, fontWeight: "800", fontSize: 16, lineHeight: 22, color: colors.ink }}>{q}</Text>
+        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: open ? colors.gold : colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={open ? "remove" : "add"} size={18} color={open ? colors.ink : colors.goldText} /></View>
       </Pressable>
       {open ? <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}><Body>{a}</Body></View> : null}
     </Card>
@@ -31,38 +38,52 @@ function Question({ q, a }) {
 }
 
 export default function Contact() {
-  const { business, faq, reviews } = useSite();
+  const { business, faq } = useSite();
   const status = openStatus(business.hours);
+  const today = nyWeekday();
+  const showEmail = business.email || showPlaceholders;
   return (
     <Screen>
-      <Section style={{ marginTop: 16 }}>
-        <H1>Contact</H1>
-        <View style={{ marginTop: 20 }}>
-          <Grid min={300} gap={14}>
-            <InfoCard title="Address">{business.address.map((l) => <Body key={l}>{l}</Body>)}</InfoCard>
-            <InfoCard title="Phone"><Body>{business.phone}</Body></InfoCard>
-            {business.email || showPlaceholders ? <InfoCard title="Email"><Body>{business.email || "[ADD EMAIL]"}</Body></InfoCard> : null}
-            <InfoCard title="Hours">
-              {business.hours.map((h) => <Body key={h.label}>{h.label}: {fmt(h.open)} – {fmt(h.close)}</Body>)}
-              <Small style={{ fontWeight: "700", color: status.open ? colors.success : colors.muted }}>{status.text}</Small>
-            </InfoCard>
-          </Grid>
-        </View>
-        <View style={{ marginTop: 22 }}><MapCard /></View>
-        <View style={{ marginTop: 16, gap: 12 }}>
+      <Reveal style={{ marginTop: 16, gap: 12 }}>
+        <H1 style={{ fontSize: 38, lineHeight: 44 }}>Contact</H1>
+        <StatusPill open={status.open}>{status.text}</StatusPill>
+      </Reveal>
+
+      <Section style={{ marginTop: 22 }}>
+        <Card>
+          <InfoRow icon="location-outline" title="Address">{business.address.map((l) => <Text key={l} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{l}</Text>)}</InfoRow>
+          <InfoRow icon="call-outline" title="Phone" label={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.phone}</Text></InfoRow>
+          {showEmail ? <InfoRow icon="mail-outline" title="Email" onPress={business.email ? () => Linking.openURL(`mailto:${business.email}`) : undefined}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.email || "[ADD EMAIL]"}</Text></InfoRow> : null}
+          <InfoRow icon="time-outline" title="Hours" last>
+            {business.hours.map((h) => {
+              const isToday = h.days.includes(today);
+              return (
+                <View key={h.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                  <Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink, fontWeight: isToday ? "800" : "400" }}>{h.label}{isToday ? "  ·  today" : ""}</Text>
+                  <Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink, fontWeight: isToday ? "800" : "400" }}>{fmt(h.open)} – {fmt(h.close)}</Text>
+                </View>
+              );
+            })}
+            <Small style={{ fontWeight: "700", color: status.open ? colors.success : colors.muted, marginTop: 2 }}>{status.text}</Small>
+          </InfoRow>
+        </Card>
+        <View style={{ marginTop: 18 }}><MapCard /></View>
+        <View style={{ marginTop: 18, gap: 12 }}>
           <Button title="Call us" variant="primary" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
           <Button title="Request a large order" variant="gold" onPress={() => router.push("/quote")} />
           <Button title="Ask about event rental" variant="light" onPress={() => router.push("/event-request")} />
           {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => Linking.openURL(`mailto:${business.email}`)} /> : null}
         </View>
-        <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
-          {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
-          {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
-        </View>
+        {business.instagram || business.tiktok ? (
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 18 }}>
+            {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
+            {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
+          </View>
+        ) : null}
       </Section>
 
-      <Section>
-        <H1 style={{ marginBottom: 16 }}>Questions people ask</H1>
+      <Section style={{ marginTop: 40 }}>
+        <SectionHead title="Questions people ask" style={{ marginBottom: 16 }} />
         <View style={{ gap: 12 }}>{faq.map((f) => <Question key={f.q} {...f} />)}</View>
       </Section>
     </Screen>

@@ -21,7 +21,7 @@ export function ThankYou({ message }) {
   const { business } = useSite();
   return (
     <View style={{ alignItems: "flex-start", gap: 16, paddingTop: 24 }}>
-      <Ionicons name="checkmark-circle" size={56} color={colors.success} />
+      <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name="checkmark" size={46} color={colors.success} /></View>
       <H1>Thank you!</H1>
       <Body style={{ fontSize: 18, lineHeight: 27 }}>{message}</Body>
       <View style={{ width: "100%", gap: 12, marginTop: 8 }}>
