@@ -60,6 +60,29 @@ export const packages = [
 ];
 export const packagesNote = "Pricing and availability depend on the date, number of guests, event type, food requirements, and rental arrangements.";
 
+// Drink customizing ("make it your way") on an item's details screen. These are REQUESTS: the choices travel with the quote request as a note and
+// Maruf Cafe confirms what it can make and any extra cost. Nothing here changes a price. EDIT THESE LISTS to match what the café really offers:
+// a choice that is not listed cannot be picked, and a control can be left out of a category below.
+export const customize = {
+  sizes: ["Small", "Medium", "Large"],            // only shown for drinks that list a price range (the price depends on size)
+  temps: ["Hot", "Iced"],
+  milks: ["Whole milk", "Skim milk", "Oat milk", "Almond milk", "Soy milk"],
+  flavors: ["Vanilla", "Caramel", "Hazelnut", "Brown sugar"],
+  ice: ["Light ice", "Regular ice", "Extra ice"],
+  sweetness: ["Less sweet", "Regular", "Extra sweet"],
+  extras: ["Whipped cream", "Extra foam"],
+  maxShots: 4,                                    // espresso shots a customer can ask for
+  maxPumps: 8,                                    // pumps of syrup a customer can ask for
+};
+// Which controls each kind of drink shows, in this order. `match` is tested against the category name (any case).
+// Controls: size, temp, shots, syrup (flavor + pumps), milk, ice (after Iced, or always for refreshers), sweetness, extras.
+export const drinkControls = [
+  { match: "coffee", controls: ["size", "temp", "shots", "syrup", "milk", "ice", "extras"] },
+  { match: "tea", controls: ["size", "temp", "syrup", "milk", "ice"] },
+  { match: "refresher", controls: ["size", "ice", "sweetness"] },
+  { match: "smoothie|other", controls: ["size", "milk", "extras"] },
+];
+
 // Menu categories to show even when they have no items yet (shown as "ask us" cards). Edit freely.
 export const placeholderCategories = ["Catering Trays", "Family Meals"];
 

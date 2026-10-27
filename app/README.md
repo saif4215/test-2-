@@ -53,6 +53,12 @@ Tap any item for a bigger view with its price, description and an Add button (`s
 
 The app also borrows a few habits that people know from big café and delivery apps, built in Maruf Cafe's own look: a greeting by time of day, a "Pickup at" bar with the address and whether the café is open (`src/components/StoreBar.js`), a heart on each item that fills **Your favorites**, **Order again** with an Add all button (the items of the last order sent), a note per item that travels with the quote request, and "More from Maruf Cafe" cards for catering, renting the café and the social pages. Favorites and recent orders are kept on the phone only (`src/lib/memory.js`, using AsyncStorage; the browser's own storage on the web). There are no rewards, points or in-app payments, because the café does not run any.
 
+### Drinks
+
+Every kind of drink has its own picture (an espresso, a cappuccino, a hibiscus tea, a mango refresher and so on: `src/lib/menu-art-key.js` picks it from the drink's name, `assets/menu/` holds the 3D renders). They are illustrations, not photos of the café's drinks; the café's own photo for an item replaces them.
+
+On a drink's details screen, **Make it your way** lets a customer ask for hot or iced, a size (only when the price depends on size), espresso shots, pumps of a syrup flavor, milk, ice, sweetness and extras, as big buttons with a live "Your drink" line (`src/components/Customizer.js`, rules in `src/lib/customize.js`). **These are requests only**: the choices travel with the quote request as text, nothing changes a price, and Maruf Cafe confirms what it can make. The choices offered are lists in `src/config.js` (`customize` and `drinkControls`): the ones shipped are common examples, so **edit them to match what the café really offers**.
+
 Colours, radii, shadows and type sizes are in `src/theme.js`. Headings use the DM Serif Display font (`assets/fonts/`, SIL Open Font License, copy in `assets/fonts/OFL.txt`); body text uses the phone's own font. The food pictures in the Home collage (`assets/hero/`) and beside menu items (`assets/menu/`) are 3D renders of generic dishes, not photos of the café's food.
 
 ## Put it in the App Store and Google Play

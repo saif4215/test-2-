@@ -32,7 +32,7 @@ export default function MyOrder() {
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text numberOfLines={2} style={{ fontWeight: "800", fontSize: 16, lineHeight: 21, color: colors.ink }}>{l.name}</Text>
                   <Small>{priceText(l)} each</Small>
-                  {order.notes[l.id] ? <Text numberOfLines={2} style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>Note: {order.notes[l.id]}</Text> : null}
+                  {order.details[l.id] ? <Text style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>Request: {order.details[l.id]}</Text> : null}
                 </View>
                 <Adder item={l} />
               </Card>

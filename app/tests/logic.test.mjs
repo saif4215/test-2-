@@ -9,6 +9,7 @@ import { trimHistory } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote } from "../src/lib/order-util.js";
 import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved } from "../src/lib/memory-util.js";
+import { controlsFor, isShown, applyChoice, cleanCustom, describeCustom, EMPTY } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -197,17 +198,39 @@ test("menu search: every word must match, names first, ignores case and accents,
 
 test("built-in menu pictures: chosen by the item's name first, then its category; unknown kinds get none", async () => {
   const { artKey } = await import("../src/lib/menu-art-key.js");
-  assert.equal(artKey({ name: "Americano", cat: "Coffee" }), "coffee");
+  assert.equal(artKey({ name: "Americano", cat: "Coffee" }), "americano");
+  assert.equal(artKey({ name: "Latte", cat: "Coffee" }), "coffee", "the plain latte keeps the latte-art picture");
+  assert.equal(artKey({ name: "Maple Honey Almond Latte", cat: "Coffee" }), "icedlatte");
+  assert.equal(artKey({ name: "Hazelnut Mocha", cat: "Coffee" }), "hazelnutmocha", "the specific mocha wins over the plain one");
+  assert.equal(artKey({ name: "White Mocha", cat: "Coffee" }), "whitemocha");
+  assert.equal(artKey({ name: "Chai Latte", cat: "Tea" }), "chai");
+  assert.equal(artKey({ name: "Dirty Chai", cat: "Coffee" }), "dirtychai");
   assert.equal(artKey({ name: "Strawberry Acai", cat: "Refreshers" }), "refresher");
-  assert.equal(artKey({ name: "Hot Chocolate", cat: "Smoothies / Others" }), "tea", "a hot drink in a mug");
+  assert.equal(artKey({ name: "Lemonade", cat: "Refreshers" }), "lemonade");
+  assert.equal(artKey({ name: "Strawberry Banana Smoothie", cat: "Smoothies / Others" }), "smoothie");
+  assert.equal(artKey({ name: "Hot Chocolate", cat: "Smoothies / Others" }), "hotchoc");
   assert.equal(artKey({ name: "Personal Pizza", cat: "Salads / Others" }), "pizza", "the name wins over the category");
   assert.equal(artKey({ name: "Garden Salad", cat: "Bowls" }), "bowl");
   assert.equal(artKey({ name: "Chicken Parmesan", cat: "Sandwiches" }), "sandwich");
   assert.equal(artKey({ name: "Chicken Tenders", cat: "Chicken & Wings" }), "chicken");
   assert.equal(artKey({ name: "Dubai Chocolate", cat: "Sweets" }), "sweets");
+  assert.equal(artKey({ name: "A new coffee", cat: "Coffee" }), "coffee", "a drink added later falls back to its category");
   assert.equal(artKey({ name: "Mystery", cat: "Specials" }), null);
   assert.equal(artKey({}), null);
 });
+
+test("every drink on the menu has a picture, most kinds of drink have their own, and every picture file is registered", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { artKey } = await import("../src/lib/menu-art-key.js");
+  const menu = JSON.parse(readFileSync(new URL("../src/data/menu.json", import.meta.url), "utf8"));
+  const art = readFileSync(new URL("../src/lib/menu-art.js", import.meta.url), "utf8");
+  const registered = new Set([...art.matchAll(/(\w+): require\("\.\.\/\.\.\/assets\/menu\/(\w+)\.jpg"\)/g)].map((m) => { assert.equal(m[1], m[2]); return m[1]; }));
+  const keys = [];
+  for (const [cat, items] of Object.entries(menu.groups.Drinks)) for (const it of items) { const k = artKey({ name: it.name, cat }); assert.ok(k, `${it.name} has a picture`); assert.ok(registered.has(k), `${k} is registered`); keys.push(k); }
+  assert.ok(new Set(keys).size >= 28, `only ${new Set(keys).size} different drink pictures for ${keys.length} drinks`);
+  for (const [cat, items] of Object.entries({ ...menu.groups.Food })) for (const it of items) assert.ok(registered.has(artKey({ name: it.name, cat })), `${it.name} resolves to a registered picture`);
+});
+
 
 test("the share text only repeats what the café published, and skips what is blank", () => {
   const b = { name: "Maruf Cafe", address: ["365 Veterans Rd W", "Staten Island, NY 10309"], phone: "(929) 335-3296", orderUrl: "https://example.com/order" };
@@ -261,4 +284,56 @@ test("saved data that is damaged is forgotten, not trusted", () => {
   assert.deepEqual(readSaved("{oops", []), []);
   assert.deepEqual(readSaved('{"a":1}', []), []);
   assert.deepEqual(readSaved(null, []), []);
+});
+
+test("drink controls: food has none, each kind of drink shows its own, size only when the price depends on it", () => {
+  assert.deepEqual(controlsFor({ group: "Food", cat: "Burgers", cents: 1000 }), []);
+  const ids = (it) => controlsFor(it).map((c) => c.id);
+  assert.deepEqual(ids({ group: "Drinks", cat: "Coffee", cents: 300 }), ["temp", "shots", "syrup", "milk", "ice", "extras"]);
+  assert.deepEqual(ids({ group: "Drinks", cat: "Coffee", min: 500, max: 600 }), ["size", "temp", "shots", "syrup", "milk", "ice", "extras"]);
+  assert.deepEqual(ids({ group: "Drinks", cat: "Refreshers", min: 500, max: 650 }), ["size", "ice", "sweetness"]);
+  assert.deepEqual(ids({ group: "Drinks", cat: "Tea", cents: 400 }), ["temp", "syrup", "milk", "ice"]);
+  assert.deepEqual(ids({ group: "Drinks", cat: "Smoothies / Others", cents: 600 }), ["milk", "extras"]);
+  assert.deepEqual(ids({ group: "Drinks", cat: "Brand new category", cents: 600 }), [], "an unknown drink category shows nothing, not a wrong set");
+  assert.deepEqual(controlsFor({ group: "Drinks", cat: "Coffee", cents: 300 }, { temps: [], milks: [], flavors: [], ice: [], extras: [], maxShots: 0, maxPumps: 0 }), [], "a café that lists nothing shows nothing");
+});
+
+test("ice only follows an iced coffee or tea, and always shows for refreshers", () => {
+  const coffee = controlsFor({ group: "Drinks", cat: "Coffee", cents: 300 }).find((c) => c.id === "ice");
+  assert.equal(isShown(coffee, { temp: "Hot" }), false);
+  assert.equal(isShown(coffee, { temp: "Iced" }), true);
+  const refresher = controlsFor({ group: "Drinks", cat: "Refreshers", cents: 300 }).find((c) => c.id === "ice");
+  assert.equal(isShown(refresher, {}), true);
+});
+
+test("a customized drink reads as one short line, in a fixed order", () => {
+  const controls = controlsFor({ group: "Drinks", cat: "Coffee", min: 500, max: 600 });
+  assert.equal(describeCustom({}, controls), "");
+  const c = { milk: "Oat milk", temp: "Iced", size: "Large", shots: 2, pumps: 2, flavor: "Vanilla", ice: "Light ice", extras: ["Whipped cream"] };
+  assert.equal(describeCustom(c, controls), "Large, Iced, 2 shots, 2 pumps Vanilla, Oat milk, Light ice, Whipped cream");
+  assert.equal(describeCustom({ shots: 1, pumps: 1 }, controls), "1 shot, 1 pump of syrup");
+  assert.equal(describeCustom({ ice: "Light ice", temp: "Hot" }, controls), "Hot", "ice is ignored on a hot drink");
+});
+
+test("choices that are not offered, or out of range, are dropped", () => {
+  const controls = controlsFor({ group: "Drinks", cat: "Coffee", cents: 300 });
+  const c = cleanCustom({ milk: "Unicorn milk", shots: 99, pumps: 99, flavor: "Vanilla", extras: ["Whipped cream", "Gold leaf"], size: "Large" }, controls);
+  assert.equal(c.milk, "");
+  assert.equal(c.shots, 4);
+  assert.equal(c.pumps, 8);
+  assert.deepEqual(c.extras, ["Whipped cream"]);
+  assert.equal(c.size, "", "no size control on a single-price drink");
+  assert.equal(cleanCustom({ shots: -3 }, controls).shots, 0);
+});
+
+test("choosing things in the app keeps the request consistent", () => {
+  let c = applyChoice(EMPTY, { temp: "Iced" });
+  c = applyChoice(c, { ice: "Light ice" });
+  assert.equal(c.ice, "Light ice");
+  c = applyChoice(c, { temp: "Hot" });
+  assert.equal(c.ice, "", "going back to Hot drops the ice");
+  c = applyChoice(c, { flavor: "Caramel" });
+  assert.equal(c.pumps, 1, "a flavor asks for at least one pump");
+  c = applyChoice(c, { pumps: 0 });
+  assert.equal(c.flavor, "", "no pumps, no flavor");
 });
