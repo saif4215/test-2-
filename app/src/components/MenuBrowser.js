@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, Chip, Grid, H3, SectionHead, Small } from "./ui";
+import { Body, Button, Card, Chip, Grid, H3, SectionHead, Small, usePullRefresh } from "./ui";
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
@@ -13,6 +13,7 @@ import { colors, fonts, gradient, radius, shadow } from "../theme";
 
 const categoryList = (menu) => Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items: items.filter((i) => !i.hidden) }))).filter((c) => c.items.length);
 const artFor = (cat) => ART[artKey({ cat })] || null;
+const openItem = (it) => router.push({ pathname: "/item", params: { id: it.id } });
 
 /**
  * The whole menu as one page, like a delivery app: a search bar and category buttons that stay at the top, then one row per
@@ -58,8 +59,9 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   };
 
   const col = { width: "100%", maxWidth: 980, alignSelf: "center", paddingHorizontal: pad };
+  const refreshControl = usePullRefresh();
   return (
-    <ScrollView ref={scroller} stickyHeaderIndices={[1]} onScroll={onScroll} scrollEventThrottle={32} keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: bottomPad }}>
+    <ScrollView ref={scroller} stickyHeaderIndices={[1]} onScroll={onScroll} scrollEventThrottle={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: bottomPad }}>
       <View style={col}>{header}</View>
 
       <View onLayout={(e) => { pos.current.sticky = e.nativeEvent.layout.height; }} style={{ backgroundColor: colors.bg, paddingTop: 8, paddingBottom: 10, zIndex: 5, boxShadow: "0px 10px 14px -12px rgba(36,26,18,0.28)" }}>
@@ -165,7 +167,7 @@ function MenuRow({ cat, inner, open, onToggle }) {
 }
 
 /** The item's own picture if the café added one; otherwise a generic 3D-rendered picture for its kind of food; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
-function ItemPhoto({ item, size = 88, box: boxStyle, always }) {
+export function ItemPhoto({ item, size = 88, box: boxStyle, always }) {
   const [broken, setBroken] = useState(false);
   const box = { width: size, height: size, borderRadius: radius.image, backgroundColor: colors.tint, ...boxStyle };
   if (item.image && !broken) return <Image source={{ uri: item.image }} accessibilityLabel={item.name} onError={() => setBroken(true)} resizeMode="cover" style={box} />;
@@ -180,7 +182,7 @@ function ItemPhoto({ item, size = 88, box: boxStyle, always }) {
 }
 
 /** Add button that becomes a [ - 2 + ] stepper once the item is in the order. */
-function Adder({ item: it, size = 46 }) {
+export function Adder({ item: it, size = 46 }) {
   const order = useOrder();
   const qty = order.lines[it.id] || 0;
   if (!qty) {
@@ -204,13 +206,15 @@ function Adder({ item: it, size = 46 }) {
 export function ItemCard({ item: it }) {
   return (
     <Card style={{ padding: 12, flexDirection: "row", gap: 12, alignItems: "center" }}>
-      <ItemPhoto item={it} size={84} />
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-        <H3>{it.name}</H3>
-        {it._cat ? <Small>{it._cat}</Small> : null}
-        {it.desc ? <Text numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 19, color: colors.muted }}>{it.desc}</Text> : null}
-        <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 16, marginTop: 2 }}>{priceText(it)}</Text>
-      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: "row", gap: 12, alignItems: "center", opacity: pressed ? 0.85 : 1 })}>
+        <ItemPhoto item={it} size={84} />
+        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+          <H3>{it.name}</H3>
+          {it._cat ? <Small>{it._cat}</Small> : null}
+          {it.desc ? <Text numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 19, color: colors.muted }}>{it.desc}</Text> : null}
+          <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 16, marginTop: 2 }}>{priceText(it)}</Text>
+        </View>
+      </Pressable>
       <Adder item={it} />
     </Card>
   );
@@ -219,15 +223,15 @@ export function ItemCard({ item: it }) {
 /** A menu item as a tile for a swipeable row: picture with the add button on it, then price and name. */
 export function ItemTile({ item: it, width = 160 }) {
   return (
-    <View style={{ width, gap: 9 }}>
-      <View>
+    <View style={{ width }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ gap: 9, opacity: pressed ? 0.9 : 1 })}>
         <ItemPhoto item={it} size={width} always box={{ borderRadius: 20 }} />
-        <View style={{ position: "absolute", right: 8, bottom: 8 }}><Adder item={it} size={40} /></View>
-      </View>
-      <View style={{ gap: 1, paddingHorizontal: 2 }}>
-        <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
-        <Text numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.ink }}>{it.name}</Text>
-      </View>
+        <View style={{ gap: 1, paddingHorizontal: 2 }}>
+          <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
+          <Text numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.ink }}>{it.name}</Text>
+        </View>
+      </Pressable>
+      <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>
     </View>
   );
 }
@@ -236,12 +240,14 @@ export function ItemTile({ item: it, width = 160 }) {
 function PickCard({ item: it }) {
   return (
     <Card style={{ width: 236 }}>
-      <ItemPhoto item={it} size={236} box={{ width: 236, height: 168, borderRadius: 0 }} />
+      <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}>
+        <ItemPhoto item={it} size={236} box={{ width: 236, height: 168, borderRadius: 0 }} />
+      </Pressable>
       <View style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View style={{ flex: 1, gap: 2 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${it.name} details`} onPress={() => openItem(it)} style={{ flex: 1, gap: 2 }}>
           <Text numberOfLines={2} style={{ fontSize: 16, lineHeight: 21, fontWeight: "800", color: colors.ink }}>{it.name}</Text>
           <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
-        </View>
+        </Pressable>
         <Adder item={it} />
       </View>
     </Card>
@@ -318,15 +324,25 @@ export function FeaturedPicks() {
   );
 }
 
-/** Floating "View my order" button, shown once something has been added. */
+/** Floating "View my order" button. It slides up the first time something is added, and the count pops when it changes. */
 export function OrderBar() {
   const order = useOrder();
-  if (!order.count) return null;
+  const slide = useRef(new Animated.Value(0)).current, pop = useRef(new Animated.Value(1)).current, shown = useRef(false), lastCount = useRef(0);
+  const visible = order.count > 0;
+  useEffect(() => {
+    if (visible && !shown.current) { shown.current = true; slide.setValue(0); Animated.spring(slide, { toValue: 1, useNativeDriver: true, friction: 8, tension: 70 }).start(); }
+    if (!visible) { shown.current = false; slide.setValue(0); }
+  }, [visible, slide]);
+  useEffect(() => {
+    if (order.count > lastCount.current && lastCount.current > 0) Animated.sequence([Animated.timing(pop, { toValue: 1.05, duration: 90, useNativeDriver: true }), Animated.spring(pop, { toValue: 1, useNativeDriver: true, friction: 5 })]).start();
+    lastCount.current = order.count;
+  }, [order.count, pop]);
+  if (!visible) return null;
   return (
-    <View style={{ position: "absolute", left: 16, right: 16, bottom: 14, alignItems: "center", pointerEvents: "box-none" }}>
+    <Animated.View style={{ position: "absolute", left: 16, right: 16, bottom: 14, alignItems: "center", pointerEvents: "box-none", opacity: slide, transform: [{ translateY: slide.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }, { scale: pop }] }}>
       <View style={{ width: "100%", maxWidth: 640 }}>
         <Button title={`View my order (${order.count}) · ${order.exact ? money(order.low) : `from ${money(order.low)}`}`} variant="primary" icon="bag-handle-outline" onPress={() => router.push("/order")} />
       </View>
-    </View>
+    </Animated.View>
   );
 }

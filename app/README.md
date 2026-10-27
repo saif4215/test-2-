@@ -49,6 +49,8 @@ Every photo slot shows a tidy placeholder until you add a picture, so nothing lo
 
 The Menu tab works like a delivery app: a search bar and category buttons stay at the top while you scroll down through one row per category. Swipe a row sideways for its items, or tap See all to open it as a grid (`MenuPage` in `src/components/MenuBrowser.js`). On computers each row also has left and right buttons.
 
+Tap any item for a bigger view with its price, description and an Add button (`src/app/item.js`). My order shows each item with its picture and a counter. Pull down on a screen in the phone app, or come back to the app after a minute, and the menu and details are loaded again, so the café's edits appear without reinstalling or restarting. Contact has a Share button that sends the café's name, address, phone and order link (`src/lib/share.js`).
+
 Colours, radii, shadows and type sizes are in `src/theme.js`. Headings use the DM Serif Display font (`assets/fonts/`, SIL Open Font License, copy in `assets/fonts/OFL.txt`); body text uses the phone's own font. The food pictures in the Home collage (`assets/hero/`) and beside menu items (`assets/menu/`) are 3D renders of generic dishes, not photos of the café's food.
 
 ## Put it in the App Store and Google Play

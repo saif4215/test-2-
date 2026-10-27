@@ -1,16 +1,26 @@
-import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, Image, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, Animated, Easing, Image, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, shadow, text } from "../theme";
 import { photos } from "../photos";
 import { showPlaceholders } from "../config";
 import { useSite } from "../lib/site";
 
+/** Pull down on a phone to load the café's latest menu and details. (The web app loads them each time it opens.) */
+export function usePullRefresh() {
+  const { refresh } = useSite();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => { setRefreshing(true); try { await refresh?.(); } finally { setRefreshing(false); } }, [refresh]);
+  if (Platform.OS === "web") return undefined;
+  return <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.goldDeep} colors={[colors.gold]} />;
+}
+
 /** Scrolling screen with a centred, readable column on tablets and the web. */
 export function Screen({ children, bottomPad = 120 }) {
   const { width } = useWindowDimensions();
+  const refreshControl = usePullRefresh();
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ alignItems: "center", paddingBottom: bottomPad }} keyboardShouldPersistTaps="handled">
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ alignItems: "center", paddingBottom: bottomPad }} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
       <View style={{ width: "100%", maxWidth: 980, paddingHorizontal: width >= 768 ? 32 : 20, paddingTop: 8 }}>{children}</View>
     </ScrollView>
   );

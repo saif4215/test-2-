@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Linking, Pressable, Text, View } from "react-native";
+import { Linking, Platform, Pressable, Share, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
@@ -7,6 +7,7 @@ import { Body, Button, Card, H1, Reveal, Screen, Section, SectionHead, Small, St
 import { showPlaceholders } from "../../config";
 import { useSite } from "../../lib/site";
 import { nyWeekday, openStatus } from "../../lib/dates";
+import { shareText } from "../../lib/share";
 import { colors } from "../../theme";
 
 /** One line of contact details: a round icon, a small title, then the details. Tap it to act on it, when it can be acted on. */
@@ -42,6 +43,15 @@ export default function Contact() {
   const status = openStatus(business.hours);
   const today = nyWeekday();
   const showEmail = business.email || showPlaceholders;
+  const [copied, setCopied] = useState(false);
+  async function share() {
+    const message = shareText(business);
+    try {
+      if (Platform.OS !== "web") await Share.share({ message });
+      else if (typeof navigator !== "undefined" && navigator.share) await navigator.share({ title: business.name, text: message });
+      else { await navigator.clipboard.writeText(message); setCopied(true); }
+    } catch { /* the person closed the share sheet, or sharing is not available here */ }
+  }
   return (
     <Screen>
       <Reveal style={{ marginTop: 16, gap: 12 }}>
@@ -74,12 +84,11 @@ export default function Contact() {
           <Button title="Ask about event rental" variant="light" onPress={() => router.push("/event-request")} />
           {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => Linking.openURL(`mailto:${business.email}`)} /> : null}
         </View>
-        {business.instagram || business.tiktok ? (
-          <View style={{ flexDirection: "row", gap: 12, marginTop: 18 }}>
-            {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
-            {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
-          </View>
-        ) : null}
+        <View style={{ flexDirection: "row", gap: 12, marginTop: 18 }}>
+          {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
+          {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
+          <Button title={copied ? "Copied" : "Share"} size="medium" variant="light" icon={copied ? "checkmark" : "share-outline"} accessibilityLabel={copied ? "Details copied to the clipboard" : "Share Maruf Cafe"} onPress={share} style={{ flex: 1 }} />
+        </View>
       </Section>
 
       <Section style={{ marginTop: 40 }}>

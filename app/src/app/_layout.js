@@ -25,6 +25,7 @@ export default function RootLayout() {
           <Stack.Screen name="event-request" options={{ presentation: "modal", title: "Event rental request" }} />
           <Stack.Screen name="assistant" options={{ presentation: "modal", title: "Ask a question" }} />
           <Stack.Screen name="order" options={{ presentation: "modal", title: "My order" }} />
+          <Stack.Screen name="item" options={{ presentation: "modal", title: "Details" }} />
         </Stack>
       </OrderProvider>
       </SiteProvider>

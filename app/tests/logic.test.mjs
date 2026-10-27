@@ -6,6 +6,7 @@ import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS } from "../src/lib/f
 import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
+import { shareText } from "../src/lib/share.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -204,4 +205,11 @@ test("built-in menu pictures: chosen by the item's name first, then its category
   assert.equal(artKey({ name: "Dubai Chocolate", cat: "Sweets" }), "sweets");
   assert.equal(artKey({ name: "Mystery", cat: "Specials" }), null);
   assert.equal(artKey({}), null);
+});
+
+test("the share text only repeats what the café published, and skips what is blank", () => {
+  const b = { name: "Maruf Cafe", address: ["365 Veterans Rd W", "Staten Island, NY 10309"], phone: "(929) 335-3296", orderUrl: "https://example.com/order" };
+  assert.equal(shareText(b), "Maruf Cafe\n365 Veterans Rd W, Staten Island, NY 10309\n(929) 335-3296\nOrder: https://example.com/order");
+  assert.equal(shareText({ name: "Maruf Cafe", address: [], phone: "", orderUrl: "" }), "Maruf Cafe");
+  assert.equal(shareText({}), "Maruf Cafe");
 });
