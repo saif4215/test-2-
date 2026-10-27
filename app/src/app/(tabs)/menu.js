@@ -2,6 +2,7 @@ import { View } from "react-native";
 import { Eyebrow, H1, Reveal, TrustBadge } from "../../components/ui";
 import { MenuPage, OrderBar } from "../../components/MenuBrowser";
 import { CupViewer } from "../../components/Viewers";
+import { StoreBar } from "../../components/StoreBar";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
 
@@ -21,6 +22,7 @@ export default function Menu() {
               </View>
               <TrustBadge label={business.badge} style={{ alignSelf: "flex-end", marginBottom: 6 }} />
             </View>
+            <StoreBar style={{ marginTop: 14 }} />
           </Reveal>
         )}
         footer={<View style={{ marginTop: 40 }}><CupViewer /></View>}

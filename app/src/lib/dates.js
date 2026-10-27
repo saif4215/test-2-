@@ -48,3 +48,9 @@ export function openStatus(hours, now = new Date()) {
   const next = hours.find((h) => h.days.includes((day + 1) % 7));
   return { open: false, text: next ? `Closed · opens ${fmt(next.open)} tomorrow` : "Closed" };
 }
+
+/** "Good morning", "Good afternoon" or "Good evening", by the hour in New York (where the café is). */
+export function greeting(now = new Date()) {
+  const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
+  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+}

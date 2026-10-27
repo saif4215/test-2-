@@ -4,6 +4,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { MemoryProvider } from "../lib/memory";
 import { OrderProvider } from "../lib/order";
 import { SiteProvider } from "../lib/site";
 import { colors } from "../theme";
@@ -17,6 +18,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SiteProvider>
+      <MemoryProvider>
       <OrderProvider>
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.ink, headerShadowVisible: false, contentStyle: { backgroundColor: colors.bg }, headerTitleStyle: { fontWeight: "800" }, headerTitleAlign: "left" }}>
@@ -28,6 +30,7 @@ export default function RootLayout() {
           <Stack.Screen name="item" options={{ presentation: "modal", title: "Details" }} />
         </Stack>
       </OrderProvider>
+      </MemoryProvider>
       </SiteProvider>
     </SafeAreaProvider>
   );

@@ -1,12 +1,14 @@
 // Run with: npm test   (plain Node, no phone or browser needed)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDate, parseTime, isPast, openStatus } from "../src/lib/dates.js";
+import { parseDate, parseTime, isPast, openStatus, greeting } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
+import { orderSummary, cleanNote } from "../src/lib/order-util.js";
+import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved } from "../src/lib/memory-util.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -212,4 +214,51 @@ test("the share text only repeats what the café published, and skips what is bl
   assert.equal(shareText(b), "Maruf Cafe\n365 Veterans Rd W, Staten Island, NY 10309\n(929) 335-3296\nOrder: https://example.com/order");
   assert.equal(shareText({ name: "Maruf Cafe", address: [], phone: "", orderUrl: "" }), "Maruf Cafe");
   assert.equal(shareText({}), "Maruf Cafe");
+});
+
+test("the greeting follows the time in New York", () => {
+  assert.equal(greeting(new Date("2026-10-08T12:00:00Z")), "Good morning");     // 8 AM in New York
+  assert.equal(greeting(new Date("2026-10-08T18:00:00Z")), "Good afternoon");   // 2 PM
+  assert.equal(greeting(new Date("2026-10-08T23:30:00Z")), "Good evening");     // 7:30 PM
+});
+
+test("the order summary lists each item once, with the customer's note in brackets", () => {
+  const entries = [{ id: "a", name: "Americano", qty: 2 }, { id: "b", name: "Chai Latte", qty: 1 }];
+  assert.equal(orderSummary(entries), "2 x Americano\n1 x Chai Latte");
+  assert.equal(orderSummary(entries, { a: "  oat milk if you have it ", c: "ignored" }), "2 x Americano (oat milk if you have it)\n1 x Chai Latte");
+  assert.equal(cleanNote("no\n  onions   please"), "no onions please");
+  assert.equal(cleanNote("x".repeat(300)).length, 100);
+});
+
+test("favorites toggle on and off, newest first", () => {
+  assert.deepEqual(toggleFavorite([], "a"), ["a"]);
+  assert.deepEqual(toggleFavorite(["a"], "b"), ["b", "a"]);
+  assert.deepEqual(toggleFavorite(["b", "a"], "b"), ["a"]);
+});
+
+test("recent orders: newest first, no duplicates, at most five, empty orders ignored", () => {
+  let h = [];
+  h = recordOrder(h, [{ id: "a", qty: 1 }]);
+  h = recordOrder(h, []);
+  assert.equal(h.length, 1);
+  h = recordOrder(h, [{ id: "b", qty: 2 }, { id: "a", qty: 1 }]);
+  h = recordOrder(h, [{ id: "a", qty: 1 }]);   // the same as the first: moves to the front, not listed twice
+  assert.deepEqual(h, [[{ id: "a", qty: 1 }], [{ id: "b", qty: 2 }, { id: "a", qty: 1 }]]);
+  for (let i = 0; i < 8; i++) h = recordOrder(h, [{ id: `x${i}`, qty: 1 }]);
+  assert.equal(h.length, 5);
+  assert.deepEqual(lastOrder(h), [{ id: "x7", qty: 1 }]);
+  assert.deepEqual(lastOrder([]), []);
+});
+
+test("order again skips items the café has taken off the menu", () => {
+  const menu = new Map([["a", {}], ["c", {}]]);
+  assert.deepEqual(reorderIds([[{ id: "a", qty: 1 }, { id: "b", qty: 2 }, { id: "c", qty: 1 }]], menu), ["a", "c"]);
+  assert.deepEqual(reorderIds([], menu), []);
+});
+
+test("saved data that is damaged is forgotten, not trusted", () => {
+  assert.deepEqual(readSaved('["a","b"]', []), ["a", "b"]);
+  assert.deepEqual(readSaved("{oops", []), []);
+  assert.deepEqual(readSaved('{"a":1}', []), []);
+  assert.deepEqual(readSaved(null, []), []);
 });

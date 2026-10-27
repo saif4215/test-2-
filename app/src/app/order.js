@@ -6,10 +6,13 @@ import { FormShell } from "../components/FormShell";
 import { Adder, ItemPhoto } from "../components/MenuBrowser";
 import { business } from "../config";   // only the Square Online address is used here
 import { money, priceText, useOrder } from "../lib/order";
+import { useMemory } from "../lib/memory";
 import { colors } from "../theme";
 
 export default function MyOrder() {
   const order = useOrder();
+  const memory = useMemory();
+  const sent = () => memory.rememberOrder(order.entries);   // so "Order again" can offer these items next time
   return (
     <FormShell>
       <H1>My order</H1>
@@ -29,6 +32,7 @@ export default function MyOrder() {
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text numberOfLines={2} style={{ fontWeight: "800", fontSize: 16, lineHeight: 21, color: colors.ink }}>{l.name}</Text>
                   <Small>{priceText(l)} each</Small>
+                  {order.notes[l.id] ? <Text numberOfLines={2} style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>Note: {order.notes[l.id]}</Text> : null}
                 </View>
                 <Adder item={l} />
               </Card>
@@ -46,8 +50,8 @@ export default function MyOrder() {
             <Small>Menu prices before tax. For large orders, Maruf Cafe confirms your final quote with you.</Small>
           </Card>
           <View style={{ gap: 12 }}>
-            <Button title="Request a quote with these items" variant="gold" onPress={() => router.replace({ pathname: "/quote", params: { foodItems: order.summary } })} />
-            <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" onPress={() => Linking.openURL(business.orderUrl)} />
+            <Button title="Request a quote with these items" variant="gold" onPress={() => { sent(); router.replace({ pathname: "/quote", params: { foodItems: order.summary } }); }} />
+            <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" onPress={() => { sent(); Linking.openURL(business.orderUrl); }} />
             <Button title="Clear my order" variant="outline" size="medium" onPress={order.clear} />
           </View>
         </>

@@ -5,8 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Chip, Grid, H3, SectionHead, Small, usePullRefresh } from "./ui";
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
+import { useMemory } from "../lib/memory";
+import { reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
-import { featuredItems, searchMenu } from "../lib/site-merge";
+import { featuredItems, indexMenu, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
 import { artKey } from "../lib/menu-art-key";
 import { colors, fonts, gradient, radius, shadow } from "../theme";
@@ -103,6 +105,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
             </View>
           ) : (
             <>
+            <View style={{ marginTop: 22 }}><PersonalRows /></View>
             {picks.length ? (
               <View style={{ marginTop: 22 }}>
                 <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
@@ -202,6 +205,18 @@ export function Adder({ item: it, size = 46 }) {
   );
 }
 
+/** A heart to save an item to "Your favorites". On a picture it sits in a small white circle. */
+export function FavoriteButton({ item: it, size = 34, onPhoto }) {
+  const { favorites, toggleFavorite } = useMemory();
+  const on = favorites.includes(it.id);
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={on ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`} onPress={() => toggleFavorite(it.id)} hitSlop={6}
+      style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: onPhoto ? "rgba(255,255,255,0.92)" : colors.surface, borderWidth: onPhoto ? 0 : 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] })}>
+      <Ionicons name={on ? "heart" : "heart-outline"} size={Math.round(size * 0.58)} color={on ? colors.danger : colors.ink} />
+    </Pressable>
+  );
+}
+
 /** One menu item with its price and Add / quantity buttons. */
 export function ItemCard({ item: it }) {
   return (
@@ -232,6 +247,7 @@ export function ItemTile({ item: it, width = 160 }) {
         </View>
       </Pressable>
       <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>
+      <View style={{ position: "absolute", right: 8, top: 8 }}><FavoriteButton item={it} size={34} onPhoto /></View>
     </View>
   );
 }
@@ -273,7 +289,7 @@ function useRowScroll() {
 }
 
 /** A row that scrolls sideways and runs out to the screen edges, inside a padded page. */
-function BleedRow({ children, gap = 14, scrollRef, onScroll }) {
+export function BleedRow({ children, gap = 14, scrollRef, onScroll }) {
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
   return (
@@ -320,6 +336,49 @@ export function FeaturedPicks() {
     <View style={{ gap: 14 }}>
       <SectionHead title={featuredTitle} extra={row.arrows} />
       <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{picks.map((it) => <PickCard key={it.id} item={it} />)}</BleedRow>
+    </View>
+  );
+}
+
+/** "Your favorites" and "Order again" (the items of the last order sent): the rows people come back for. Shown only when there is something in them. */
+export function PersonalRows({ onTiles }) {
+  const { menu } = useSite();
+  const { favorites, recent } = useMemory();
+  const order = useOrder();
+  const byId = useMemo(() => indexMenu(menu), [menu]);
+  const favItems = favorites.map((id) => byId.get(id)).filter((it) => it && !it.hidden);
+  const again = reorderIds(recent, byId).map((id) => byId.get(id)).filter((it) => it && !it.hidden);
+  const favRow = useRowScroll(), againRow = useRowScroll();
+  const titleStyle = { fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink };
+  const head = (title, row, action) => (
+    <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+      <Text accessibilityRole="header" style={titleStyle}>{title}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingBottom: 2 }}>
+        {row.arrows}
+        {action}
+      </View>
+    </View>
+  );
+  if (!favItems.length && !again.length) return null;
+  const lastLines = (recent[0] || []).filter((l) => byId.has(l.id));
+  return (
+    <View style={{ gap: 26 }}>
+      {again.length ? (
+        <View>
+          {head("Order again", againRow, (
+            <Pressable accessibilityRole="button" accessibilityLabel="Add everything from my last order" onPress={() => order.addMany(lastLines)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="add-circle" size={18} color={colors.goldText} /><Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>Add all</Text>
+            </Pressable>
+          ))}
+          <BleedRow scrollRef={againRow.scrollRef} onScroll={againRow.onScroll}>{again.map((it) => <ItemTile key={`again-${it.id}`} item={it} />)}</BleedRow>
+        </View>
+      ) : null}
+      {favItems.length ? (
+        <View>
+          {head("Your favorites", favRow, null)}
+          <BleedRow scrollRef={favRow.scrollRef} onScroll={favRow.onScroll}>{favItems.map((it) => <ItemTile key={`fav-${it.id}`} item={it} />)}</BleedRow>
+        </View>
+      ) : null}
     </View>
   );
 }

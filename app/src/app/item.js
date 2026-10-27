@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, H1, Small } from "../components/ui";
-import { Adder, ItemPhoto } from "../components/MenuBrowser";
+import { Adder, FavoriteButton, ItemPhoto } from "../components/MenuBrowser";
 import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
 import { indexMenu } from "../lib/site-merge";
@@ -35,12 +35,19 @@ export default function ItemDetails() {
         <View style={{ width: "100%", maxWidth: 560, paddingHorizontal: 20, paddingTop: 8, gap: 16 }}>
           <ItemPhoto item={item} size={side} always box={{ borderRadius: radius.hero, alignSelf: "center" }} />
           <View style={{ gap: 6 }}>
+            <View style={{ position: "absolute", right: 0, top: 0, zIndex: 2 }}><FavoriteButton item={item} size={44} /></View>
             {item.cat ? <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase", color: colors.goldText }}>{item.cat}</Text> : null}
             <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 32, lineHeight: 38, color: colors.ink }}>{item.name}</Text>
             <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 22 }}>{priceText(item)}</Text>
           </View>
           {item.desc ? <Body>{item.desc}</Body> : null}
           {item.cents == null ? <Small>This item comes in more than one size, so the price depends on the size you choose. Maruf Cafe confirms it with you.</Small> : null}
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>Note for Maruf Cafe (optional)</Text>
+            <TextInput value={order.notes[item.id] || ""} onChangeText={(t) => order.setNote(item.id, t)} placeholder="For example: no onions" placeholderTextColor="#9A9087" accessibilityLabel="Note for Maruf Cafe" maxLength={100}
+              style={{ backgroundColor: colors.surface, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, paddingVertical: 13, minHeight: 50, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
+            <Small>Sent with your quote request. It is a request, not a promise: Maruf Cafe confirms what's possible.</Small>
+          </View>
           <View style={{ gap: 10, backgroundColor: colors.tint, borderRadius: 20, padding: 16 }}>
             <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
               <Ionicons name="information-circle-outline" size={22} color={colors.goldText} />
