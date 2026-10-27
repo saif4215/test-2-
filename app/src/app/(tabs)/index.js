@@ -88,8 +88,8 @@ export default function Home() {
           <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "stretch" }}>
             <View style={{ flex: 1, paddingBottom: wide ? 40 : 0, alignSelf: wide ? "center" : "auto" }}>
               <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <StatusPill dark open={status.open}>{status.text}</StatusPill>
-                <TrustBadge dark label={business.badge} style={{ paddingVertical: 5 }} />
+                <StatusPill dark compact open={status.open}>{status.text.replace(/^Open now/, "Open")}</StatusPill>
+                <TrustBadge dark small label={business.badge} style={{ marginLeft: "auto" }} />
               </View>
               <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: wide ? 60 : 46, lineHeight: wide ? 64 : 50, color: colors.cream, marginTop: 20, letterSpacing: -0.5 }}>Hungry?</Text>
               {homeTagline ? <Text style={{ fontFamily: fonts.display, fontSize: 21, lineHeight: 28, color: colors.creamMuted, marginTop: 8, maxWidth: 340 }}>{homeTagline}</Text> : null}

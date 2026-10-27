@@ -115,11 +115,11 @@ export function SectionHead({ title, action, onAction, extra, style }) {
 }
 
 /** A small rounded status line: "Open now · until 10 PM". */
-export function StatusPill({ open, children, dark }) {
+export function StatusPill({ open, children, dark, compact }) {
   return (
-    <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 99, paddingVertical: 7, paddingHorizontal: 12, backgroundColor: dark ? "rgba(255,255,255,0.10)" : colors.surface, borderWidth: 1, borderColor: dark ? "rgba(255,255,255,0.14)" : colors.line }}>
+    <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: compact ? 6 : 8, borderRadius: 99, paddingVertical: compact ? 6 : 7, paddingHorizontal: compact ? 10 : 12, backgroundColor: dark ? "rgba(255,255,255,0.10)" : colors.surface, borderWidth: 1, borderColor: dark ? "rgba(255,255,255,0.14)" : colors.line }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: open ? "#4CC38A" : "#A99C8C" }} />
-      <Text style={{ fontSize: 13, fontWeight: "700", color: dark ? colors.cream : colors.ink }}>{children}</Text>
+      <Text style={{ fontSize: compact ? 12.5 : 13, fontWeight: "700", color: dark ? colors.cream : colors.ink }}>{children}</Text>
     </View>
   );
 }
@@ -168,12 +168,12 @@ export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.car
 }
 
 /** A short trust line such as "100% Halal", shown only when the café has one. */
-export function TrustBadge({ label, style, dark }) {
+export function TrustBadge({ label, style, dark, small }) {
   if (!label) return null;
   return (
-    <View accessible accessibilityLabel={label} style={[{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: dark ? "rgba(217,164,65,0.16)" : colors.successSoft, borderWidth: dark ? 1 : 0, borderColor: "rgba(217,164,65,0.45)", borderRadius: 99, paddingVertical: 6, paddingLeft: 10, paddingRight: 14 }, style]}>
-      <Ionicons name="checkmark-circle" size={18} color={dark ? colors.gold : colors.success} />
-      <Text style={{ fontSize: 14, fontWeight: "800", color: dark ? colors.cream : colors.ink, letterSpacing: 0.2 }}>{label}</Text>
+    <View accessible accessibilityLabel={label} style={[{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: dark ? "rgba(217,164,65,0.16)" : colors.successSoft, borderWidth: dark ? 1 : 0, borderColor: "rgba(217,164,65,0.45)", borderRadius: 99, paddingVertical: small ? 5 : 6, paddingLeft: small ? 8 : 10, paddingRight: small ? 11 : 14 }, style]}>
+      <Ionicons name="checkmark-circle" size={small ? 16 : 18} color={dark ? colors.gold : colors.success} />
+      <Text style={{ fontSize: small ? 13 : 14, fontWeight: "800", color: dark ? colors.cream : colors.ink, letterSpacing: 0.2 }}>{label}</Text>
     </View>
   );
 }
