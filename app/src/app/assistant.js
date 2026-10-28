@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { router, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Small } from "../components/ui";
 import { askAssistant, assistantMode } from "../lib/assistant";
 import { useSite } from "../lib/site";
 import { colors, radius } from "../theme";
+import { openLink } from "../lib/links";
 
 const STARTERS = ["What's good for breakfast?", "Help me plan food for 30 people", "How does renting the café work?", "What are your hours?"];
 
@@ -30,7 +31,7 @@ export default function Assistant() {
     setBusy(false);
   }
 
-  const call = () => Linking.openURL(`tel:${business.phoneTel}`);
+  const call = () => openLink(`tel:${business.phoneTel}`);
   const lastIsAnswer = messages.at(-1)?.role === "assistant" && !messages.at(-1).error;
 
   return (

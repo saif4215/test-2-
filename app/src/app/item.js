@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, H1, Small } from "../components/ui";
@@ -9,6 +9,7 @@ import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
 import { indexMenu } from "../lib/site-merge";
 import { colors, fonts, radius } from "../theme";
+import { openLink } from "../lib/links";
 
 /** One menu item, bigger: its picture, price and description, and the buttons to add it. Opened by tapping an item on the menu. */
 export default function ItemDetails() {
@@ -55,7 +56,7 @@ export default function ItemDetails() {
               <Ionicons name="information-circle-outline" size={22} color={colors.goldText} />
               <Text style={{ flex: 1, fontSize: 14.5, lineHeight: 21, color: colors.ink }}>Prices are before tax. For ingredients or allergies, please ask Maruf Cafe before you order.{item.image ? "" : " The picture is an illustration, not a photo of the dish."}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 32 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 32 }}>
               <Ionicons name="call-outline" size={18} color={colors.goldText} /><Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{business.phone}</Text>
             </Pressable>
           </View>

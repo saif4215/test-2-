@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { LinkSheet } from "../components/LinkSheet";
 import { MemoryProvider } from "../lib/memory";
 import { OrderProvider } from "../lib/order";
 import { SiteProvider } from "../lib/site";
@@ -14,6 +15,8 @@ export default function RootLayout() {
   const [fontsReady, fontError] = useFonts({ DMSerifDisplay: require("../../assets/fonts/DMSerifDisplay-Regular.ttf") });
   const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => { const t = setTimeout(() => setGaveUp(true), 2500); return () => clearTimeout(t); }, []);
+  // The shared preview page (which runs this app inside itself) uses this to jump to a screen from its own buttons.
+  useEffect(() => { if (typeof window !== "undefined" && window.__MARUF_PREVIEW) window.__previewGo = (path) => router.navigate(path); }, []);
   if (!fontsReady && !fontError && !gaveUp) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   return (
     <SafeAreaProvider>
@@ -29,6 +32,7 @@ export default function RootLayout() {
           <Stack.Screen name="order" options={{ presentation: "modal", title: "My order" }} />
           <Stack.Screen name="item" options={{ presentation: "modal", title: "Details" }} />
         </Stack>
+        <LinkSheet />
       </OrderProvider>
       </MemoryProvider>
       </SiteProvider>

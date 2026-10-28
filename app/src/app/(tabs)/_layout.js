@@ -1,8 +1,9 @@
-import { Image, Linking, Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { Tabs } from "expo-router/js-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useSite } from "../../lib/site";
 import { colors } from "../../theme";
+import { openLink } from "../../lib/links";
 
 const logo = require("../../../assets/logo-dark.png");
 
@@ -10,7 +11,7 @@ const logo = require("../../../assets/logo-dark.png");
 function CallPill() {
   const { business } = useSite();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)}
+    <Pressable accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)}
       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.ink, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 16, marginRight: 16, opacity: pressed ? 0.85 : 1, boxShadow: "0px 6px 14px rgba(27,21,17,0.22)" })}>
       <Ionicons name="call" size={15} color={colors.cream} />
       <Text style={{ color: colors.cream, fontWeight: "800", fontSize: 13, letterSpacing: 0.4 }}>CALL</Text>

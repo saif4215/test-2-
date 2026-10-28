@@ -1,9 +1,10 @@
-import { KeyboardAvoidingView, Linking, Platform, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, H1 } from "./ui";
 import { useSite } from "../lib/site";
 import { colors } from "../theme";
+import { openLink } from "../lib/links";
 
 /** Scrolling form container that keeps fields visible above the keyboard. */
 export function FormShell({ children }) {
@@ -26,7 +27,7 @@ export function ThankYou({ message }) {
       <Body style={{ fontSize: 18, lineHeight: 27 }}>{message}</Body>
       <View style={{ width: "100%", gap: 12, marginTop: 8 }}>
         <Button title="Done" variant="primary" onPress={() => router.dismissAll?.() ?? router.back()} />
-        <Button title="Call us" variant="outline" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
+        <Button title="Call us" variant="outline" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
       </View>
     </View>
   );
@@ -39,7 +40,7 @@ export function SendError({ message }) {
   return (
     <View accessibilityLiveRegion="assertive" style={{ backgroundColor: "#FBEAE8", borderColor: colors.danger, borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 }}>
       <Text style={{ color: colors.danger, fontWeight: "700" }}>{message}</Text>
-      <Button title={`Call ${business.phone}`} variant="outline" size="medium" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
+      <Button title={`Call ${business.phone}`} variant="outline" size="medium" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
     </View>
   );
 }

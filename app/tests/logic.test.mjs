@@ -8,6 +8,7 @@ import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote } from "../src/lib/order-util.js";
+import { parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved } from "../src/lib/memory-util.js";
 import { controlsFor, isShown, applyChoice, cleanCustom, describeCustom, EMPTY } from "../src/lib/customize.js";
 
@@ -336,4 +337,15 @@ test("choosing things in the app keeps the request consistent", () => {
   assert.equal(c.pumps, 1, "a flavor asks for at least one pump");
   c = applyChoice(c, { pumps: 0 });
   assert.equal(c.flavor, "", "no pumps, no flavor");
+});
+
+test("phone and mail links are read so they can be shown on a computer with no dialer", () => {
+  assert.deepEqual(parseContactLink("tel:+19293353296"), { kind: "phone", value: "+19293353296" });
+  assert.deepEqual(parseContactLink("mailto:hello%40example.com?subject=Hi"), { kind: "email", value: "hello@example.com" });
+  assert.equal(parseContactLink("https://example.com"), null);
+  assert.equal(parseContactLink("tel:"), null);
+  assert.equal(prettyPhone("+19293353296"), "(929) 335-3296");
+  assert.equal(prettyPhone("9293353296"), "(929) 335-3296");
+  assert.equal(prettyPhone("(929) 335-3296"), "(929) 335-3296");
+  assert.equal(prettyPhone("12345"), "12345");
 });

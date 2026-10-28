@@ -1,4 +1,4 @@
-import { Image, Linking, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ActionTile, Body, Button, Card, Grid, H1, H2, Reveal, Screen, Section, SectionHead, Small, StatusPill, TrustBadge } from "../../components/ui";
@@ -13,6 +13,7 @@ import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
 import { greeting, openStatus } from "../../lib/dates";
 import { colors, fonts, gradient, radius, shadowStrong } from "../../theme";
+import { openLink, webLinkProps } from "../../lib/links";
 
 const HERO = {
   burger: require("../../../assets/hero/burger.png"), coffee: require("../../../assets/hero/coffee.png"),
@@ -39,14 +40,14 @@ function PromoCards({ business }) {
   const cards = [
     { key: "catering", title: "Catering for groups", body: `${catering.slice(0, 3).map((c) => c.title.replace(/ Parties| Catering| Gatherings| Events/, "").toLowerCase()).join(", ")} and more.`, cta: "Request catering", art: ART.chicken, go: () => router.push({ pathname: "/quote", params: { occasion: "Catering" } }) },
     { key: "rent", title: "Rent the café", body: `${venueUses.slice(0, 3).map((u) => u.title.toLowerCase()).join(", ")} and more.`, cta: "Check a date", art: ART.sweets, go: () => router.push("/event-request") },
-    ...(business.instagram || business.tiktok ? [{ key: "social", title: "Follow Maruf Cafe", body: [business.instagram && "Instagram", business.tiktok && "TikTok"].filter(Boolean).join(" and "), cta: "Take a look", art: ART.burger, go: () => Linking.openURL(business.instagram || business.tiktok) }] : []),
+    ...(business.instagram || business.tiktok ? [{ key: "social", title: "Follow Maruf Cafe", body: [business.instagram && "Instagram", business.tiktok && "TikTok"].filter(Boolean).join(" and "), cta: "Take a look", art: ART.burger, href: business.instagram || business.tiktok }] : []),
   ];
   return (
     <View style={{ gap: 14 }}>
       <SectionHead title="More from Maruf Cafe" />
       <BleedRow>
         {cards.map((c) => (
-          <Pressable key={c.key} accessibilityRole="button" accessibilityLabel={`${c.title}. ${c.body} ${c.cta}`} onPress={c.go}
+          <Pressable key={c.key} accessibilityRole={c.href && webLinkProps(c.href).href ? "link" : "button"} accessibilityLabel={`${c.title}. ${c.body} ${c.cta}`} {...(c.href ? webLinkProps(c.href) : {})} onPress={c.href ? () => { if (!webLinkProps(c.href).href) openLink(c.href); } : c.go}
             style={({ pressed }) => [{ width: 292, minHeight: 176, borderRadius: radius.hero, overflow: "hidden", padding: 20, justifyContent: "space-between", opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }, gradient(colors.espresso, "linear-gradient(150deg, #3E2C1C 0%, #241A12 70%)"), shadowStrong]}>
             <Image source={c.art} accessible={false} style={{ position: "absolute", right: -22, top: -18, width: 132, height: 132, borderRadius: 66, borderWidth: 3, borderColor: "rgba(217,164,65,0.5)" }} />
             <View style={{ gap: 6, maxWidth: 170 }}>
@@ -119,7 +120,7 @@ export default function Home() {
       <Section style={{ marginTop: 34 }}>
         <FeaturedPicks />
         <View style={{ marginTop: 16 }}>
-          <Button title="Order pickup on Square Online" variant="light" icon="open-outline" onPress={() => Linking.openURL(business.orderUrl)} />
+          <Button title="Order pickup on Square Online" variant="light" icon="open-outline" href={business.orderUrl} />
         </View>
       </Section>
 
@@ -172,11 +173,11 @@ export default function Home() {
           <H2>Questions? Talk to us.</H2>
           <MapCard />
           <View style={{ gap: 12, marginTop: 2 }}>
-            <Button title="Call us" variant="primary" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
+            <Button title="Call us" variant="primary" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
             {business.instagram || business.tiktok ? (
               <View style={{ flexDirection: "row", gap: 12 }}>
-                {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
-                {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
+                {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" href={business.instagram} style={{ flex: 1 }} /> : null}
+                {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" href={business.tiktok} style={{ flex: 1 }} /> : null}
               </View>
             ) : null}
           </View>

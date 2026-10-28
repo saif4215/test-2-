@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Linking, Modal, Platform, Pressable, Text, View } from "react-native";
+import { Modal, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "./ui";
 import { mapLinks } from "../lib/maps";
@@ -11,7 +11,6 @@ export function MapCard() {
   const { business } = useSite();
   const [open, setOpen] = useState(false), [copied, setCopied] = useState(false);
   const links = mapLinks(business.address);
-  const go = (url) => { setOpen(false); Linking.openURL(url); };
   const copy = async () => { try { await navigator.clipboard.writeText(business.address.join(", ")); setCopied(true); } catch { /* not available here */ } };
   const canCopy = Platform.OS === "web" && typeof navigator !== "undefined" && !!navigator.clipboard;
   return (
@@ -41,9 +40,9 @@ export function MapCard() {
           <Pressable accessibilityRole="menu" onPress={() => {}} style={{ width: "100%", maxWidth: 520, backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30, gap: 12 }}>
             <Text accessibilityRole="header" style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>Get directions</Text>
             <Text style={{ color: colors.muted, fontSize: 15 }}>{business.address.join(", ")}</Text>
-            <Button title="Google Maps" variant="primary" icon="map-outline" onPress={() => go(links.google)} />
-            {Platform.OS !== "android" ? <Button title="Apple Maps" variant="light" icon="navigate-outline" onPress={() => go(links.apple)} /> : null}
-            <Button title="Waze" variant="light" icon="car-outline" onPress={() => go(links.waze)} />
+            <Button title="Google Maps" variant="primary" icon="map-outline" href={links.google} onPress={() => setOpen(false)} />
+            {Platform.OS !== "android" ? <Button title="Apple Maps" variant="light" icon="navigate-outline" href={links.apple} onPress={() => setOpen(false)} /> : null}
+            <Button title="Waze" variant="light" icon="car-outline" href={links.waze} onPress={() => setOpen(false)} />
             {canCopy ? <Button title={copied ? "Address copied" : "Copy address"} variant="outline" size="medium" icon="copy-outline" onPress={copy} /> : null}
             <Button title="Cancel" variant="outline" size="medium" onPress={() => setOpen(false)} />
           </Pressable>

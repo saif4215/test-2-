@@ -1,4 +1,4 @@
-import { Linking, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, H1, Small } from "../components/ui";
@@ -8,6 +8,7 @@ import { business } from "../config";   // only the Square Online address is use
 import { money, priceText, useOrder } from "../lib/order";
 import { useMemory } from "../lib/memory";
 import { colors } from "../theme";
+import { openLink } from "../lib/links";
 
 export default function MyOrder() {
   const order = useOrder();
@@ -51,7 +52,7 @@ export default function MyOrder() {
           </Card>
           <View style={{ gap: 12 }}>
             <Button title="Request a quote with these items" variant="gold" onPress={() => { sent(); router.replace({ pathname: "/quote", params: { foodItems: order.summary } }); }} />
-            <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" onPress={() => { sent(); Linking.openURL(business.orderUrl); }} />
+            <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" href={business.orderUrl} onPress={sent} />
             <Button title="Clear my order" variant="outline" size="medium" onPress={order.clear} />
           </View>
         </>

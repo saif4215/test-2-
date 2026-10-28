@@ -5,6 +5,7 @@ import { colors, radius, shadow, text } from "../theme";
 import { photos } from "../photos";
 import { showPlaceholders } from "../config";
 import { useSite } from "../lib/site";
+import { openLink, webLinkProps } from "../lib/links";
 
 /** Pull down on a phone to load the café's latest menu and details. (The web app loads them each time it opens.) */
 export function usePullRefresh() {
@@ -46,13 +47,14 @@ const variants = {
   light: { bg: colors.surface, fg: colors.ink, border: colors.line },
 };
 
-export function Button({ title, onPress, variant = "primary", size = "large", icon, disabled, style, accessibilityLabel }) {
+export function Button({ title, onPress, href, variant = "primary", size = "large", icon, disabled, style, accessibilityLabel }) {
   const v = variants[variant];
   const big = size === "large";
   return (
     <Pressable
-      accessibilityRole="button" accessibilityLabel={accessibilityLabel || title} accessibilityState={{ disabled: !!disabled }}
-      onPress={disabled ? undefined : onPress}
+      accessibilityRole={href && Object.keys(webLinkProps(href)).length ? "link" : "button"} accessibilityLabel={accessibilityLabel || title} accessibilityState={{ disabled: !!disabled }}
+      {...(href ? webLinkProps(href) : {})}
+      onPress={disabled ? undefined : href ? () => { onPress?.(); if (!Object.keys(webLinkProps(href)).length) openLink(href); } : onPress}
       style={({ pressed, hovered }) => [{
         backgroundColor: v.bg, borderColor: v.border, borderWidth: 1, borderRadius: big ? radius.button : 14,
         paddingVertical: big ? 16 : 10, paddingHorizontal: big ? 24 : 16, minHeight: big ? 56 : 44,

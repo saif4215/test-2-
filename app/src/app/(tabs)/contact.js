@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Linking, Platform, Pressable, Share, Text, View } from "react-native";
+import { Platform, Pressable, Share, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
@@ -9,6 +9,7 @@ import { useSite } from "../../lib/site";
 import { nyWeekday, openStatus } from "../../lib/dates";
 import { shareText } from "../../lib/share";
 import { colors } from "../../theme";
+import { openLink } from "../../lib/links";
 
 /** One line of contact details: a round icon, a small title, then the details. Tap it to act on it, when it can be acted on. */
 function InfoRow({ icon, title, children, onPress, label, last }) {
@@ -62,8 +63,8 @@ export default function Contact() {
       <Section style={{ marginTop: 22 }}>
         <Card>
           <InfoRow icon="location-outline" title="Address">{business.address.map((l) => <Text key={l} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{l}</Text>)}</InfoRow>
-          <InfoRow icon="call-outline" title="Phone" label={`Call Maruf Cafe at ${business.phone}`} onPress={() => Linking.openURL(`tel:${business.phoneTel}`)}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.phone}</Text></InfoRow>
-          {showEmail ? <InfoRow icon="mail-outline" title="Email" onPress={business.email ? () => Linking.openURL(`mailto:${business.email}`) : undefined}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.email || "[ADD EMAIL]"}</Text></InfoRow> : null}
+          <InfoRow icon="call-outline" title="Phone" label={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.phone}</Text></InfoRow>
+          {showEmail ? <InfoRow icon="mail-outline" title="Email" onPress={business.email ? () => openLink(`mailto:${business.email}`) : undefined}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.email || "[ADD EMAIL]"}</Text></InfoRow> : null}
           <InfoRow icon="time-outline" title="Hours" last>
             {business.hours.map((h) => {
               const isToday = h.days.includes(today);
@@ -79,14 +80,14 @@ export default function Contact() {
         </Card>
         <View style={{ marginTop: 18 }}><MapCard /></View>
         <View style={{ marginTop: 18, gap: 12 }}>
-          <Button title="Call us" variant="primary" icon="call-outline" onPress={() => Linking.openURL(`tel:${business.phoneTel}`)} />
+          <Button title="Call us" variant="primary" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
           <Button title="Request a large order" variant="gold" onPress={() => router.push("/quote")} />
           <Button title="Ask about event rental" variant="light" onPress={() => router.push("/event-request")} />
-          {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => Linking.openURL(`mailto:${business.email}`)} /> : null}
+          {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => openLink(`mailto:${business.email}`)} /> : null}
         </View>
         <View style={{ flexDirection: "row", gap: 12, marginTop: 18 }}>
-          {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" onPress={() => Linking.openURL(business.instagram)} style={{ flex: 1 }} /> : null}
-          {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" onPress={() => Linking.openURL(business.tiktok)} style={{ flex: 1 }} /> : null}
+          {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" href={business.instagram} style={{ flex: 1 }} /> : null}
+          {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" href={business.tiktok} style={{ flex: 1 }} /> : null}
           <Button title={copied ? "Copied" : "Share"} size="medium" variant="light" icon={copied ? "checkmark" : "share-outline"} accessibilityLabel={copied ? "Details copied to the clipboard" : "Share Maruf Cafe"} onPress={share} style={{ flex: 1 }} />
         </View>
       </Section>
