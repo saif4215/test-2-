@@ -42,3 +42,9 @@ export function buildEvent(v, now = new Date()) {
   return { errors, fields };
 }
 
+
+// The forms show only what is needed first; these fields sit under "More details (optional)". When one of them has a mistake
+// (a time like "soon", a date that has passed) that part must open, or the person is told to check a field they cannot see.
+export const QUOTE_OPTIONAL = ["contactMethod", "pickupTime", "dietary", "specialRequests", "budget", "notes"];
+export const EVENT_OPTIONAL = ["contactMethod", "alternateDate", "startTime", "endTime", "needFood", "catering", "foodBudget", "dietary", "venueType", "budget", "specialRequests", "decorations", "entertainment", "notes"];
+export const hasHiddenError = (errors, optional) => Object.keys(errors || {}).some((k) => errors[k] && optional.includes(k));

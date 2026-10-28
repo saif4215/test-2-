@@ -1,19 +1,15 @@
-import { Image, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Image, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
+import { ActionTile, Body, Button, Card, Grid, Reveal, Screen, Small, StatusPill, TrustBadge } from "../../components/ui";
 import { Ionicons } from "@expo/vector-icons";
-import { ActionTile, Body, Button, Card, Grid, H1, H2, Reveal, Screen, Section, SectionHead, Small, StatusPill, TrustBadge } from "../../components/ui";
 import { MapCard } from "../../components/MapCard";
-import { BurgerViewer } from "../../components/Viewers";
-import { BleedRow, CategoryStrip, FeaturedPicks, OrderBar, PersonalRows } from "../../components/MenuBrowser";
-import { StoreBar } from "../../components/StoreBar";
-import { ART } from "../../lib/menu-art";
-import { catering, homeTagline, venueUses } from "../../config";
+import { FeaturedPicks, OrderBar, PersonalRows, RowHead } from "../../components/MenuBrowser";
+import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
 import { greeting, openStatus } from "../../lib/dates";
 import { colors, fonts, gradient, radius, shadowStrong } from "../../theme";
-import { openLink, webLinkProps } from "../../lib/links";
 
 const HERO = {
   burger: require("../../../assets/hero/burger.png"), coffee: require("../../../assets/hero/coffee.png"),
@@ -31,35 +27,6 @@ function FoodCollage({ w, side }) {
       <Image source={HERO.burger} resizeMode="contain" style={{ position: "absolute", left: (w - big) / 2 + w * 0.02, top: h * 0.08, width: big, height: big * 0.81 }} />
       <Image source={HERO.coffee} resizeMode="contain" style={{ position: "absolute", left: -w * 0.04, bottom: h * 0.0, width: cup, height: cup * 0.7 }} />
       <Image source={HERO.cake} resizeMode="contain" style={{ position: "absolute", right: -w * 0.05, bottom: h * 0.02, width: cake, height: cake * 0.7 }} />
-    </View>
-  );
-}
-
-/** "More from Maruf Cafe": cards for what the café already offers (catering, renting the café, its social pages). Nothing here is a deal or an announcement. */
-function PromoCards({ business }) {
-  const cards = [
-    { key: "catering", title: "Catering for groups", body: `${catering.slice(0, 3).map((c) => c.title.replace(/ Parties| Catering| Gatherings| Events/, "").toLowerCase()).join(", ")} and more.`, cta: "Request catering", art: ART.chicken, go: () => router.push({ pathname: "/quote", params: { occasion: "Catering" } }) },
-    { key: "rent", title: "Rent the café", body: `${venueUses.slice(0, 3).map((u) => u.title.toLowerCase()).join(", ")} and more.`, cta: "Check a date", art: ART.sweets, go: () => router.push("/event-request") },
-    ...(business.instagram || business.tiktok ? [{ key: "social", title: "Follow Maruf Cafe", body: [business.instagram && "Instagram", business.tiktok && "TikTok"].filter(Boolean).join(" and "), cta: "Take a look", art: ART.burger, href: business.instagram || business.tiktok }] : []),
-  ];
-  return (
-    <View style={{ gap: 14 }}>
-      <SectionHead title="More from Maruf Cafe" />
-      <BleedRow>
-        {cards.map((c) => (
-          <Pressable key={c.key} accessibilityRole={c.href && webLinkProps(c.href).href ? "link" : "button"} accessibilityLabel={`${c.title}. ${c.body} ${c.cta}`} {...(c.href ? webLinkProps(c.href) : {})} onPress={c.href ? () => { if (!webLinkProps(c.href).href) openLink(c.href); } : c.go}
-            style={({ pressed }) => [{ width: 292, minHeight: 176, borderRadius: radius.hero, overflow: "hidden", padding: 20, justifyContent: "space-between", opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }, gradient(colors.espresso, "linear-gradient(150deg, #3E2C1C 0%, #241A12 70%)"), shadowStrong]}>
-            <Image source={c.art} accessible={false} style={{ position: "absolute", right: -22, top: -18, width: 132, height: 132, borderRadius: 66, borderWidth: 3, borderColor: "rgba(217,164,65,0.5)" }} />
-            <View style={{ gap: 6, maxWidth: 170 }}>
-              <Text style={{ fontFamily: fonts.display, fontSize: 25, lineHeight: 30, color: colors.cream }}>{c.title}</Text>
-              <Text style={{ fontSize: 13.5, lineHeight: 19, color: colors.creamMuted }}>{c.body}</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14 }}>
-              <Text style={{ color: colors.gold, fontWeight: "800", fontSize: 15 }}>{c.cta}</Text><Ionicons name="arrow-forward" size={16} color={colors.gold} />
-            </View>
-          </Pressable>
-        ))}
-      </BleedRow>
     </View>
   );
 }
@@ -105,58 +72,22 @@ export default function Home() {
 
       <Reveal delay={120} style={{ marginTop: 18 }}>
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <ActionTile icon="restaurant-outline" title="Catering" sub="Food for groups" onPress={() => router.push({ pathname: "/quote", params: { occasion: "Catering" } })} />
-          <ActionTile icon="calendar-outline" title="Events" sub="Rent the café" label="Rent the spot: private events" onPress={() => router.push("/event-request")} />
+          <ActionTile icon="restaurant-outline" title="Catering" sub="Food for groups" onPress={() => router.push({ pathname: "/groups", params: { show: "food", n: String(Date.now()) } })} />
+          <ActionTile icon="calendar-outline" title="Events" sub="Rent the café" label="Rent the spot: private events" onPress={() => router.push({ pathname: "/groups", params: { show: "rent", n: String(Date.now()) } })} />
           <ActionTile icon="chatbubble-ellipses-outline" title="Ask us" sub="Menu, hours, orders" label="Ask a question" onPress={() => router.push("/assistant")} />
         </View>
       </Reveal>
 
-      <Reveal delay={200} style={{ marginTop: 14 }}><StoreBar /></Reveal>
-
-      <Section style={{ marginTop: 30 }}><PersonalRows /></Section>
-
-      <Section style={{ marginTop: 34 }}><CategoryStrip /></Section>
-
-      <Section style={{ marginTop: 34 }}>
+      <View style={{ marginTop: 30, gap: 30 }}>
+        <PersonalRows only="again" />
         <FeaturedPicks />
-        <View style={{ marginTop: 16 }}>
-          <Button title="Order pickup on Square Online" variant="light" icon="open-outline" href={business.orderUrl} />
-        </View>
-      </Section>
-
-      <Section style={{ marginTop: 34 }}><PromoCards business={business} /></Section>
-
-      <Section style={{ marginTop: 34 }}><BurgerViewer /></Section>
-
-      {/* planning band */}
-      <Section tone="dark" style={{ marginTop: 40 }}>
-        <View style={[{ position: "absolute", right: -70, top: -70, width: 220, height: 220, borderRadius: 110, borderWidth: 1.5, borderColor: "rgba(217,164,65,0.35)" }]} />
-        <View style={{ position: "absolute", right: -30, top: -30, width: 140, height: 140, borderRadius: 70, borderWidth: 1.5, borderColor: "rgba(217,164,65,0.2)" }} />
-        <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase", color: colors.gold }}>Groups and events</Text>
-        <H1 style={{ color: colors.cream, marginTop: 8 }}>Planning a Large Gathering?</H1>
-        <Body style={{ color: colors.creamMuted, marginTop: 12 }}>
-          Whether you're feeding a large group, planning a birthday party, hosting a business meeting, or looking for a private event space, Maruf Cafe can help make your gathering easy and memorable.
-        </Body>
-        <View style={{ gap: 12, marginTop: 22 }}>
-          <Button title="Request a Large Order" variant="gold" onPress={() => router.push("/quote")} />
-          <Button title="Request Event Rental" variant="light" onPress={() => router.push("/event-request")} />
-        </View>
-      </Section>
-
-      {gallery.length ? (
-        <Section>
-          <H1 style={{ marginBottom: 16 }}>Photos</H1>
-          <Grid min={240} gap={12}>
-            {gallery.map((g) => <Image key={g.url} source={{ uri: g.url }} accessibilityLabel={g.alt} resizeMode="cover" style={{ width: "100%", aspectRatio: 1.4, borderRadius: radius.card }} />)}
-          </Grid>
-        </Section>
-      ) : null}
+      </View>
 
       {reviews.length ? (
-        <Section>
-          <H1 style={{ marginBottom: 16 }}>What customers say</H1>
+        <View style={{ marginTop: 34 }}>
+          <RowHead title="What customers say" />
           <Grid min={280} gap={12}>
-            {reviews.map((r) => (
+            {reviews.slice(0, 3).map((r) => (
               <Card key={`${r.name}-${r.text.slice(0, 20)}`} style={{ padding: 20, gap: 10 }}>
                 <Ionicons name="chatbox-ellipses" size={22} color={colors.gold} />
                 <Body>“{r.text}”</Body>
@@ -164,25 +95,22 @@ export default function Home() {
               </Card>
             ))}
           </Grid>
-        </Section>
+        </View>
       ) : null}
 
-      {/* quick contact */}
-      <Section>
-        <Card style={{ padding: 22, gap: 16 }}>
-          <H2>Questions? Talk to us.</H2>
-          <MapCard />
-          <View style={{ gap: 12, marginTop: 2 }}>
-            <Button title="Call us" variant="primary" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
-            {business.instagram || business.tiktok ? (
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" href={business.instagram} style={{ flex: 1 }} /> : null}
-                {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" href={business.tiktok} style={{ flex: 1 }} /> : null}
-              </View>
-            ) : null}
-          </View>
-        </Card>
-      </Section>
+      {gallery.length ? (
+        <View style={{ marginTop: 34 }}>
+          <RowHead title="Photos" />
+          <Grid min={240} gap={12}>
+            {gallery.slice(0, 4).map((g) => <Image key={g.url} source={{ uri: g.url }} accessibilityLabel={g.alt} resizeMode="cover" style={{ width: "100%", aspectRatio: 1.4, borderRadius: radius.card }} />)}
+          </Grid>
+        </View>
+      ) : null}
+
+      <View style={{ marginTop: 34 }}>
+        <RowHead title="Visit us" />
+        <MapCard />
+      </View>
     </Screen>
     <OrderBar />
     </View>

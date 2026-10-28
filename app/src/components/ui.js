@@ -153,14 +153,54 @@ export function Grid({ children, min = 280, gap = 16, style }) {
   );
 }
 
-/** A photo slot. Shows the photo from photos.js, or a tidy placeholder until one is added. */
-export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.card }) {
+/** Two or three choices side by side, one always on: switches a screen between its parts ("Food for a group" / "Rent the café"). */
+export function SegmentedTabs({ options, value, onChange, label }) {
+  return (
+    <View accessibilityRole="tablist" accessibilityLabel={label} style={{ flexDirection: "row", backgroundColor: colors.tint, borderRadius: 18, padding: 4, gap: 4 }}>
+      {options.map((o) => {
+        const on = value === o.value;
+        return (
+          <Pressable key={o.value} accessibilityRole="tab" accessibilityState={{ selected: on }} aria-selected={on} accessibilityLabel={o.label} onPress={() => onChange(o.value)}
+            style={[{ flex: 1, minHeight: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 }, on ? { backgroundColor: colors.ink, boxShadow: "0px 4px 10px rgba(27,21,17,0.22)" } : null]}>
+            <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "800", color: on ? colors.cream : colors.ink }}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * A tidy row that opens to show more: the way to keep optional things out of the way until someone wants them.
+ * It keeps its own open/closed state; pass `open` and `onToggle` to control it from outside (for example to open it when a hidden field has an error).
+ */
+export function Disclosure({ title, hint, icon, children, defaultOpen = false, open, onToggle, flat }) {
+  const [inner, setInner] = useState(defaultOpen);
+  const isOpen = open === undefined ? inner : open;
+  const toggle = () => { if (open === undefined) setInner(!inner); onToggle?.(!isOpen); };
+  return (
+    <View style={[flat ? { borderTopWidth: 1, borderColor: colors.line } : [{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: "rgba(36,26,18,0.06)", overflow: "hidden" }, shadow]]}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: isOpen }} aria-expanded={isOpen} onPress={toggle} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: flat ? 0 : 16, minHeight: 58, opacity: pressed ? 0.85 : 1 })}>
+        {icon ? <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={icon} size={19} color={colors.goldText} /></View> : null}
+        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink }}>{title}</Text>
+          {hint ? <Text numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 19, color: colors.muted }}>{hint}</Text> : null}
+        </View>
+        <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={20} color={colors.muted} />
+      </Pressable>
+      {isOpen ? <View style={{ paddingHorizontal: flat ? 0 : 16, paddingBottom: 16, gap: 16 }}>{children}</View> : null}
+    </View>
+  );
+}
+
+/** A photo slot. Shows the photo from photos.js, or a tidy placeholder until one is added. `onlyIfSet` shows nothing at all until a photo is there. */
+export function Photo({ slot, label, ratio = 1.6, style, radiusSize = radius.card, onlyIfSet }) {
   const { photos: remote } = useSite();
   const source = photos[slot] || (remote[slot] ? { uri: remote[slot] } : null);   // a photo built into the app wins, then one uploaded in the dashboard
   const { width } = useWindowDimensions();
   const box = { width: "100%", aspectRatio: width >= 768 ? ratio * 1.6 : ratio, borderRadius: radiusSize, overflow: "hidden" };
   if (source) return <Image source={source} accessibilityLabel={label} resizeMode="cover" style={[box, style]} />;
-  if (!showPlaceholders) return null;   // store builds show nothing rather than a placeholder
+  if (!showPlaceholders || onlyIfSet) return null;   // store builds show nothing rather than a placeholder
   return (
     <View accessibilityLabel={`Photo placeholder: ${label}`} style={[box, { backgroundColor: colors.tint, alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: colors.line, borderStyle: "dashed" }, style]}>
       <Ionicons name="image-outline" size={30} color={colors.goldText} />

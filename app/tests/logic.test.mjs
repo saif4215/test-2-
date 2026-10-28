@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus, greeting } from "../src/lib/dates.js";
-import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS } from "../src/lib/forms.js";
+import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
@@ -348,4 +348,21 @@ test("phone and mail links are read so they can be shown on a computer with no d
   assert.equal(prettyPhone("9293353296"), "(929) 335-3296");
   assert.equal(prettyPhone("(929) 335-3296"), "(929) 335-3296");
   assert.equal(prettyPhone("12345"), "12345");
+});
+
+test("a mistake in a field tucked under More details is found, so that part can open", () => {
+  const base = { fullName: "Sam Lee", phone: "(929) 555-0101", email: "sam@example.com", dateNeeded: "12/20/2099", fulfillment: "pickup", people: "20", foodItems: "trays", pickupTime: "soon", specialRequests: "", budget: "", notes: "", dietary: "", deliveryAddress: "", contactMethod: "" };
+  const bad = buildQuote(base);
+  assert.deepEqual(Object.keys(bad.errors), ["pickupTime"]);
+  assert.equal(hasHiddenError(bad.errors, QUOTE_OPTIONAL), true);
+  const required = buildQuote({ ...base, pickupTime: "", people: "" });
+  assert.equal(hasHiddenError(required.errors, QUOTE_OPTIONAL), false, "a missing required field is always on screen");
+  assert.equal(hasHiddenError({}, QUOTE_OPTIONAL), false);
+  assert.equal(hasHiddenError({ startTime: "Enter a time like 6:00 PM." }, EVENT_OPTIONAL), true);
+  assert.equal(hasHiddenError({ guests: "Enter how many guests (1 to 1000)." }, EVENT_OPTIONAL), false);
+  // every field the form can complain about is either always shown or listed as tucked away
+  const emptyEvent = { name: "", phone: "", email: "", eventType: "", eventDate: "x", startTime: "zz", endTime: "zz", alternateDate: "x", guests: "", needFood: "", catering: "", foodBudget: "", venueType: "", specialRequests: "", decorations: "", entertainment: "", notes: "", packageInterest: "", contactMethod: "", budget: "", dietary: "" };
+  const eventErrors = Object.keys(buildEvent(emptyEvent).errors);
+  const alwaysShown = ["name", "phone", "email", "eventType", "eventDate", "guests"];
+  for (const k of eventErrors) assert.ok(alwaysShown.includes(k) || EVENT_OPTIONAL.includes(k), `${k} must be shown or listed`);
 });

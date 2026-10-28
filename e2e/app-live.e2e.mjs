@@ -14,7 +14,7 @@ const up = (await a.call("POST", "uploads", PNG, { "Content-Type": "image/png" }
 await p.goto(site.u + "/app/", { waitUntil: "load" });
 await p.getByText("Start an order").first().waitFor();
 ok(await p.getByRole("button", { name: /Call Maruf Cafe at \(929\) 335-3296/ }).first().isVisible(), "Call quick action on Home");
-ok(await p.getByRole("button", { name: "Large Orders" }).first().isVisible() && await p.getByRole("button", { name: "Rent the Cafe" }).first().isVisible(), "Large Orders and Rent the Cafe quick actions on Home");
+ok(await p.getByRole("button", { name: /^Catering/ }).first().isVisible() && await p.getByRole("button", { name: "Rent the spot: private events" }).first().isVisible(), "Catering and Events shortcuts on Home");
 ok((await p.getByText("What customers say").count()) === 0 && (await p.getByText("Photos").count()) === 0, "no reviews or gallery until the café adds real ones");
 
 // the café edits things in the dashboard
@@ -42,8 +42,10 @@ await p.getByRole("button", { name: /^Coffee$|Coffee/ }).first().click().catch((
 await p.waitForTimeout(500);
 ok(await p.getByText("$5.75").first().isVisible().catch(() => false), "edited price shows on the menu");
 ok((await p.getByLabel("Add Americano to order").count()) === 0, "a hidden item is not on the menu");
-await p.getByRole("tab", { name: /Events/ }).first().click();
+await p.getByRole("tab", { name: /Groups/ }).first().click();
+await p.getByRole("tab", { name: "Rent the café" }).click();
 ok(await p.getByText("Up to 40 seated").first().isVisible(), "venue capacity entered by the café shows (and only then)");
+await p.getByRole("button", { name: /Basic Gathering/ }).click();
 ok(await p.getByText("Ask for pricing").first().isVisible(), "option price shows only because the café set it");
 await p.getByRole("tab", { name: /Contact/ }).first().click();
 ok(await p.getByText("hello@example.com").first().isVisible(), "email shows once the café adds it");

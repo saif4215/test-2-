@@ -1,8 +1,7 @@
 import { useMemo } from "react";
-import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, H1, Small } from "../components/ui";
+import { Body, Button, Disclosure, H1, Small } from "../components/ui";
 import { Adder, FavoriteButton, ItemPhoto } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
 import { money, priceText, useOrder } from "../lib/order";
@@ -45,21 +44,16 @@ export default function ItemDetails() {
           {item.desc ? <Body>{item.desc}</Body> : null}
           {item.cents == null ? <Small>This item comes in more than one size, so the price depends on the size you choose. Maruf Cafe confirms it with you.</Small> : null}
           <Customizer item={item} />
-          <View style={{ gap: 6 }}>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>Anything else? Note for Maruf Cafe (optional)</Text>
+          <Disclosure icon="create-outline" title="Add a note" hint={order.notes[item.id] || "Optional, for example: no onions"} defaultOpen={!!order.notes[item.id]}>
             <TextInput value={order.notes[item.id] || ""} onChangeText={(t) => order.setNote(item.id, t)} placeholder="For example: no onions" placeholderTextColor="#9A9087" accessibilityLabel="Note for Maruf Cafe" maxLength={100}
-              style={{ backgroundColor: colors.surface, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, paddingVertical: 13, minHeight: 50, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
+              style={{ backgroundColor: colors.bg, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, paddingVertical: 13, minHeight: 50, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
             <Small>Sent with your quote request. It is a request, not a promise: Maruf Cafe confirms what's possible.</Small>
-          </View>
-          <View style={{ gap: 10, backgroundColor: colors.tint, borderRadius: 20, padding: 16 }}>
-            <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-              <Ionicons name="information-circle-outline" size={22} color={colors.goldText} />
-              <Text style={{ flex: 1, fontSize: 14.5, lineHeight: 21, color: colors.ink }}>Prices are before tax. For ingredients or allergies, please ask Maruf Cafe before you order.{item.image ? "" : " The picture is an illustration, not a photo of the dish."}</Text>
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 32 }}>
-              <Ionicons name="call-outline" size={18} color={colors.goldText} /><Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{business.phone}</Text>
-            </Pressable>
-          </View>
+          </Disclosure>
+          <Small>
+            Prices are before tax. For ingredients or allergies, please ask Maruf Cafe before you order:{" "}
+            <Text accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)} style={{ fontWeight: "800", color: colors.goldText }}>{business.phone}</Text>.
+            {item.image ? "" : " The picture is an illustration, not a photo of the dish."}
+          </Small>
         </View>
       </ScrollView>
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", backgroundColor: colors.surface, paddingTop: 14, paddingBottom: 26, paddingHorizontal: 20, boxShadow: "0px -8px 24px rgba(36,26,18,0.08)" }}>

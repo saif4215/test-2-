@@ -6,16 +6,18 @@ import { mapLinks } from "../lib/maps";
 import { useSite } from "../lib/site";
 import { colors, radius } from "../theme";
 
-/** A tappable map card. Tapping it lets the customer pick Google Maps, Apple Maps or Waze. */
-export function MapCard() {
+/** A tappable map card. Tapping it lets the customer pick Google Maps, Apple Maps or Waze. `compact` is just a Directions button (it opens the same choices). */
+export function MapCard({ compact, style }) {
   const { business } = useSite();
   const [open, setOpen] = useState(false), [copied, setCopied] = useState(false);
   const links = mapLinks(business.address);
   const copy = async () => { try { await navigator.clipboard.writeText(business.address.join(", ")); setCopied(true); } catch { /* not available here */ } };
   const canCopy = Platform.OS === "web" && typeof navigator !== "undefined" && !!navigator.clipboard;
+  const show = () => { setCopied(false); setOpen(true); };
   return (
     <>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Map and directions to ${business.address.join(", ")}`} onPress={() => { setCopied(false); setOpen(true); }}
+      {compact ? <Button title="Directions" variant="light" icon="navigate-outline" accessibilityLabel={`Directions to ${business.address.join(", ")}`} onPress={show} style={style} /> : (
+      <Pressable accessibilityRole="button" accessibilityLabel={`Map and directions to ${business.address.join(", ")}`} onPress={show}
         style={({ pressed }) => ({ borderRadius: radius.card, overflow: "hidden", borderWidth: 1, borderColor: colors.line, opacity: pressed ? 0.92 : 1, backgroundColor: colors.surface })}>
         {/* a drawn street grid, not a real map: it does not pretend to know exact coordinates */}
         <View style={{ height: 150, backgroundColor: "#EFE6D3", overflow: "hidden" }}>
@@ -34,6 +36,7 @@ export function MapCard() {
           </View>
         </View>
       </Pressable>
+      )}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable accessibilityLabel="Close" onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end", alignItems: "center" }}>

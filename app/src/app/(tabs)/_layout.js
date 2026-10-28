@@ -42,9 +42,8 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={tab("Home", "home-outline", "home")} />
-      <Tabs.Screen name="orders" options={tab("Orders", "basket-outline", "basket")} />
-      <Tabs.Screen name="events" options={tab("Events", "calendar-outline", "calendar")} />
       <Tabs.Screen name="menu" options={tab("Menu", "restaurant-outline", "restaurant")} />
+      <Tabs.Screen name="groups" options={tab("Groups", "people-outline", "people")} />
       <Tabs.Screen name="contact" options={tab("Contact", "chatbubble-ellipses-outline", "chatbubble-ellipses")} />
     </Tabs>
   );

@@ -7,7 +7,8 @@ import { plan } from "../lib/plan";
 import { colors } from "../theme";
 import { money } from "../lib/order";
 
-export default function Calculator() {
+/** The group food planner. `bare` leaves off the card and heading, for use inside a row that already has its own title. */
+export default function Calculator({ bare }) {
   const [guests, setGuests] = useState("");
   const [selected, setSelected] = useState({});
   const result = plan(guests, selected);
@@ -15,9 +16,10 @@ export default function Calculator() {
     ? [`Group size: ${result.n} people`, ...result.lines.map((l) => (l.qty != null ? `${l.label}: about ${l.qty}` : `${l.label}: quantity to be confirmed`))].join("\n")
     : "";
 
+  const Wrap = bare ? View : Card;
   return (
-    <Card style={{ padding: 22, gap: 18 }}>
-      <H2>Planning Food for a Group?</H2>
+    <Wrap style={bare ? { gap: 18 } : { padding: 22, gap: 18 }}>
+      {bare ? null : <H2>Planning Food for a Group?</H2>}
       <Body>Tell us how many people you're feeding and what kind of food you're thinking about. This is a planning guide only. Maruf Cafe confirms quantities and pricing with you.</Body>
       <Field label="Number of guests" value={guests} onChangeText={(t) => setGuests(t.replace(/[^0-9]/g, ""))} keyboardType="number-pad" placeholder="For example, 25" maxLength={4} />
       <Text accessibilityLiveRegion="polite" style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>
@@ -42,6 +44,6 @@ export default function Calculator() {
       ) : null}
       <Button title="Add this to my quote request" variant="primary" disabled={!result.valid}
         onPress={() => router.push({ pathname: "/quote", params: { people: String(result.n), foodItems: summary } })} />
-    </Card>
+    </Wrap>
   );
 }

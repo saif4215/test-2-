@@ -6,7 +6,7 @@ Nothing here has been submitted. Publishing needs your own accounts.
 ## 0. Read this first (the things most likely to cost you time)
 
 - **The iPhone version has never been run.** All testing was done in the web version of the app. Before you submit, make a test build,
-  install it through TestFlight and tap through every screen (Home, Orders, Events, Menu, Contact, Ask a question, the two forms).
+  install it through TestFlight and tap through every screen (Home, Menu, Groups, Contact, Ask a question, the two forms).
   The JavaScript for iPhone does bundle without errors, but that is not the same as running on a phone.
 - **The server must be online before you submit.** The forms and the chat talk to it, and App Review will open your Privacy Policy and Support links.
   See `DEPLOY.md`. A server that is asleep or erased during review is the most common reason this app would be rejected.
@@ -114,9 +114,9 @@ The app ids are `com.marufcafe.app` (change them in `app/app.json` before the fi
 
 **App Review notes** (paste into the review notes box)
 
-> No sign-in is needed. The app shows the café's menu, hours and contact details, a group-size planner, and two request forms (Orders → "Get a large order quote", and Events → "Check event availability"). Submitting a form sends the customer's request to the café's server and shows a confirmation. "Ask a question" on the Home screen is a chat that answers from the café's own menu and details. "Order pickup on Square Online" opens the café's existing web store in the browser. There is no in-app payment and no account.
+> No sign-in is needed. The app shows the café's menu, hours and contact details, a group-size planner, and two request forms (Groups → "Get a large order quote", and Groups → "Rent the café" → "Check a date"). Submitting a form sends the customer's request to the café's server and shows a confirmation. "Ask us" on the Home screen (and the question row on Contact) is a chat that answers from the café's own menu and details. "Order pickup on Square Online" opens the café's existing web store in the browser. There is no in-app payment and no account.
 
-**Screenshots:** `store/screenshots/iphone-6.9/` (eight files, 1320 × 2868: Home, Orders planner, Events, Menu, Ask a question, My order, quote form, thank-you). Apple scales these for smaller iPhones. They are taken from the web version of the app at phone size, which looks the same as the iPhone version for these screens, but replace them with real iPhone screenshots from your TestFlight build if you can. iPad screenshots: `store/screenshots/ipad-13/` (see section 0).
+**Screenshots:** `store/screenshots/iphone-6.9/` (eight files, 1320 × 2868: Home, Groups planner, Rent the café, Menu, Ask a question, My order, quote form, thank-you). Apple scales these for smaller iPhones. They are taken from the web version of the app at phone size, which looks the same as the iPhone version for these screens, but replace them with real iPhone screenshots from your TestFlight build if you can. iPad screenshots: `store/screenshots/ipad-13/` (see section 0).
 
 ## 5. Google Play text
 

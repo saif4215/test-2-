@@ -26,6 +26,8 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.ink, headerShadowVisible: false, contentStyle: { backgroundColor: colors.bg }, headerTitleStyle: { fontWeight: "800" }, headerTitleAlign: "left" }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="orders" options={{ headerShown: false }} />
+          <Stack.Screen name="events" options={{ headerShown: false }} />
           <Stack.Screen name="quote" options={{ presentation: "modal", title: "Large order quote" }} />
           <Stack.Screen name="event-request" options={{ presentation: "modal", title: "Event rental request" }} />
           <Stack.Screen name="assistant" options={{ presentation: "modal", title: "Ask a question" }} />

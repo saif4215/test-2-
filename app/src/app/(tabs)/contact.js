@@ -3,7 +3,8 @@ import { Platform, Pressable, Share, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
-import { Body, Button, Card, H1, Reveal, Screen, Section, SectionHead, Small, StatusPill } from "../../components/ui";
+import { Body, Button, Card, H1, Reveal, Screen, Small, StatusPill } from "../../components/ui";
+import { RowHead } from "../../components/MenuBrowser";
 import { showPlaceholders } from "../../config";
 import { useSite } from "../../lib/site";
 import { nyWeekday, openStatus } from "../../lib/dates";
@@ -30,7 +31,7 @@ function Question({ q, a }) {
   const [open, setOpen] = useState(false);
   return (
     <Card>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} style={{ padding: 18, flexDirection: "row", gap: 12, alignItems: "center" }}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} aria-expanded={open} onPress={() => setOpen(!open)} style={{ padding: 18, flexDirection: "row", gap: 12, alignItems: "center" }}>
         <Text style={{ flex: 1, fontWeight: "800", fontSize: 16, lineHeight: 22, color: colors.ink }}>{q}</Text>
         <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: open ? colors.gold : colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={open ? "remove" : "add"} size={18} color={open ? colors.ink : colors.goldText} /></View>
       </Pressable>
@@ -44,7 +45,8 @@ export default function Contact() {
   const status = openStatus(business.hours);
   const today = nyWeekday();
   const showEmail = business.email || showPlaceholders;
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false), [allFaq, setAllFaq] = useState(false);
+  const shownFaq = allFaq ? faq : faq.slice(0, 3);
   async function share() {
     const message = shareText(business);
     try {
@@ -60,10 +62,15 @@ export default function Contact() {
         <StatusPill open={status.open}>{status.text}</StatusPill>
       </Reveal>
 
-      <Section style={{ marginTop: 22 }}>
+      <View style={{ marginTop: 20, flexDirection: "row", gap: 12 }}>
+        <Button title="Call" variant="primary" icon="call-outline" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)} style={{ flex: 1 }} />
+        <MapCard compact style={{ flex: 1 }} />
+      </View>
+
+      <View style={{ marginTop: 18 }}>
         <Card>
-          <InfoRow icon="location-outline" title="Address">{business.address.map((l) => <Text key={l} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{l}</Text>)}</InfoRow>
           <InfoRow icon="call-outline" title="Phone" label={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.phone}</Text></InfoRow>
+          <InfoRow icon="location-outline" title="Address">{business.address.map((l) => <Text key={l} style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{l}</Text>)}</InfoRow>
           {showEmail ? <InfoRow icon="mail-outline" title="Email" onPress={business.email ? () => openLink(`mailto:${business.email}`) : undefined}><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>{business.email || "[ADD EMAIL]"}</Text></InfoRow> : null}
           <InfoRow icon="time-outline" title="Hours" last>
             {business.hours.map((h) => {
@@ -75,27 +82,34 @@ export default function Contact() {
                 </View>
               );
             })}
-            <Small style={{ fontWeight: "700", color: status.open ? colors.success : colors.muted, marginTop: 2 }}>{status.text}</Small>
           </InfoRow>
         </Card>
-        <View style={{ marginTop: 18 }}><MapCard /></View>
-        <View style={{ marginTop: 18, gap: 12 }}>
-          <Button title="Call us" variant="primary" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
-          <Button title="Request a large order" variant="gold" onPress={() => router.push("/quote")} />
-          <Button title="Ask about event rental" variant="light" onPress={() => router.push("/event-request")} />
-          {business.email ? <Button title="Email us" variant="outline" icon="mail-outline" onPress={() => openLink(`mailto:${business.email}`)} /> : null}
-        </View>
-        <View style={{ flexDirection: "row", gap: 12, marginTop: 18 }}>
-          {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" href={business.instagram} style={{ flex: 1 }} /> : null}
-          {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" href={business.tiktok} style={{ flex: 1 }} /> : null}
-          <Button title={copied ? "Copied" : "Share"} size="medium" variant="light" icon={copied ? "checkmark" : "share-outline"} accessibilityLabel={copied ? "Details copied to the clipboard" : "Share Maruf Cafe"} onPress={share} style={{ flex: 1 }} />
-        </View>
-      </Section>
+      </View>
 
-      <Section style={{ marginTop: 40 }}>
-        <SectionHead title="Questions people ask" style={{ marginBottom: 16 }} />
-        <View style={{ gap: 12 }}>{faq.map((f) => <Question key={f.q} {...f} />)}</View>
-      </Section>
+      <View style={{ marginTop: 14 }}>
+        <Card>
+          <InfoRow icon="chatbubble-ellipses-outline" title="Have a question?" label="Ask a question" onPress={() => router.push("/assistant")} last><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>Ask about the menu, hours or orders</Text></InfoRow>
+        </Card>
+      </View>
+
+      <View style={{ marginTop: 34 }}>
+        <RowHead title="Questions people ask" />
+        <View style={{ gap: 10 }}>
+          {shownFaq.map((f) => <Question key={f.q} {...f} />)}
+          {faq.length > 3 ? (
+            <Pressable accessibilityRole="button" onPress={() => setAllFaq(!allFaq)} hitSlop={8} style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 }}>
+              <Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>{allFaq ? "Show fewer" : `Show all ${faq.length} questions`}</Text>
+              <Ionicons name={allFaq ? "chevron-up" : "chevron-down"} size={16} color={colors.goldText} />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 12, marginTop: 30 }}>
+        {business.instagram ? <Button title="Instagram" size="medium" variant="light" icon="logo-instagram" href={business.instagram} style={{ flex: 1 }} /> : null}
+        {business.tiktok ? <Button title="TikTok" size="medium" variant="light" icon="logo-tiktok" href={business.tiktok} style={{ flex: 1 }} /> : null}
+        <Button title={copied ? "Copied" : "Share"} size="medium" variant="light" icon={copied ? "checkmark" : "share-outline"} accessibilityLabel={copied ? "Details copied to the clipboard" : "Share Maruf Cafe"} onPress={share} style={{ flex: 1 }} />
+      </View>
     </Screen>
   );
 }

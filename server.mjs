@@ -241,7 +241,7 @@ export function createServer(env = process.env) {
   const isHttps = (req) => publicUrl.startsWith("https:") || req.headers["x-forwarded-proto"] === "https";
   const PAGES = ["/app/", "/privacy", "/support"];
   // The old website is gone: its addresses send people to the matching place in the app, so old links and emails still work.
-  const MOVED = { "/": "/app/", "/index.html": "/app/", "/large-orders": "/app/orders", "/rent-the-cafe": "/app/events" };
+  const MOVED = { "/": "/app/", "/index.html": "/app/", "/large-orders": "/app/groups", "/rent-the-cafe": "/app/groups?show=rent" };
 
   /* ---- staff dashboard API ---- */
   /** A request as the dashboard shows it: the stored values plus readable label/value pairs. */
@@ -439,7 +439,7 @@ export function createServer(env = process.env) {
         }
 
         let hit = await resolveStatic(p);
-        // The phone app's own screens (/app/events, /app/menu ...) all load the app's single page.
+        // The phone app's own screens (/app/groups, /app/menu ...) all load the app's single page.
         if (!hit && /^\/app\//.test(p) && !path.extname(p)) hit = await resolveStatic("/app/index.html");
         // Plain addresses for simple pages: /privacy serves privacy.html, /large-orders serves large-orders.html.
         if (!hit && !path.extname(p) && p !== "/") hit = await resolveStatic(`${p.replace(/\/$/, "")}.html`);

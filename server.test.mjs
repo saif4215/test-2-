@@ -99,7 +99,7 @@ test("serves only allow-listed files", async () => {
 });
 
 test("the website is gone: its addresses lead into the app, and the old service worker removes itself", async () => {
-  for (const [from, to] of [["/", "/app/"], ["/index.html", "/app/"], ["/large-orders", "/app/orders"], ["/rent-the-cafe", "/app/events"]]) {
+  for (const [from, to] of [["/", "/app/"], ["/index.html", "/app/"], ["/large-orders", "/app/groups"], ["/rent-the-cafe", "/app/groups?show=rent"]]) {
     const r = await fetch(base + from, { redirect: "manual" });
     assert.equal(r.status, 302, from); assert.equal(r.headers.get("location"), to, from);
   }
@@ -141,7 +141,7 @@ test("the phone app is served at /app/ and its screens reload on any path", { sk
   const index = await fetch(base + "/app/");
   assert.equal(index.status, 200);
   assert.match(await index.text(), /manifest\.webmanifest/);
-  for (const screen of ["/app/events", "/app/menu", "/app/quote"]) {
+  for (const screen of ["/app/groups", "/app/events", "/app/menu", "/app/quote"]) {
     const r = await fetch(base + screen);
     assert.equal(r.status, 200, screen);
     assert.match(r.headers.get("content-type"), /text\/html/);

@@ -23,7 +23,7 @@ const mk = async () => { const ctx = await b.newContext({ viewport: { width: 390
   ok(await p.getByRole("button", { name: "Start an order" }).isVisible(), "big 'Start an order' on Home");
   ok(await p.getByRole("button", { name: /^Catering:/ }).isVisible() && await p.getByRole("button", { name: /^Rent the spot:/ }).isVisible(), "smaller Catering and Rent the spot buttons");
   const big = await p.getByRole("button", { name: "Start an order" }).boundingBox(), small = await p.getByRole("button", { name: /^Catering:/ }).boundingBox();
-  ok(big.height > small.height * 1.4 && big.width > small.width * 1.7, "start-an-order is clearly the big one");
+  ok(big.y < small.y && big.width > small.width, "start-an-order comes first and is wider than the shortcuts");
   await p.screenshot({ path: `${OUT}/ai-1-home.png` });
   await p.getByRole("button", { name: "Ask a question" }).click();
   await p.getByText("How can I help?").waitFor();

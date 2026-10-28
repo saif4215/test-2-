@@ -3,9 +3,7 @@
 A phone app (iPhone and Android) for Maruf Cafe, focused on large orders, catering, event rental and easy contact.
 Built with Expo and React Native. The same code also exports to a web app.
 
-Screens: Home · Orders (large orders, catering, group-size calculator) · Events (venue rental, event options) ·
-Menu (with an order list) · Contact (with FAQ). Two forms open as sheets: the large order quote form and the event
-rental form.
+Four tabs: **Home** · **Menu** (with an order list) · **Groups** (large orders and catering, with the group-size planner, and renting the café with its options; a switch at the top chooses which) · **Contact** (call, directions, hours, a question row and the FAQ). Two forms open as sheets: the large order quote form and the event rental form. The old Orders and Events tabs were merged into Groups; `/app/orders` and `/app/events` (and the old website addresses `/large-orders` and `/rent-the-cafe`) lead there.
 
 ## Run it on your phone (no accounts needed)
 
@@ -43,7 +41,7 @@ The app also loads the live menu (`/menu.json`) and the café's details, FAQ, ev
 ## Photos
 
 Every photo slot shows a tidy placeholder until you add a picture, so nothing looks broken. Slots: `hero`,
-`largeOrders`, `catering`, `interior`, `interior2`, `event` and one per catering card. When the café adds a `hero` photo (here or in the dashboard) it replaces the food collage at the top of Home.
+`largeOrders`, `catering`, `interior`, `interior2`, `event` and one per catering card. Groups shows `largeOrders` (food) and `interior` (renting); `event` shows beside it once it has a photo. When the café adds a `hero` photo (here or in the dashboard) it replaces the food collage at the top of Home.
 
 ## Look and feel
 
@@ -51,13 +49,17 @@ The Menu tab works like a delivery app: a search bar and category buttons stay a
 
 Tap any item for a bigger view with its price, description and an Add button (`src/app/item.js`). My order shows each item with its picture and a counter. Pull down on a screen in the phone app, or come back to the app after a minute, and the menu and details are loaded again, so the café's edits appear without reinstalling or restarting. Contact has a Share button that sends the café's name, address, phone and order link (`src/lib/share.js`).
 
-The app also borrows a few habits that people know from big café and delivery apps, built in Maruf Cafe's own look: a greeting by time of day, a "Pickup at" bar with the address and whether the café is open (`src/components/StoreBar.js`), a heart on each item that fills **Your favorites**, **Order again** with an Add all button (the items of the last order sent), a note per item that travels with the quote request, and "More from Maruf Cafe" cards for catering, renting the café and the social pages. Favorites and recent orders are kept on the phone only (`src/lib/memory.js`, using AsyncStorage; the browser's own storage on the web). There are no rewards, points or in-app payments, because the café does not run any.
+### Kept simple on purpose
+
+Each screen has one job and each thing is shown once, so the app does not pile up. **Home** is the greeting, one big "Start an order" card, three shortcuts (Catering, Events, Ask us), **Order again** (only once someone has sent an order), the café's **Try these** picks and a **Visit us** map card. The Menu is the menu: **Your favorites** (only once something is hearted) and the category rows, with a one-line "open until / address" under the title. Anything optional is folded away behind a tap (`Disclosure` in `src/components/ui.js`): the group planner, the rental options, a drink's "More options" (shots, syrup, milk, ice, extras; size and hot or iced stay up front), the note on an item, and "More details (optional)" on both forms, which opens by itself if a mistake is in a folded field (`src/lib/forms.js`). The forms show only the required fields first.
+
+The app also borrows a few habits that people know from big café and delivery apps, built in Maruf Cafe's own look: a greeting by time of day, a "Pickup at" line with the address and whether the café is open (`src/components/StoreBar.js`), a heart on each item that fills **Your favorites**, **Order again** with an Add all button (the items of the last order sent), and a note per item that travels with the quote request. Favorites and recent orders are kept on the phone only (`src/lib/memory.js`, using AsyncStorage; the browser's own storage on the web). There are no rewards, points or in-app payments, because the café does not run any.
 
 ### Drinks
 
 Every kind of drink has its own picture (an espresso, a cappuccino, a hibiscus tea, a mango refresher and so on: `src/lib/menu-art-key.js` picks it from the drink's name, `assets/menu/` holds the 3D renders). They are illustrations, not photos of the café's drinks; the café's own photo for an item replaces them.
 
-On a drink's details screen, **Make it your way** lets a customer ask for hot or iced, a size (only when the price depends on size), espresso shots, pumps of a syrup flavor, milk, ice, sweetness and extras, as big buttons with a live "Your drink" line (`src/components/Customizer.js`, rules in `src/lib/customize.js`). **These are requests only**: the choices travel with the quote request as text, nothing changes a price, and Maruf Cafe confirms what it can make. The choices offered are lists in `src/config.js` (`customize` and `drinkControls`): the ones shipped are common examples, so **edit them to match what the café really offers**.
+On a drink's details screen, **Make it your way** lets a customer ask for a size (only when the price depends on size) and hot or iced, and, under **More options**, espresso shots, pumps of a syrup flavor, milk, ice, sweetness and extras, as big buttons with a live "Your drink" line (`src/components/Customizer.js`, rules in `src/lib/customize.js`). **These are requests only**: the choices travel with the quote request as text, nothing changes a price, and Maruf Cafe confirms what it can make. The choices offered are lists in `src/config.js` (`customize` and `drinkControls`): the ones shipped are common examples, so **edit them to match what the café really offers**.
 
 Colours, radii, shadows and type sizes are in `src/theme.js`. Headings use the DM Serif Display font (`assets/fonts/`, SIL Open Font License, copy in `assets/fonts/OFL.txt`); body text uses the phone's own font. The food pictures in the Home collage (`assets/hero/`) and beside menu items (`assets/menu/`) are 3D renders of generic dishes, not photos of the café's food.
 

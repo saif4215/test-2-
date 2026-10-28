@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, Chip, Grid, H3, SectionHead, Small, usePullRefresh } from "./ui";
+import { Body, Button, Card, Chip, Grid, H3, Small, usePullRefresh } from "./ui";
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useMemory } from "../lib/memory";
@@ -22,7 +22,7 @@ const openItem = (it) => router.push({ pathname: "/item", params: { id: it.id } 
  * category. Swipe a row sideways to go through its items, scroll down for the next category, tap "See all" to open a row as a grid.
  */
 export function MenuPage({ header, footer, bottomPad = 120 }) {
-  const { menu, featuredTitle } = useSite();
+  const { menu } = useSite();
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
   const inner = Math.min(width, 980) - pad * 2;
@@ -36,8 +36,6 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   const { cat: wantedCat, n: wantedNonce } = useLocalSearchParams();   // a tile on Home can open the Menu on one category
   const q = query.trim();
   const results = useMemo(() => (q ? searchMenu(categories, q) : null), [categories, q]);
-  const picks = useMemo(() => featuredItems(menu), [menu]);
-  const featuredRow = useRowScroll();
   const current = names.includes(active) ? active : names[0];
 
   const goTo = (name) => {
@@ -105,16 +103,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
             </View>
           ) : (
             <>
-            <View style={{ marginTop: 22 }}><PersonalRows /></View>
-            {picks.length ? (
-              <View style={{ marginTop: 22 }}>
-                <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-                  <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink }}>{featuredTitle}</Text>
-                  {featuredRow.arrows}
-                </View>
-                <BleedRow scrollRef={featuredRow.scrollRef} onScroll={featuredRow.onScroll}>{picks.map((it) => <ItemTile key={`pick-${it.id}`} item={it} />)}</BleedRow>
-              </View>
-            ) : null}
+            <PersonalRows only="favorites" style={{ marginTop: 22 }} />
             {names.map((name) => {
               const cat = categories.find((c) => c.name === name);
               return (
@@ -145,21 +134,8 @@ function MenuRow({ cat, inner, open, onToggle }) {
   const row = useRowScroll();
   return (
     <View>
-      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-        <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
-          <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink }}>{cat.name}</Text>
-          <Text style={{ fontSize: 14, color: colors.muted, fontWeight: "600" }}>{n}</Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingBottom: 2 }}>
-          {!open && n > 2 ? row.arrows : null}
-          {n > 2 ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={open ? `Show fewer ${cat.name}` : `See all ${cat.name}`} onPress={onToggle} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-              <Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>{open ? "Show less" : "See all"}</Text>
-              <Ionicons name={open ? "chevron-up" : "chevron-forward"} size={16} color={colors.goldText} />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
+      <RowHead title={cat.name} count={n} arrows={!open && n > 2 ? row.arrows : null}
+        action={n > 2 ? { label: open ? "Show less" : "See all", icon: open ? "chevron-up" : "chevron-forward", a11y: open ? `Show fewer ${cat.name}` : `See all ${cat.name}`, onPress: onToggle } : null} />
       {open ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, columnGap: gap }}>{cat.items.map((it) => <ItemTile key={it.id} item={it} width={w} />)}</View>
       ) : (
@@ -252,21 +228,27 @@ export function ItemTile({ item: it, width = 160 }) {
   );
 }
 
-/** A tall card for the home screen's horizontal row: big picture, name, price, add. */
-function PickCard({ item: it }) {
+/** The heading above a row: its name (and how many), then on the right the sideways arrows (computers) and one action such as "See all". */
+export function RowHead({ title, count, arrows, action }) {
   return (
-    <Card style={{ width: 236 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}>
-        <ItemPhoto item={it} size={236} box={{ width: 236, height: 168, borderRadius: 0 }} />
-      </Pressable>
-      <View style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${it.name} details`} onPress={() => openItem(it)} style={{ flex: 1, gap: 2 }}>
-          <Text numberOfLines={2} style={{ fontSize: 16, lineHeight: 21, fontWeight: "800", color: colors.ink }}>{it.name}</Text>
-          <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
-        </Pressable>
-        <Adder item={it} />
+    <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+      <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink, flexShrink: 1 }}>{title}</Text>
+        {count != null ? <Text style={{ fontSize: 14, color: colors.muted, fontWeight: "600" }}>{count}</Text> : null}
       </View>
-    </Card>
+      {arrows || action ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingBottom: 2 }}>
+          {arrows}
+          {action ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={action.a11y || action.label} onPress={action.onPress} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              {action.icon === "add-circle" ? <Ionicons name="add-circle" size={18} color={colors.goldText} /> : null}
+              <Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>{action.label}</Text>
+              {action.icon && action.icon !== "add-circle" ? <Ionicons name={action.icon} size={16} color={colors.goldText} /> : null}
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -299,83 +281,45 @@ export function BleedRow({ children, gap = 14, scrollRef, onScroll }) {
   );
 }
 
-/** "What are you craving?": a round picture for every menu category. Tapping one opens the Menu on it. */
-export function CategoryStrip() {
-  const { menu } = useSite();
-  const categories = useMemo(() => categoryList(menu), [menu]);
-  const row = useRowScroll();
-  if (!categories.length) return null;
-  return (
-    <View style={{ gap: 14 }}>
-      <SectionHead title="Browse the menu" extra={row.arrows} action="See all" onAction={() => router.push("/menu")} />
-      <BleedRow gap={16} scrollRef={row.scrollRef} onScroll={row.onScroll}>
-        {categories.map((c) => {
-          const art = artFor(c.name);
-          return (
-            <Pressable key={c.name} accessibilityRole="button" accessibilityLabel={`${c.name}, ${c.items.length} items`} onPress={() => router.push({ pathname: "/menu", params: { cat: c.name, n: String(Date.now()) } })}
-              style={({ pressed }) => ({ width: 88, alignItems: "center", gap: 8, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] })}>
-              <View style={[{ width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: colors.surface, backgroundColor: colors.tint, overflow: "hidden", alignItems: "center", justifyContent: "center" }, shadow]}>
-                {art ? <Image source={art} accessible={false} style={{ width: 84, height: 84 }} /> : <Ionicons name="restaurant-outline" size={28} color={colors.goldText} />}
-              </View>
-              <Text numberOfLines={2} style={{ fontSize: 13, lineHeight: 17, fontWeight: "700", color: colors.ink, textAlign: "center" }}>{c.name}</Text>
-            </Pressable>
-          );
-        })}
-      </BleedRow>
-    </View>
-  );
-}
-
-/** The few items the café picked for the home screen, in a row you can swipe. Hidden when none are picked. */
+/** "Popular": the few items the café picked, in a row you can swipe. Hidden when none are picked. */
 export function FeaturedPicks() {
   const { menu, featuredTitle } = useSite();
   const picks = useMemo(() => featuredItems(menu), [menu]);
   const row = useRowScroll();
   if (!picks.length) return null;
   return (
-    <View style={{ gap: 14 }}>
-      <SectionHead title={featuredTitle} extra={row.arrows} />
-      <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{picks.map((it) => <PickCard key={it.id} item={it} />)}</BleedRow>
+    <View>
+      <RowHead title={featuredTitle} arrows={row.arrows} />
+      <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{picks.map((it) => <ItemTile key={`pick-${it.id}`} item={it} />)}</BleedRow>
     </View>
   );
 }
 
-/** "Your favorites" and "Order again" (the items of the last order sent): the rows people come back for. Shown only when there is something in them. */
-export function PersonalRows({ onTiles }) {
+/**
+ * "Order again" (the items of the last order sent) and "Your favorites": the rows people come back for. Shown only when there is something in them.
+ * Each one lives in one place: Order again on Home, Your favorites on the Menu (`only` picks which).
+ */
+export function PersonalRows({ only, style }) {
   const { menu } = useSite();
   const { favorites, recent } = useMemory();
   const order = useOrder();
   const byId = useMemo(() => indexMenu(menu), [menu]);
-  const favItems = favorites.map((id) => byId.get(id)).filter((it) => it && !it.hidden);
-  const again = reorderIds(recent, byId).map((id) => byId.get(id)).filter((it) => it && !it.hidden);
+  const favItems = only === "again" ? [] : favorites.map((id) => byId.get(id)).filter((it) => it && !it.hidden);
+  const again = only === "favorites" ? [] : reorderIds(recent, byId).map((id) => byId.get(id)).filter((it) => it && !it.hidden);
   const favRow = useRowScroll(), againRow = useRowScroll();
-  const titleStyle = { fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink };
-  const head = (title, row, action) => (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-      <Text accessibilityRole="header" style={titleStyle}>{title}</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingBottom: 2 }}>
-        {row.arrows}
-        {action}
-      </View>
-    </View>
-  );
   if (!favItems.length && !again.length) return null;
   const lastLines = (recent[0] || []).filter((l) => byId.has(l.id));
   return (
-    <View style={{ gap: 26 }}>
+    <View style={[{ gap: 26 }, style]}>
       {again.length ? (
         <View>
-          {head("Order again", againRow, (
-            <Pressable accessibilityRole="button" accessibilityLabel="Add everything from my last order" onPress={() => order.addMany(lastLines)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Ionicons name="add-circle" size={18} color={colors.goldText} /><Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>Add all</Text>
-            </Pressable>
-          ))}
+          <RowHead title="Order again" arrows={againRow.arrows} action={{ label: "Add all", icon: "add-circle", a11y: "Add everything from my last order", onPress: () => order.addMany(lastLines) }} />
           <BleedRow scrollRef={againRow.scrollRef} onScroll={againRow.onScroll}>{again.map((it) => <ItemTile key={`again-${it.id}`} item={it} />)}</BleedRow>
         </View>
       ) : null}
       {favItems.length ? (
         <View>
-          {head("Your favorites", favRow, null)}
+          <RowHead title="Your favorites" arrows={favRow.arrows} />
           <BleedRow scrollRef={favRow.scrollRef} onScroll={favRow.onScroll}>{favItems.map((it) => <ItemTile key={`fav-${it.id}`} item={it} />)}</BleedRow>
         </View>
       ) : null}
