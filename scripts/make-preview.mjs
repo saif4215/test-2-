@@ -78,9 +78,8 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
       placed[id] = { at: Date.now(), ref: refOf(String(order.idempotencyKey || id)), total: total };
       return reply({ ok: true, orderId: id, ref: placed[id].ref, totalCents: total, preview: true });
     }
-    var progress = /^\/api\/order\/(preview\w+)$/.exec(pathname);
-    if (progress) {
-      var p = placed[progress[1]], age = p ? Date.now() - p.at : 0;
+    if (pathname.indexOf("/api/order/preview") === 0) {   // no backslashes here: this text sits inside a template string
+      var p = placed[pathname.slice("/api/order/".length)], age = p ? Date.now() - p.at : 0;
       return reply({ ok: true, status: age < 12000 ? "received" : age < 30000 ? "accepted" : "ready", ref: p ? p.ref : "", totalCents: p ? p.total : null });
     }
     if (pathname === "/api/inquiry" && method === "POST") return reply({ ok: true });   // a preview: nothing is stored or sent
@@ -88,6 +87,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
   };
 })();
 `;
+try { new Function(shim); } catch (err) { console.error(`The stand-in server written for the preview has a syntax error (${err.message}). Backslashes inside the template string are the usual cause.`); process.exit(1); }
 writeFileSync(path.join(APP, "preview-shim.js"), shim);
 
 // 3. the page that starts the app
