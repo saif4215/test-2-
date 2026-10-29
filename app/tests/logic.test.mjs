@@ -8,7 +8,7 @@ import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote } from "../src/lib/order-util.js";
-import { parseContactLink, prettyPhone } from "../src/lib/links-util.js";
+import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved } from "../src/lib/memory-util.js";
 import { controlsFor, isShown, applyChoice, cleanCustom, describeCustom, EMPTY } from "../src/lib/customize.js";
 
@@ -365,4 +365,16 @@ test("a mistake in a field tucked under More details is found, so that part can 
   const eventErrors = Object.keys(buildEvent(emptyEvent).errors);
   const alwaysShown = ["name", "phone", "email", "eventType", "eventDate", "guests"];
   for (const k of eventErrors) assert.ok(alwaysShown.includes(k) || EVENT_OPTIONAL.includes(k), `${k} must be shown or listed`);
+});
+
+test("Call dials straight away on phones and tablets, and shows the number to copy only on computers", () => {
+  const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+  assert.equal(canPlaceCalls({ userAgent: iphone, platform: "iPhone", maxTouchPoints: 5, coarsePointer: true }), true, "an iPhone");
+  assert.equal(canPlaceCalls({ userAgent: iphone }), true, "an iPhone even if the browser says nothing about its touch screen");
+  assert.equal(canPlaceCalls({ userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36" }), true, "an Android phone");
+  assert.equal(canPlaceCalls({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15", platform: "MacIntel", maxTouchPoints: 5 }), true, "an iPad asking for the desktop site");
+  assert.equal(canPlaceCalls({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15", platform: "MacIntel", maxTouchPoints: 0 }), false, "a Mac");
+  assert.equal(canPlaceCalls({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126 Safari/537.36", platform: "Win32", maxTouchPoints: 10, coarsePointer: false }), false, "a Windows laptop, even with a touch screen");
+  assert.equal(canPlaceCalls({}), false, "nothing known");
+  assert.equal(canPlaceCalls({ coarsePointer: true }), true, "a touch screen as the main pointer");
 });
