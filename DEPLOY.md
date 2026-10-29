@@ -188,14 +188,52 @@ Chats are not stored, and the privacy page says that questions are sent to Anthr
 
 ---
 
-## 6. Payments and bookings
+## 6. Orders into your Square, and what is not paid
 
 - **Quote and event requests collect no money and confirm nothing.** Every page says so. Take payment and confirm dates yourself,
   after you have decided your deposit and cancellation rules, and write them under Site info → Rent the café.
-- **Square card checkout** is a leftover from the old website. The app does not use it (it links to your Square Online store instead), so leave it off. If you ever want it, it is separate and optional. It stays off until you set
-  `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` and `SQUARE_APP_ID`. Start with `SQUARE_ENV=sandbox` and Square's test cards, set
-  `TAX_PERCENT`, and only then switch to `production`. It has been tested against a mock of Square, not Square itself.
-  Checkout always uses the live menu, so a price you change or an item you hide applies to checkout immediately.
+- **Pickup orders from the app go into your Square.** A customer adds items, taps **Place order for pickup**, gives a name and phone number,
+  and the order is created in your Square account as a pickup order. Nothing is charged by the app: **the customer pays at the counter**,
+  the way your Square point of sale already works. The customer sees a short order code and a screen that follows the order as you move it
+  along in Square (sent, accepted, ready). This stays off until you connect Square below. While it is off, customers can still send a quote
+  with their items or go to your Square Online store, so the app always works.
+
+### Connect Square (about 15 minutes; do the sandbox part first)
+
+1. Sign in at <https://developer.squareup.com> with the same login you use for your Square account. Open **Applications**, tap **+** and create an
+   application called "Maruf Cafe app".
+2. Open the application. At the top choose **Sandbox** (test mode). Under **Credentials** copy the **Sandbox access token**. Under **Locations**
+   copy the sandbox **Location ID**.
+3. In your host's environment settings (never in an email, a chat or git) set `SQUARE_ENV=sandbox`, `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`,
+   and `TAX_PERCENT` (the NYC combined rate is 8.875; confirm yours with your accountant, because Square does not add tax to an order sent this way).
+   Restart the server. In the dashboard, **Setup** now says "App orders go into your Square (sandbox)".
+4. Place an order in the app. In the Developer Dashboard open **Sandbox test accounts**, open the test account's Square Dashboard and look under
+   **Orders**. You should see a pickup order marked as coming from "Maruf Cafe app", with the customer's name, phone, the items and the order code.
+   Move it through accept, ready and complete there and watch the customer's screen follow. **Do not go live until you have seen this work.**
+5. To go live: in the Developer Dashboard switch to **Production**, copy the **Production access token** and your real **Location ID**
+   (Locations page, or Square Dashboard → Account & Settings → Business → Locations), put them in the host settings, set `SQUARE_ENV=production`
+   and restart. Place one real order from your own phone, accept it in your point of sale, and cancel it.
+
+### Good to know
+
+- **Where staff see it:** in your Square Dashboard under Orders, and in Square Point of Sale's order list. Whether a new order also beeps or prints
+  a ticket depends on your Square plan and device settings, so check this in step 4 and set it up in Square if you want it.
+- **Staff steps decide what the customer sees:** accept, mark ready, complete. If nobody touches an order in Square, the customer's screen stays on
+  "Order sent". The screen says it updates when the café updates the order.
+- **Prices come from the Menu tab in the dashboard,** looked up again by the server for every order, so a price you change or an item you hide applies
+  immediately and the app can never set its own price. The items arrive in Square by name and price (not linked to your Square item library, so
+  Square's item reports will not group them with items you ring up at the counter). Linking them is possible later by reading your Square catalog.
+- **Items with a price range** (for example a drink that costs more in a larger size) cannot be sent from the app, because no single price is known.
+  The order screen says which ones. Give the item one price in the Menu tab (or one item per size) to let customers order it from the app.
+- **Guards:** a phone number is required (so you can call the customer), one connection can place 5 orders a minute
+  (`ORDER_RATE_LIMIT_PER_MIN`), and an order over $300 (`ORDER_MAX_DOLLARS`) is sent to the large-order quote instead. A prank order is cancelled in Square.
+- **Retries are safe:** if a customer's connection drops and they tap Place order again, Square receives the same request key and makes one order.
+- **How it was tested:** the whole flow, from the menu to the confirmation screen, runs in a real browser against a stand-in for Square. It has **not**
+  been run against Square itself, and the request format (Square's Orders API, a pickup fulfillment, version `2024-10-17` in `server.mjs`) could not
+  be checked against Square's current documentation when it was written. That is why step 4 matters: if Square refuses an order, the customer is told
+  to try again or call, and the server log shows Square's error code (never the customer's details), which says what to fix.
+- **Paying in the app** (a card form or a Square-hosted payment page) is a different feature. It is not built, because customers pay at the counter. It can be added on
+  top of this later without changing how orders reach Square.
 
 ---
 

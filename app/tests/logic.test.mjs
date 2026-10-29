@@ -7,9 +7,9 @@ import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
-import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved } from "../src/lib/memory-util.js";
+import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject } from "../src/lib/memory-util.js";
 import { controlsFor, isShown, applyChoice, cleanCustom, describeCustom, EMPTY } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -377,4 +377,57 @@ test("Call dials straight away on phones and tablets, and shows the number to co
   assert.equal(canPlaceCalls({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126 Safari/537.36", platform: "Win32", maxTouchPoints: 10, coarsePointer: false }), false, "a Windows laptop, even with a touch screen");
   assert.equal(canPlaceCalls({}), false, "nothing known");
   assert.equal(canPlaceCalls({ coarsePointer: true }), true, "a touch screen as the main pointer");
+});
+
+test("only items with one fixed price are sent from the app; sized ones are left to the counter", () => {
+  const latte = { id: "latte", name: "Latte", cents: 450, qty: 1 }, lemonade = { id: "lemonade", name: "Lemonade", min: 400, max: 600, qty: 2 };
+  const { ready, needsPrice } = splitOrderable([latte, lemonade]);
+  assert.deepEqual(ready.map((l) => l.id), ["latte"]);
+  assert.deepEqual(needsPrice.map((l) => l.id), ["lemonade"]);
+  assert.deepEqual(splitOrderable([]), { ready: [], needsPrice: [] });
+});
+
+test("pickup details need a name and a 10-digit phone, and the phone is kept as digits", () => {
+  const ok = buildPickup({ name: "  Sam   Lee ", phone: "(718) 555-0123", note: "  at 5  pm " });
+  assert.deepEqual(ok.errors, {});
+  assert.deepEqual(ok.fields, { name: "Sam Lee", phone: "7185550123", note: "at 5 pm" });
+  assert.equal(buildPickup({ name: "Sam", phone: "1-718-555-0123", note: "" }).fields.phone, "7185550123");   // a leading 1 is dropped
+  const bad = buildPickup({ name: " ", phone: "555-0123", note: "" });
+  assert.ok(bad.errors.name && bad.errors.phone);
+  assert.ok(buildPickup({ name: "x".repeat(61), phone: "7185550123" }).errors.name);
+  assert.equal(buildPickup({ name: "Sam", phone: "7185550123", note: "y".repeat(400) }).fields.note.length, 200);
+});
+
+test("the order sent to the server holds ids, quantities and notes, never prices", () => {
+  const entries = [{ id: "latte", name: "Latte", cents: 450, qty: 2 }, { id: "bagel", name: "Bagel", cents: 300, qty: 1 }];
+  const body = orderBody(entries, { latte: "Iced, oat milk" }, { name: "Sam", phone: "7185550123", note: "" });
+  assert.deepEqual(body, { items: [{ id: "latte", qty: 2, note: "Iced, oat milk" }, { id: "bagel", qty: 1 }], name: "Sam", phone: "7185550123" });
+  assert.ok(!JSON.stringify(body).includes("450"));
+  assert.equal(orderBody(entries, {}, { name: "Sam", phone: "7185550123", note: "ring the bell" }).note, "ring the bell");
+});
+
+test("the same order keeps one key, so pressing Place order twice can never order twice", () => {
+  const k = newKey();
+  assert.match(k, /^[0-9a-f]{32}$/);
+  assert.notEqual(newKey(), newKey());
+  let n = 0; const make = () => `key${++n}`;
+  const a = { items: [{ id: "latte", qty: 1 }], name: "Sam", phone: "7185550123" };
+  const first = keyFor(null, a, make);
+  assert.equal(keyFor(first, { ...a }, make).key, first.key, "unchanged order: same key");
+  assert.notEqual(keyFor(first, { ...a, name: "Pat" }, make).key, first.key, "a changed order: a new key");
+});
+
+test("each stage of an order says what is happening, and anything unknown reads as just sent", () => {
+  assert.deepEqual(ORDER_STAGES.map((s) => s.id), ["received", "accepted", "ready"]);
+  assert.deepEqual(["received", "accepted", "ready", "done", "canceled"].map((s) => stageInfo(s).step), [0, 1, 2, 2, -1]);
+  assert.deepEqual(["received", "accepted", "ready", "done", "canceled"].map((s) => stageInfo(s).final), [false, false, false, true, true]);
+  assert.equal(stageInfo("something new").status, "received");
+  assert.match(stageInfo("received").text, /isn't confirmed until/);
+});
+
+test("the saved pickup name and phone are read back only if they are what was saved", () => {
+  assert.deepEqual(readObject('{"name":"Sam","phone":"7185550123"}', null), { name: "Sam", phone: "7185550123" });
+  assert.equal(readObject("[1,2]", null), null);
+  assert.equal(readObject("not json", null), null);
+  assert.equal(readObject(null, null), null);
 });

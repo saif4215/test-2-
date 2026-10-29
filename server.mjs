@@ -1,4 +1,4 @@
-// Maruf Cafe: hosts the phone app, takes quote/event requests, runs the staff dashboard and the AI helper (and optional Square checkout).
+// Maruf Cafe: hosts the phone app, takes quote/event requests, runs the staff dashboard and the AI helper (and optional ordering into the café's Square).
 // No packages to install. Needs Node 22.12 or newer (it uses Node's built-in SQLite).
 //
 //   node server.mjs
@@ -39,54 +39,70 @@ class SquareError extends Error {
   constructor(status, errors) { super(errors?.[0]?.detail || "Square request failed"); this.status = status; this.errors = errors || []; }
 }
 
-/* ------------------------------------------------------------------ checkout (Square) */
+/* ------------------------------------------------------------------ orders (Square) */
+// A customer's order is created in the café's Square account as a PICKUP order, so it shows up where the staff already work
+// (Square Point of Sale and the Square Dashboard). Nothing is charged by this server: the customer pays at the counter.
 
-const CARD_PROBLEMS = new Set([
-  "CARD_DECLINED", "GENERIC_DECLINE", "CVV_FAILURE", "ADDRESS_VERIFICATION_FAILURE", "INVALID_EXPIRATION",
-  "INVALID_CARD", "CARD_EXPIRED", "INSUFFICIENT_FUNDS", "CARD_NOT_SUPPORTED", "PAYMENT_LIMIT_EXCEEDED", "TRANSACTION_LIMIT",
-  "VERIFY_CVV_FAILURE", "VERIFY_AVS_FAILURE",
-]);
+const APP_SOURCE = "Maruf Cafe app";   // marks the orders that came from the app, in Square and when checking an order's status
+const REF_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";   // no I, L, O, 0 or 1: easy to read out loud over the counter
 
-function normalizePhone(raw) {
-  if (!raw) return null;
-  const digits = String(raw).replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  throw new HttpError(400, "Enter a 10-digit US phone number, or leave it blank.");
+/** A short code the customer can say ("K7QF"), the same every time for the same idempotency key. */
+export function orderRef(key) {
+  const h = crypto.createHash("sha256").update(String(key)).digest();
+  return Array.from(h.subarray(0, 4), (b) => REF_ALPHABET[b % REF_ALPHABET.length]).join("");
 }
 
-/** Validate the checkout body and return clean values. Throws HttpError(400). */
-export function parseCheckout(body, menu) {
+/** Square's fulfillment states, said the way the customer sees them. */
+const FULFILLMENT_STATUS = { PROPOSED: "received", RESERVED: "accepted", PREPARED: "ready", COMPLETED: "done", CANCELED: "canceled", FAILED: "canceled" };
+export function orderStatus(order) {
+  if (!order || order.state === "CANCELED") return order ? "canceled" : "received";
+  const pickup = (order.fulfillments || []).find((f) => f.type === "PICKUP");
+  if (pickup && FULFILLMENT_STATUS[pickup.state]) return FULFILLMENT_STATUS[pickup.state];
+  return order.state === "COMPLETED" ? "done" : "received";
+}
+
+function normalizePhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  throw new HttpError(400, "Enter a 10-digit US phone number so the café can reach you about your order.");
+}
+
+/** Validate the order body and return clean values. Prices always come from the live menu, never from the app. Throws HttpError(400). */
+export function parseOrder(body, menu, maxCents = 30000) {
   const bad = (m) => { throw new HttpError(400, m); };
   if (!body || typeof body !== "object") bad("Invalid request.");
-  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 30) bad("Your cart is empty.");
-  const qty = new Map();
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 30) bad("Your order is empty.");
+  const wanted = new Map();
   for (const it of body.items) {
-    if (!it || typeof it.id !== "string") bad("Invalid cart item.");
+    if (!it || typeof it.id !== "string") bad("Invalid order item.");
     if (!Number.isInteger(it.qty) || it.qty < 1 || it.qty > 20) bad("Quantities must be between 1 and 20.");
-    if (!menu.has(it.id)) bad("An item in your cart is not available for online ordering. Remove it and try again.");
-    qty.set(it.id, (qty.get(it.id) || 0) + it.qty);
+    if (!menu.has(it.id)) bad("An item in your order can't be ordered in the app right now. Remove it and try again.");
+    const note = typeof it.note === "string" ? it.note.replace(/\s+/g, " ").trim().slice(0, 250) : "";
+    const cur = wanted.get(it.id) || { qty: 0, note: "" };
+    cur.qty += it.qty;
+    if (note && !cur.note) cur.note = note;
+    wanted.set(it.id, cur);
   }
-  for (const n of qty.values()) if (n > 20) bad("Quantities must be between 1 and 20.");
-  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const lines = [...wanted].map(([id, w]) => ({ id, ...w, ...menu.get(id) }));
+  if (lines.some((l) => l.qty > 20)) bad("Quantities must be between 1 and 20.");
+  if (lines.reduce((s, l) => s + l.cents * l.qty, 0) > maxCents) bad(`That order is over $${maxCents / 100}. For a bigger order, please use Get a large order quote.`);
+  const name = typeof body.name === "string" ? body.name.replace(/\s+/g, " ").trim() : "";
   if (name.length < 1 || name.length > 60) bad("Enter a name for the pickup order.");
-  const note = typeof body.note === "string" ? body.note.trim().slice(0, 200) : "";
-  if (typeof body.sourceId !== "string" || body.sourceId.length < 1 || body.sourceId.length > 200) bad("Card details are missing. Enter your card and try again.");
+  const note = typeof body.note === "string" ? body.note.replace(/\s+/g, " ").trim().slice(0, 200) : "";
   if (typeof body.idempotencyKey !== "string" || !/^[A-Za-z0-9-]{16,36}$/.test(body.idempotencyKey)) bad("Invalid request.");
-  return {
-    lines: [...qty].map(([id, q]) => ({ id, qty: q, ...menu.get(id) })),
-    name, note, phone: normalizePhone(body.phone), sourceId: body.sourceId, key: body.idempotencyKey,
-  };
+  return { lines, name, note, phone: normalizePhone(body.phone), key: body.idempotencyKey };
 }
 
 export function createServer(env = process.env) {
   const production = env.SQUARE_ENV === "production";
   const taxPercent = (() => { const n = Number(env.TAX_PERCENT); return Number.isFinite(n) && n > 0 && n <= 20 ? n : 0; })();
   const cfg = {
-    token: env.SQUARE_ACCESS_TOKEN || "", locationId: env.SQUARE_LOCATION_ID || "", appId: env.SQUARE_APP_ID || "",
+    token: env.SQUARE_ACCESS_TOKEN || "", locationId: env.SQUARE_LOCATION_ID || "",
     environment: production ? "production" : "sandbox", taxPercent,
   };
-  const enabled = !!(cfg.token && cfg.locationId && cfg.appId);
+  const enabled = !!(cfg.token && cfg.locationId);
+  const maxOrderCents = (() => { const n = Number(env.ORDER_MAX_DOLLARS); return Number.isFinite(n) && n >= 10 && n <= 2000 ? Math.round(n * 100) : 30000; })();
   const apiBase = env.SQUARE_API_BASE || (production ? "https://connect.squareup.com" : "https://connect.squareupsandbox.com");
   const dataDir = env.DATA_DIR || path.join(ROOT, "data");
   const uploadDir = path.join(dataDir, "uploads");
@@ -130,43 +146,40 @@ export function createServer(env = process.env) {
     return json;
   }
 
-  async function checkout(body) {
-    const { lines, name, note, phone, sourceId, key } = parseCheckout(body, checkoutIndex(getMenu()));
-
+  /** Put the customer's order into the café's Square as an unpaid pickup order. Retrying with the same key never orders twice. */
+  async function placeOrder(body) {
+    const { lines, name, note, phone, key } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
+    const ref = orderRef(key);
     const order = {
-      location_id: cfg.locationId,
-      line_items: lines.map((l) => ({ name: l.name, quantity: String(l.qty), base_price_money: { amount: l.cents, currency: "USD" } })),
+      location_id: cfg.locationId, reference_id: ref, source: { name: APP_SOURCE },
+      line_items: lines.map((l) => ({ name: l.name, quantity: String(l.qty), base_price_money: { amount: l.cents, currency: "USD" }, ...(l.note ? { note: l.note } : {}) })),
       fulfillments: [{
         type: "PICKUP", state: "PROPOSED",
-        pickup_details: { recipient: { display_name: name, ...(phone ? { phone_number: phone } : {}) }, schedule_type: "ASAP", ...(note ? { note } : {}) },
+        pickup_details: { recipient: { display_name: name, phone_number: phone }, schedule_type: "ASAP", ...(note ? { note } : {}) },
       }],
     };
     if (cfg.taxPercent > 0) order.taxes = [{ uid: "sales-tax", name: "Sales tax", percentage: String(cfg.taxPercent), scope: "ORDER" }];
-
-    let created;
     try {
-      created = (await square("POST", "/v2/orders", { idempotency_key: `${key}-o`, order })).order;
+      const created = (await square("POST", "/v2/orders", { idempotency_key: key, order })).order;
+      const subtotal = lines.reduce((s, l) => s + l.cents * l.qty, 0);
+      return { ok: true, orderId: created.id, ref, totalCents: created.total_money?.amount ?? subtotal };
     } catch (err) {
-      if (err instanceof SquareError) throw new HttpError(502, "We could not start your order. Please try again.");
-      throw new HttpError(502, "We could not reach our payment provider. Please try again.");
+      console.error("Square order failed:", err instanceof SquareError ? `${err.status} ${err.errors[0]?.code || ""}` : err.message);   // never the customer's details
+      if (err instanceof SquareError) throw new HttpError(502, "We couldn't send your order to the café. Please try again, or call us.", { retry: true });
+      throw new HttpError(502, "We couldn't reach the café's order system. Please try again, or call us. Trying again will not order twice.", { retry: true });
     }
+  }
 
-    try {
-      const { payment } = await square("POST", "/v2/payments", {
-        idempotency_key: `${key}-p`, source_id: sourceId, location_id: cfg.locationId, order_id: created.id,
-        amount_money: created.total_money, autocomplete: true, note: `Web pickup order for ${name}`.slice(0, 500),
-      });
-      return { ok: true, orderId: created.id, paymentId: payment.id, status: payment.status, receiptUrl: payment.receipt_url || null, totalCents: created.total_money.amount };
-    } catch (err) {
-      if (err instanceof SquareError) {
-        // A definite failure: nothing was charged. Cancel the unpaid order so it does not sit in the queue.
-        await square("PUT", `/v2/orders/${created.id}`, { order: { location_id: cfg.locationId, state: "CANCELED", version: created.version } }).catch(() => {});
-        const card = err.errors.some((e) => CARD_PROBLEMS.has(e.code));
-        throw new HttpError(card ? 402 : 502, card ? "Your card was declined. Try another card." : "We could not take your payment. You were not charged.", { retry: true });
-      }
-      // Timeout or network failure: we do not know whether the charge went through. Leave the order alone.
-      throw new HttpError(502, `We could not confirm your payment. Please do not pay again. Show order ${created.id.slice(0, 8)} to the cafe or check your receipt.`, { uncertain: true, orderId: created.id });
+  /** Where an order stands in the café, for the customer's confirmation screen. Only orders the app placed can be looked up. */
+  async function orderProgress(id) {
+    let order;
+    try { order = (await square("GET", `/v2/orders/${encodeURIComponent(id)}`)).order; }
+    catch (err) {
+      if (err instanceof SquareError && (err.status === 404 || err.status === 400)) throw new HttpError(404, "We can't find that order.");
+      throw new HttpError(502, "We can't check on your order right now.");
     }
+    if (!order || order.location_id !== cfg.locationId || order.source?.name !== APP_SOURCE) throw new HttpError(404, "We can't find that order.");
+    return { ok: true, status: orderStatus(order), ref: order.reference_id || "", totalCents: order.total_money?.amount ?? null };
   }
 
   /* ---- quote / event requests: store first, then notify. A request counts as received only once it is stored or sent. ---- */
@@ -192,7 +205,7 @@ export function createServer(env = process.env) {
   async function assistant(body) {
     const clean = cleanMessages(body?.messages);
     if (clean.error) throw new HttpError(400, clean.error);
-    if (!assistantOn) return { ok: true, mode: "basic", ...basicAnswer(getContent(), publicMenu(getMenu()), clean.messages) };
+    if (!assistantOn) return { ok: true, mode: "basic", ...basicAnswer(getContent(), publicMenu(getMenu()), clean.messages, new Date(), { ordering: enabled }) };
     const day = new Date().toISOString().slice(0, 10);
     if (day !== assistantDay) { assistantDay = day; assistantCount = 0; }
     if (assistantCount >= assistantPerDay) throw new HttpError(429, "The assistant has reached its limit for today. Please call us or send a request.");
@@ -204,6 +217,7 @@ export function createServer(env = process.env) {
   /* ---- rate limits, responses, bodies ---- */
   const rateMax = Number(env.RATE_LIMIT_PER_MIN) || 10;
   const inquiryMax = Number(env.INQUIRY_RATE_LIMIT_PER_MIN) || 5;
+  const orderMax = Number(env.ORDER_RATE_LIMIT_PER_MIN) || 5;
   const hits = new Map();
   function limited(bucket, ip, max) {
     const k = `${bucket}:${ip}`, now = Date.now(), recent = (hits.get(k) || []).filter((t) => now - t < 60000);
@@ -391,19 +405,26 @@ export function createServer(env = process.env) {
       const url = new URL(req.url, "http://localhost");
       const ip = clientIp(req);
       const p = url.pathname;
-      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
+      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/order" || p.startsWith("/api/order/") || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
       if (cors && req.method === "OPTIONS") {
         res.writeHead(204, { "Access-Control-Allow-Origin": allowOrigin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" });
         return res.end();
       }
       if (p === "/api/config" && req.method === "GET") {
-        return send(res, 200, enabled ? { enabled, appId: cfg.appId, locationId: cfg.locationId, environment: cfg.environment, taxPercent: cfg.taxPercent } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents } : { enabled: false }, { cors: true });
       }
-      if (p === "/api/checkout") {
+      if (p === "/api/order") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
-        if (!enabled) throw new HttpError(503, "Online checkout is not switched on yet.");
-        if (limited("checkout", ip, rateMax)) throw new HttpError(429, "Too many attempts. Wait a minute and try again.");
-        return send(res, 200, await checkout(await readBody(req)));
+        if (!enabled) throw new HttpError(503, "Ordering from the app isn't switched on yet. Please call us.");
+        if (limited("order", ip, orderMax)) throw new HttpError(429, "Too many orders from this connection. Wait a minute, or call us.");
+        return send(res, 200, await placeOrder(await readBody(req, 12000)), { cors: true });
+      }
+      const om = /^\/api\/order\/([A-Za-z0-9_-]{8,64})$/.exec(p);
+      if (om) {
+        if (req.method !== "GET") throw new HttpError(405, "Method not allowed.");
+        if (!enabled) throw new HttpError(503, "Ordering from the app isn't switched on yet.");
+        if (limited("order-status", ip, 60)) throw new HttpError(429, "Too many checks. Wait a minute and try again.");
+        return send(res, 200, await orderProgress(om[1]), { cors: true });
       }
       if (p === "/api/inquiry") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
@@ -468,10 +489,10 @@ export function createServer(env = process.env) {
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
   const port = Number(process.env.PORT) || 8080;
   createServer().listen(port, () => {
-    const e = process.env, on = !!(e.SQUARE_ACCESS_TOKEN && e.SQUARE_LOCATION_ID && e.SQUARE_APP_ID);
+    const e = process.env, on = !!(e.SQUARE_ACCESS_TOKEN && e.SQUARE_LOCATION_ID);
     const notify = [e.INQUIRY_WEBHOOK_URL && "webhook", e.RESEND_API_KEY && e.NOTIFY_EMAIL && "email"].filter(Boolean);
     console.log(`Maruf Cafe on http://localhost:${port}`);
-    console.log(`  Square checkout: ${on ? (e.SQUARE_ENV === "production" ? "LIVE" : "sandbox") : "off (set SQUARE_ACCESS_TOKEN, SQUARE_LOCATION_ID, SQUARE_APP_ID)"}`);
+    console.log(`  Orders into Square: ${on ? (e.SQUARE_ENV === "production" ? "LIVE" : "sandbox") : "off (set SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID)"}`);
     console.log(`  Requests: saved in ${path.join(e.DATA_DIR || path.join(ROOT, "data"), "maruf.db")}${notify.length ? ` + ${notify.join(" + ")} notification` : " (no notification set: see RESEND_API_KEY / INQUIRY_WEBHOOK_URL)"}`);
     console.log(`  Staff dashboard: ${e.ADMIN_PASSWORD && e.ADMIN_PASSWORD.length >= 10 ? "on at /admin/" : "off (set ADMIN_PASSWORD, at least 10 characters)"}`);
   });

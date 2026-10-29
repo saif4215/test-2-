@@ -98,6 +98,8 @@ The app ids are `com.marufcafe.app` (change them in `app/app.json` before the fi
 > • Rent our space: ask about private events, engagements, private dinners and celebrations. Send your date and guest count and we'll follow up about availability and pricing.
 > • Group-size planner: enter your number of guests to plan your food. Maruf Cafe confirms quantities and pricing with you.
 > • Menu: coffee, refreshers, tea, breakfast, sandwiches, burgers, wings, sides and sweets, with prices. Build an order list and send it with your quote request, or continue to our Square Online store to order pickup.
+>
+> **Once Square is connected** (DEPLOY.md section 6), use this line for the Menu instead, because it is then true: "• Order ahead: pick what you want from the menu, place your pickup order in the app, and pay at the counter when you pick it up. Or build an order list and send it with a quote request for a big order."
 > • Ask a question: quick answers about the menu and prices, our hours, large orders and renting the café.
 > • Hours, address, phone and directions in one tap.
 >
@@ -114,7 +116,7 @@ The app ids are `com.marufcafe.app` (change them in `app/app.json` before the fi
 
 **App Review notes** (paste into the review notes box)
 
-> No sign-in is needed. The app shows the café's menu, hours and contact details, a group-size planner, and two request forms (Groups → "Get a large order quote", and Groups → "Rent the café" → "Check a date"). Submitting a form sends the customer's request to the café's server and shows a confirmation. "Ask us" on the Home screen (and the question row on Contact) is a chat that answers from the café's own menu and details. "Order pickup on Square Online" opens the café's existing web store in the browser. There is no in-app payment and no account.
+> No sign-in is needed. The app shows the café's menu, hours and contact details, a group-size planner, and two request forms (Groups → "Get a large order quote", and Groups → "Rent the café" → "Check a date"). Submitting a form sends the customer's request to the café's server and shows a confirmation. "Ask us" on the Home screen (and the question row on Contact) is a chat that answers from the café's own menu and details. "Order pickup on Square Online" opens the café's existing web store in the browser. There is no in-app payment and no account. [Add this only once Square is connected: "Menu → add items → My order → Place order for pickup sends the order to the café's point-of-sale system (Square) for pickup; the customer pays at the counter. Orders placed during review reach the café, so please enter a name and phone number such as 'App Review' and (718) 555-0100; the café will cancel them."]
 
 **Screenshots:** `store/screenshots/iphone-6.9/` (eight files, 1320 × 2868: Home, Groups planner, Rent the café, Menu, Ask a question, My order, quote form, thank-you). Apple scales these for smaller iPhones. They are taken from the web version of the app at phone size, which looks the same as the iPhone version for these screens, but replace them with real iPhone screenshots from your TestFlight build if you can. iPad screenshots: `store/screenshots/ipad-13/` (see section 0).
 

@@ -7,7 +7,8 @@
 // What it changes in the copy (the built app itself is not touched):
 //  - the app's file addresses are made relative to wherever app/index.html is served from;
 //  - a small stand-in for the café's server answers the few things the app asks the server for: the menu and details,
-//    the chat (using the same answers as the real server's keyless chat), and "send a request" (nothing is actually sent).
+//    the chat (using the same answers as the real server's keyless chat), "send a request" and "place an order" (nothing is actually sent;
+//    a placed order moves through its steps by itself so the whole flow can be seen).
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,6 +53,10 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
   var CONTENT = ${JSON.stringify(content)}, MENU = ${JSON.stringify(menu)}, PUBLIC_CONTENT = ${JSON.stringify(publicContent)};
   ${fmtHourSrc}
   ${answersSrc}
+  var PRICE = {};
+  Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { if (typeof it.cents === "number") PRICE[it.id] = it.cents; }); }); });
+  var ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", placed = {};
+  function refOf(key) { var h = 7, out = ""; for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0; for (var j = 0; j < 4; j++) { out += ALPHA[h % ALPHA.length]; h = Math.floor(h / ALPHA.length) + 17; } return out; }
   var realFetch = window.fetch.bind(window);
   function reply(obj, status) { return Promise.resolve(new Response(JSON.stringify(obj), { status: status || 200, headers: { "Content-Type": "application/json" } })); }
   window.fetch = function (input, init) {
@@ -63,7 +68,20 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
     if (pathname === "/api/assistant") {
       if (method === "GET") return reply({ enabled: true, mode: "basic" });
       var body = {}; try { body = JSON.parse(init.body); } catch (e) { /* no messages */ }
-      return reply(Object.assign({ ok: true, mode: "basic" }, basicAnswer(CONTENT, MENU, body.messages || [])));
+      return reply(Object.assign({ ok: true, mode: "basic" }, basicAnswer(CONTENT, MENU, body.messages || [], new Date(), { ordering: true })));
+    }
+    if (pathname === "/api/config") return reply({ enabled: true, environment: "sandbox", taxPercent: 0, maxOrderCents: 30000 });
+    if (pathname === "/api/order" && method === "POST") {
+      var order = {}; try { order = JSON.parse(init.body); } catch (e) { /* no order */ }
+      var total = 0, id = "preview" + Date.now().toString(36);
+      (order.items || []).forEach(function (it) { total += (PRICE[it.id] || 0) * (it.qty || 0); });
+      placed[id] = { at: Date.now(), ref: refOf(String(order.idempotencyKey || id)), total: total };
+      return reply({ ok: true, orderId: id, ref: placed[id].ref, totalCents: total, preview: true });
+    }
+    var progress = /^\/api\/order\/(preview\w+)$/.exec(pathname);
+    if (progress) {
+      var p = placed[progress[1]], age = p ? Date.now() - p.at : 0;
+      return reply({ ok: true, status: age < 12000 ? "received" : age < 30000 ? "accepted" : "ready", ref: p ? p.ref : "", totalCents: p ? p.total : null });
     }
     if (pathname === "/api/inquiry" && method === "POST") return reply({ ok: true });   // a preview: nothing is stored or sent
     return realFetch(input, init);

@@ -30,3 +30,8 @@ export function reorderIds(history, itemsById) {
 export function readSaved(raw, fallback) {
   try { const v = JSON.parse(raw); return Array.isArray(v) ? v : fallback; } catch { return fallback; }
 }
+
+/** Like readSaved, for something stored as an object (not a list). */
+export function readObject(raw, fallback) {
+  try { const v = JSON.parse(raw); return v && typeof v === "object" && !Array.isArray(v) ? v : fallback; } catch { return fallback; }
+}

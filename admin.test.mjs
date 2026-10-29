@@ -149,7 +149,7 @@ test("the request list can be exported as a spreadsheet, safely", async () => {
 });
 
 /* ---------------- menu ---------------- */
-test("menu edits change the public menu, and hidden items cannot be bought", async () => {
+test("menu edits change the public menu, and hidden items cannot be ordered", async () => {
   const sq = http.createServer(async (req, res) => {
     let raw = ""; for await (const c of req) raw += c;
     sq.calls.push({ url: req.url, json: raw ? JSON.parse(raw) : {} });
@@ -159,7 +159,7 @@ test("menu edits change the public menu, and hidden items cannot be bought", asy
   });
   sq.calls = [];
   await new Promise((r) => sq.listen(0, r));
-  const t = await startSite({ SQUARE_ACCESS_TOKEN: "t", SQUARE_LOCATION_ID: "l", SQUARE_APP_ID: "a", SQUARE_API_BASE: `http://localhost:${sq.address().port}` });
+  const t = await startSite({ SQUARE_ACCESS_TOKEN: "t", SQUARE_LOCATION_ID: "l", SQUARE_API_BASE: `http://localhost:${sq.address().port}` });
   const a = await t.login();
   const menu = (await a.get("menu")).json.menu;
   const latte = menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte");
@@ -171,9 +171,9 @@ test("menu edits change the public menu, and hidden items cannot be bought", asy
   assert.equal(pub.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents, 999);
   assert.equal(pub.groups.Drinks.Coffee.some((i) => i.id === "drinks-coffee-espresso"), false, "hidden items are not public");
   assert.equal((await (await a.get("menu")).json.menu.groups.Drinks.Coffee.some((i) => i.id === "drinks-coffee-espresso")), true, "but the owner still sees them");
-  const buy = (id) => fetch(t.u + "/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id, qty: 1 }], name: "Sam", sourceId: "cnon:x", idempotencyKey: "11111111-2222-3333-4444-555555555555" }) });
+  const buy = (id) => fetch(t.u + "/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id, qty: 1 }], name: "Sam", phone: "7185550123", idempotencyKey: "11111111-2222-3333-4444-555555555555" }) });
   assert.equal((await buy("drinks-coffee-latte")).status, 200);
-  assert.equal(sq.calls[0].json.order.line_items[0].base_price_money.amount, 999, "checkout uses the new price");
+  assert.equal(sq.calls[0].json.order.line_items[0].base_price_money.amount, 999, "the order uses the new price");
   assert.equal((await buy("drinks-coffee-espresso")).status, 400, "hidden item is refused");
   // reset
   assert.equal((await a.del("menu")).status, 200);

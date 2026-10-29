@@ -401,7 +401,7 @@ async function viewSetup(main) {
         check(true, "Requests are saved in the database.", ""),
         check(s.email, "Email alerts are on. New requests are emailed to you.", "Email alerts are OFF. Set RESEND_API_KEY and NOTIFY_EMAIL (see DEPLOY.md), or you will only see requests here."),
         check(s.email || s.webhook, "You are alerted when a request arrives.", "Nothing alerts you when a request arrives. Add email alerts or a webhook."),
-        check(s.square !== "off", `Online card checkout is on (${s.square}).`, "Online card checkout is off. That is fine until you set up Square."),
+        check(s.square !== "off", `App orders go into your Square (${s.square}).`, "App orders are off, so customers can only send requests or use your Square Online store. Turn them on by connecting Square (see DEPLOY.md)."),
         check(s.assistant, "The chat in the app uses an AI service for smarter answers.", "The chat in the app is on and answers from your menu and details, with no AI. Add an AI key if you want smarter answers (optional, see DEPLOY.md)."),
         check(s.publicUrl, "The server address is set (links in emails are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
         check(s.staffAccount, "A staff account is set up.", "No staff account. Set STAFF_PASSWORD (10+ characters) to give staff their own sign-in."),

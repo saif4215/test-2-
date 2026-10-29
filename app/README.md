@@ -53,7 +53,7 @@ Tap any item for a bigger view with its price, description and an Add button (`s
 
 Each screen has one job and each thing is shown once, so the app does not pile up. **Home** is the greeting, one big "Start an order" card, three shortcuts (Catering, Events, Ask us), **Order again** (only once someone has sent an order), the café's **Try these** picks and a **Visit us** map card. The Menu is the menu: **Your favorites** (only once something is hearted) and the category rows, with a one-line "open until / address" under the title. Anything optional is folded away behind a tap (`Disclosure` in `src/components/ui.js`): the group planner, the rental options, a drink's "More options" (shots, syrup, milk, ice, extras; size and hot or iced stay up front), the note on an item, and "More details (optional)" on both forms, which opens by itself if a mistake is in a folded field (`src/lib/forms.js`). The forms show only the required fields first.
 
-The app also borrows a few habits that people know from big café and delivery apps, built in Maruf Cafe's own look: a greeting by time of day, a "Pickup at" line with the address and whether the café is open (`src/components/StoreBar.js`), a heart on each item that fills **Your favorites**, **Order again** with an Add all button (the items of the last order sent), and a note per item that travels with the quote request. Favorites and recent orders are kept on the phone only (`src/lib/memory.js`, using AsyncStorage; the browser's own storage on the web). There are no rewards, points or in-app payments, because the café does not run any.
+The app also borrows a few habits that people know from big café and delivery apps, built in Maruf Cafe's own look: a greeting by time of day, a "Pickup at" line with the address and whether the café is open (`src/components/StoreBar.js`), a heart on each item that fills **Your favorites**, **Order again** with an Add all button (the items of the last order sent), and a note per item that travels with the quote request. Favorites and recent orders are kept on the phone only (`src/lib/memory.js`, using AsyncStorage; the browser's own storage on the web). There are no rewards, points or in-app payments, because the café does not run any. The name and phone used for a pickup order are remembered on the phone too, so the next order is two taps.
 
 ### Drinks
 
@@ -90,9 +90,12 @@ The server has its own tests: `cd .. && node --test server.test.mjs`.
 
 ## What this app does not do yet
 
-- **No card payments in the app.** "Add to Order" builds an order list. From it, customers can send a quote request
-  with those items or open your Square Online store to pay. Taking cards inside the app needs Square's native
-  payment SDK and a custom build.
+- **No card payments in the app.** "Add to Order" builds an order list. When the café has connected Square (`../DEPLOY.md`
+  section 6), **Place order for pickup** (`src/app/checkout.js`) sends it to the café's server, which creates a pickup order in
+  the café's Square account; the customer pays at the counter and watches the order's progress (`src/app/order-sent.js`).
+  Without Square connected, or for an item with a price range, customers can send a quote request with those items or open
+  your Square Online store. Taking cards inside the app would need Square's hosted payment page or its native payment SDK
+  and a custom build.
 - **Prices are never invented.** Event packages show no prices. The calculator shows quantities and totals only when
   you provide serving sizes and prices.
 - **Menu photos and descriptions** are empty because none were provided. Until the café adds its own, each item shows a generic 3D-rendered picture of its kind of food (`assets/menu/`, chosen by `src/lib/menu-art-key.js`); these are not photos of the café's food.
