@@ -19,6 +19,7 @@ import { normalizeContent, mergeContent } from "./lib/content.mjs";
 import { detectImage, MAX_UPLOAD_BYTES, MAX_UPLOADS } from "./lib/uploads.mjs";
 import { renderPage, robotsTxt, sitemapXml } from "./lib/render.mjs";
 import { cleanMessages, ask, provider } from "./lib/assistant.mjs";
+import { draftReply, digest } from "./lib/staff-assistant.mjs";
 import { basicAnswer } from "./lib/answers.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -202,6 +203,8 @@ export function createServer(env = process.env) {
   const assistantOn = !!provider(env);
   const assistantPerMin = Number(env.ASSISTANT_RATE_LIMIT_PER_MIN) || 6, assistantPerDay = Number(env.ASSISTANT_DAILY_LIMIT) || 300;
   let assistantDay = "", assistantCount = 0;
+  const staffPerDay = Number(env.STAFF_AI_DAILY_LIMIT) || 100;
+  let staffDay = "", staffCount = 0;
   async function assistant(body) {
     const clean = cleanMessages(body?.messages);
     if (clean.error) throw new HttpError(400, clean.error);
@@ -276,12 +279,12 @@ export function createServer(env = process.env) {
       const r = auth.login(typeof b.username === "string" ? b.username : "", typeof b.password === "string" ? b.password : "", ip);
       if (!r.ok) throw new HttpError(r.status, r.error);
       db?.audit(r.user, "login");
-      return out(200, { ok: true, user: r.user, role: r.role, csrf: r.csrf, canManageSite: manages(r.role), canEditMenu: true }, { headers: { "Set-Cookie": auth.cookie(r.token, secure, r.maxAge) } });
+      return out(200, { ok: true, user: r.user, role: r.role, csrf: r.csrf, canManageSite: manages(r.role), canEditMenu: true, assistant: assistantOn }, { headers: { "Set-Cookie": auth.cookie(r.token, secure, r.maxAge) } });
     }
     const session = auth.session(req);
     if (!session) throw new HttpError(401, "Please sign in.");
     const who = session.user, role = session.role, canManage = manages(role);
-    if (route === "me") return out(200, { ok: true, user: who, role, csrf: session.csrf, canManageSite: canManage, canEditMenu: true });
+    if (route === "me") return out(200, { ok: true, user: who, role, csrf: session.csrf, canManageSite: canManage, canEditMenu: true, assistant: assistantOn });
     if (method !== "GET" && method !== "HEAD" && !auth.csrfOk(req, session)) throw new HttpError(403, "Your sign-in expired. Reload the page and try again.");
     if (route === "logout") {
       if (method !== "POST") throw new HttpError(405, "Method not allowed.");
@@ -319,6 +322,33 @@ export function createServer(env = process.env) {
       if (!r) throw new HttpError(404, "Request not found.");
       db.audit(who, "request.update", `${m[1].slice(0, 8)} ${patch.status ? `status=${patch.status}` : ""}${patch.notes !== undefined ? " notes" : ""}`.trim());
       return out(200, { ok: true, request: withView(r), counts: db.counts() });
+    }
+
+    /* the staff helper: summarize a request and draft a reply, or an overview of what is open. It only reads, and a person sends or changes anything. */
+    if (route === "assistant" && method === "POST") {
+      if (!assistantOn) throw new HttpError(503, "The AI helper is not switched on. Add an AI key on the server (see DEPLOY.md).");
+      if (limited("staff-ai", who, 12)) throw new HttpError(429, "Too many requests to the assistant. Wait a minute and try again.");
+      const day = new Date().toISOString().slice(0, 10);
+      if (day !== staffDay) { staffDay = day; staffCount = 0; }
+      if (staffCount >= staffPerDay) throw new HttpError(429, "The assistant has reached its limit for today.");
+      const b = await readBody(req, 2000);
+      try {
+        if (b.task === "draft") {
+          const r = typeof b.id === "string" && /^[0-9a-f-]{36}$/.test(b.id) ? db.getInquiry(b.id) : null;
+          if (!r) throw new HttpError(404, "Request not found.");
+          staffCount++;
+          const result = await draftReply(env, getContent(), publicMenu(getMenu()), r);
+          db.audit(who, "ai.draft", r.id.slice(0, 8));
+          return out(200, { ok: true, ...result });
+        }
+        if (b.task === "digest") {
+          staffCount++;
+          const result = await digest(env, getContent(), publicMenu(getMenu()), db.listInquiries({ limit: 200 }).rows);
+          db.audit(who, "ai.digest");
+          return out(200, { ok: true, ...result });
+        }
+      } catch (err) { if (err instanceof HttpError) throw err; throw new HttpError(502, err.message); }
+      throw new HttpError(400, "Unknown task.");
     }
 
     /* menu, content, photos (owner, or staff when STAFF_CAN_EDIT_SITE=1) */

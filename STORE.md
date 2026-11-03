@@ -19,7 +19,7 @@ Nothing here has been submitted. Publishing needs your own accounts.
 - **The chat and Apple's rules.** Out of the box the chat answers from the café's own menu and details, and nothing leaves the café's server.
   If you connect a third-party AI key (Anthropic, Google, Groq, OpenRouter...), the typed questions are sent to that company. Apple's
   App Review Guidelines require you to clearly disclose that and ask permission before sharing personal data with third-party AI.
-  The privacy policy now says so, but the app has no consent prompt. The simplest safe path: **launch without an AI key**, and add the
+  The privacy policy now says so (including the order helper and the staff helper), but the app has no consent prompt. The simplest safe path: **launch without an AI key**, and add the
   consent prompt later if you connect one. Check the current guidelines before you do.
 - **3D is web only.** The burger and the cup are not drawn in the iPhone app (that is why the screenshots below have none).
 

@@ -68,7 +68,7 @@ test("a question goes to Claude with the café's real details, and the key stays
   assert.equal(r.status, 200); assert.equal(r.json.reply, "Hi! A Latte is $4.50.");
   const c = m.calls[0];
   assert.equal(c.url, "/v1/messages"); assert.equal(c.key, "sk-ant-secret"); assert.ok(c.version);
-  assert.equal(c.body.model, "claude-haiku-5-5"); assert.ok(c.body.max_tokens <= 500);
+  assert.equal(c.body.model, "claude-haiku-5-5"); assert.ok(c.body.max_tokens <= 800);
   assert.deepEqual(c.body.messages, [{ role: "user", content: "How much is a latte?" }]);
   for (const fact of ["365 Veterans Rd W", "(929) 335-3296", "Latte $4.50", "NOT PROVIDED", "Never state or imply that a date is available"]) assert.ok(c.body.system.includes(fact), fact);
   assert.doesNotMatch(JSON.stringify(r.json), /sk-ant/);

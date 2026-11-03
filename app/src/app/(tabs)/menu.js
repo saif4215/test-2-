@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { ActiveOrderCard } from "../../components/ActiveOrder";
+import { AssistantNudge } from "../../components/AssistantNudge";
 import { H1, Reveal, TrustBadge } from "../../components/ui";
 import { MenuPage, OrderBar } from "../../components/MenuBrowser";
 import { CloserLook } from "../../components/Viewers";
@@ -22,6 +23,7 @@ export default function Menu() {
               <TrustBadge label={business.badge} />
             </View>
             <StoreBar compact />
+            <AssistantNudge style={{ marginTop: 4 }} />
           </Reveal>
         )}
         footer={<CloserLook />}

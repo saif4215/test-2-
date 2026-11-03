@@ -5,7 +5,7 @@ import { parseDate, parseTime, isPast, openStatus, greeting, closedNotice } from
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems, suggestFor } from "../src/lib/site-merge.js";
-import { trimHistory } from "../src/lib/assistant-util.js";
+import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
@@ -505,4 +505,24 @@ test("while the café is closed an order is warned about it, and nothing is said
   const late = closedNotice(hours, at("2026-01-13T04:00:00Z"));           // Monday 23:00
   assert.match(late.text, /opens 7 AM tomorrow/);
   assert.equal(closedNotice([], at("2026-01-13T04:00:00Z")).text, "The café may not see your order until it opens.");
+});
+
+// ── what the assistant puts together ─────────────────────────────────────────────────────────────────────────────────────────────
+test("a proposal from the assistant is checked against this phone's menu, and prices come only from the menu", () => {
+  const byId = new Map([["latte", { id: "latte", name: "Latte", cents: 450 }], ["lem", { id: "lem", name: "Lemonade", min: 400, max: 600 }], ["gone", { id: "gone", name: "Gone", cents: 100, hidden: true }]]);
+  const lines = readProposal([{ id: "latte", qty: 2, note: " iced \n oat ", cents: 1 }, { id: "latte", qty: 1 }, { id: "nope", qty: 1 }, { id: "gone", qty: 1 }, { id: "lem", qty: 99 }, { id: "lem", qty: 0 }, null, { id: "latte", qty: "x" }], byId);
+  assert.deepEqual(lines.map((l) => [l.id, l.qty, l.note]), [["latte", 2, "iced oat"], ["lem", 20, ""]]);
+  assert.equal(lines[0].item.cents, 450, "the price is the menu's");
+  assert.deepEqual(readProposal("latte", byId), []);
+  assert.deepEqual(readProposal(undefined, byId), []);
+  assert.equal(readProposal(Array.from({ length: 30 }, (_, i) => ({ id: `i${i}`, qty: 1 })), new Map(Array.from({ length: 30 }, (_, i) => [`i${i}`, { id: `i${i}`, name: "x", cents: 1 }]))).length, 10);
+  assert.deepEqual(proposalTotal(lines.slice(0, 1)), { low: 900, high: 900, exact: true });
+  assert.deepEqual(proposalTotal(lines), { low: 900 + 8000, high: 900 + 12000, exact: false });
+});
+test("the assistant's request is added to a note the customer already wrote, not over it", () => {
+  assert.equal(mergeNote("", "iced"), "iced");
+  assert.equal(mergeNote("no ice", "oat milk"), "no ice; oat milk");
+  assert.equal(mergeNote("Iced, oat milk", "iced"), "Iced, oat milk");
+  assert.equal(mergeNote("x", ""), "x");
+  assert.equal(mergeNote("a".repeat(95), "bbbbbbbb").length, 100);
 });

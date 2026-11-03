@@ -44,7 +44,7 @@ const mk = async () => { const ctx = await b.newContext({ viewport: { width: 390
   await p.getByRole("button", { name: "Start an order" }).waitFor();
   await p.getByRole("button", { name: "Ask a question" }).click();
   await p.getByText("How can I help?").waitFor();
-  ok(await p.getByText(/I can help you plan how much food/).isVisible(), "with a key it is the AI helper");
+  ok(await p.getByText(/put it together for you to check/).isVisible(), "with a key it is the AI helper");
   await p.screenshot({ path: `${OUT}/ai-3-chat.png` });
   await p.getByRole("button", { name: "Help me plan food for 30 people" }).click();
   await p.getByText(/around 30/).waitFor();

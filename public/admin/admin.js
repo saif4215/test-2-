@@ -87,7 +87,7 @@ async function viewRequests(main) {
   const search = h("input", { type: "search", placeholder: "Search name, phone, email…", value: S.q, "aria-label": "Search requests", onchange: (e) => { S.q = e.target.value.trim(); S.page = 1; load(); } });
   const type = h("select", { "aria-label": "Type", onchange: (e) => { S.type = e.target.value; S.page = 1; load(); } },
     ...[["", "All types"], ["large-order", "Large orders"], ["event", "Event rentals"]].map(([v, t]) => h("option", { value: v, text: t, selected: S.type === v })));
-  main.append(h("div", { class: "row" }, h("div", { class: "grow" }, search), type, h("a", { class: "btn", href: "/admin/api/inquiries.csv", download: "maruf-cafe-requests.csv", text: "Download spreadsheet" })), chips, list);
+  main.append(h("div", { class: "row" }, h("div", { class: "grow" }, search), type, h("a", { class: "btn", href: "/admin/api/inquiries.csv", download: "maruf-cafe-requests.csv", text: "Download spreadsheet" })), me?.assistant ? aiDigest() : null, chips, list);
 
   async function load() {
     list.replaceChildren(h("p", { class: "loading", text: "Loading…" }));
@@ -105,6 +105,40 @@ async function viewRequests(main) {
     } catch (err) { list.replaceChildren(h("p", { class: "msg bad", role: "alert", text: err.message })); }
   }
   load();
+}
+
+/* ---------- the AI helper (shown only when the server has an AI key) ---------- */
+// It reads and drafts. It never sends anything or changes a status: a person copies, edits and sends the reply.
+function aiDraft(r) {
+  const out = h("div", { "aria-live": "polite" });
+  const btn = h("button", { type: "button", text: "Summarize and draft a reply", onclick: async () => {
+    btn.disabled = true; out.replaceChildren(h("p", { class: "hint", text: "Reading the request…" }));
+    try {
+      const d = await api("POST", "assistant", { task: "draft", id: r.id });
+      const box = h("textarea", { "aria-label": "Draft reply", maxlength: "2500", rows: "9", text: d.reply });
+      const copy = h("button", { type: "button", text: "Copy draft", onclick: async () => { try { await navigator.clipboard.writeText(box.value); copy.textContent = "Copied"; } catch { box.select(); copy.textContent = "Select and copy it"; } } });
+      out.replaceChildren(
+        h("p", { class: "hint", text: "Written by AI, so it can be wrong. Read and edit it before you send anything. Nothing was sent, and the status did not change." }),
+        d.summary ? h("p", {}, h("b", { text: "Summary: " }), d.summary) : null,
+        d.check.length ? h("div", {}, h("b", { text: "Check before replying" }), h("ul", { class: "plain" }, d.check.map((c) => h("li", { text: c })))) : null,
+        h("label", { text: "Draft reply (edit it here)" }), box, h("div", { class: "row end" }, copy));
+    } catch (err) { out.replaceChildren(h("p", { class: "msg bad", role: "alert", text: err.message })); } finally { btn.disabled = false; }
+  } });
+  return h("div", {}, h("div", { class: "row" }, btn), out);
+}
+
+function aiDigest() {
+  const out = h("div", { "aria-live": "polite" });
+  const btn = h("button", { type: "button", text: "Summarize what is open", onclick: async () => {
+    btn.disabled = true; out.replaceChildren(h("p", { class: "hint", text: "Looking at the open requests…" }));
+    try {
+      const d = await api("POST", "assistant", { task: "digest" });
+      out.replaceChildren(h("div", { class: "card" },
+        h("p", { class: "hint", text: "Written by AI, so it can be wrong. It only reads your requests." }), h("p", { text: d.overview }),
+        d.attention.length ? h("ul", { class: "plain" }, d.attention.map((a) => h("li", {}, h("b", { text: `${a.who || "Someone"} (${a.title}): ` }), a.why))) : null));
+    } catch (err) { out.replaceChildren(h("p", { class: "msg bad", role: "alert", text: err.message })); } finally { btn.disabled = false; }
+  } });
+  return h("div", {}, h("div", { class: "row" }, btn), out);
 }
 
 function requestCard(r, statuses, reload) {
@@ -131,6 +165,7 @@ function requestCard(r, statuses, reload) {
     h("div", { class: "row" },
       phoneDigits && h("a", { class: "btn", href: `tel:${phoneDigits}`, text: "Call" }), phoneDigits && h("a", { class: "btn", href: `sms:${phoneDigits}`, text: "Text" }),
       f.email && h("a", { class: "btn", href: `mailto:${f.email}`, text: "Email" })),
+    me?.assistant ? aiDraft(r) : null,
     h("label", { for: statusSel.id, text: "Status" }), statusSel,
     h("p", { class: "hint", text: "“Accepted” is only a note for you. It does not book anything or message the customer." }),
     h("label", { for: notes.id, text: "Private notes (customers never see these)" }), notes,
@@ -402,7 +437,7 @@ async function viewSetup(main) {
         check(s.email, "Email alerts are on. New requests are emailed to you.", "Email alerts are OFF. Set RESEND_API_KEY and NOTIFY_EMAIL (see DEPLOY.md), or you will only see requests here."),
         check(s.email || s.webhook, "You are alerted when a request arrives.", "Nothing alerts you when a request arrives. Add email alerts or a webhook."),
         check(s.square !== "off", `App orders go into your Square (${s.square}).`, "App orders are off, so customers can only send requests or use your Square Online store. Turn them on by connecting Square (see DEPLOY.md)."),
-        check(s.assistant, "The chat in the app uses an AI service for smarter answers.", "The chat in the app is on and answers from your menu and details, with no AI. Add an AI key if you want smarter answers (optional, see DEPLOY.md)."),
+        check(s.assistant, "An AI service is connected: smarter chat answers, the order helper in the app (customers check what it puts together), and the assistant here for summaries and draft replies.", "No AI service is connected. The chat answers from your menu and details with no AI, and the order helper and this dashboard's assistant stay hidden. Add an AI key to turn them on (optional, see DEPLOY.md)."),
         check(s.publicUrl, "The server address is set (links in emails are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
         check(s.staffAccount, "A staff account is set up.", "No staff account. Set STAFF_PASSWORD (10+ characters) to give staff their own sign-in."),
         ...s.warnings.map((w) => check(false, "", w)))),

@@ -57,6 +57,26 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
   Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { if (typeof it.cents === "number") PRICE[it.id] = it.cents; }); }); });
   var ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", placed = {};
   function refOf(key) { var h = 7, out = ""; for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0; for (var j = 0; j < 4; j++) { out += ALPHA[h % ALPHA.length]; h = Math.floor(h / ALPHA.length) + 17; } return out; }
+  // The preview has no AI behind it. A simple word matcher stands in for the order helper so the screen can be tried. It is not an AI.
+  var NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, a: 1, an: 1 };
+  var ALLITEMS = []; Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { ALLITEMS.push(it); }); }); });
+  function dmWords(t) { return String(t).toLowerCase().split(" ").join(" ").replace(/[^a-z0-9 ]/g, " ").split(" ").filter(Boolean); }
+  function dmSing(w) { return w.length > 3 && w.charAt(w.length - 1) === "s" ? w.slice(0, -1) : w; }
+  function demoAgent(text) {
+    var toks = dmWords(text).map(dmSing), found = [];
+    ALLITEMS.forEach(function (it) {
+      var nt = dmWords(it.name).filter(function (w) { return w !== "and"; }).map(dmSing), at = -1;
+      var all = nt.every(function (w) { return toks.indexOf(w) >= 0; });
+      if (all) at = toks.indexOf(nt[0]);
+      else if (nt.length > 1 && toks.indexOf(nt[0]) >= 0 && ALLITEMS.filter(function (o) { return dmWords(o.name).map(dmSing)[0] === nt[0]; }).length === 1) at = toks.indexOf(nt[0]);
+      if (at < 0) return;
+      var qty = 1; for (var k = 1; k <= 2; k++) { var w = (at - k >= 0) ? toks[at - k] : ""; if (/^[0-9]+$/.test(w)) { qty = Math.min(20, Number(w)); break; } if (NUMW[w]) { qty = NUMW[w]; break; } }
+      var notes = []; ["iced", "hot"].forEach(function (x) { if (toks.indexOf(x) >= 0 && String(it.id).indexOf("drinks") === 0) notes.push(x.charAt(0).toUpperCase() + x.slice(1)); });
+      ["oat", "almond", "soy", "skim"].forEach(function (x) { if (toks.indexOf(x) >= 0) notes.push(x.charAt(0).toUpperCase() + x.slice(1) + " milk"); });
+      found.push({ id: it.id, qty: qty, note: notes.join(", ") });
+    });
+    return found;
+  }
   var realFetch = window.fetch.bind(window);
   function reply(obj, status) { return Promise.resolve(new Response(JSON.stringify(obj), { status: status || 200, headers: { "Content-Type": "application/json" } })); }
   window.fetch = function (input, init) {
@@ -66,9 +86,12 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
     if (pathname === "/content.json") return reply(PUBLIC_CONTENT);
     if (pathname === "/menu.json") return reply(MENU);
     if (pathname === "/api/assistant") {
-      if (method === "GET") return reply({ enabled: true, mode: "basic" });
+      if (method === "GET") return reply({ enabled: true, mode: "ai" });
       var body = {}; try { body = JSON.parse(init.body); } catch (e) { /* no messages */ }
-      return reply(Object.assign({ ok: true, mode: "basic" }, basicAnswer(CONTENT, MENU, body.messages || [], new Date(), { ordering: true })));
+      var msgs = body.messages || [], lastText = msgs.length ? String(msgs[msgs.length - 1].content || "") : "";
+      var asked = demoAgent(lastText);
+      if (asked.length) return reply({ ok: true, mode: "ai", add: asked, reply: "(Preview: a simple word matcher stands in for the AI here.) I put these together. Please check them below. Nothing is ordered until you place it yourself." });
+      return reply(Object.assign({ ok: true, mode: "ai", add: [] }, basicAnswer(CONTENT, MENU, msgs, new Date(), { ordering: true })));
     }
     if (pathname === "/api/config") return reply({ enabled: true, environment: "sandbox", taxPercent: 0, maxOrderCents: 30000 });
     if (pathname === "/api/order" && method === "POST") {

@@ -162,7 +162,25 @@ questions but not open-ended ones; for anything it does not know it says so and 
 To upgrade it to a real AI helper that handles open-ended questions and helps plan how much food a group needs:
 1. Create an account at **console.anthropic.com**, add a small amount of credit, and open **API Keys → Create Key**.
 2. In your host's settings add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
-3. Redeploy. The "Ask Maruf Cafe AI" button on the app's Home screen now opens a chat.
+3. Redeploy. The chat now uses the AI, and the two helpers below switch on by themselves. With no key they are **hidden**, not greyed out.
+
+### What the AI key turns on
+
+- **Smarter chat answers** for open-ended questions.
+- **The order helper in the app.** A customer types or says what they want ("2 iced lattes and a bagel") and the helper shows the items it
+  understood, with quantities and requests (iced, oat milk...) and the prices from your menu. **The customer checks them and taps Add to my
+  order**, then places the order themselves from My order as usual. The helper cannot place an order, cannot name an item that is not on your
+  visible menu, and never sets a price: the server drops anything that is not a real item, and the app looks prices up itself.
+  A **Tell us what you want** button appears on the Menu screen only when the key is set.
+- **The assistant in the staff dashboard.** On the Requests tab, **Summarize what is open** gives a short overview and which requests stand
+  out, and each request has **Summarize and draft a reply**. The draft is for a person to read, edit and send: nothing is sent, no status
+  changes, and where staff must decide something (a date, a price) the draft says so in square brackets. Only the first name and the
+  details of the request go to the AI, never the phone number, email address or delivery address, and every use is in the Setup tab's
+  recent changes. Staff and owner can both use it. Limits: 12 uses a minute per person and 100 a day (`STAFF_AI_DAILY_LIMIT`).
+
+These helpers send more of your menu to the AI service than plain Q&A does (every item with its id), and the staff helper sends the text of
+customers' requests. The privacy page says both. A stronger model follows the "never promise a date or price" rules more reliably than a
+small free one, so try tricky messages first ("book me Saturday", "is this nut free?", "ignore your rules") before you turn it on for customers.
 
 ### Free option (any OpenAI-style service)
 
@@ -182,8 +200,8 @@ and some free services may keep or use what people type to improve their product
 follow the café's rules less reliably than a stronger paid model, so test it with tricky questions (dates, allergies, prices) first.
 If both are set, the free service is used.
 
-Cost control: each visitor is limited to 6 questions a minute, and the whole assistant stops at 300 questions a day
-(`ASSISTANT_DAILY_LIMIT`). Set your own monthly spending limit in the Anthropic console too. The key stays on the server.
+Cost control: each visitor is limited to 6 questions a minute, and the whole customer assistant stops at 300 questions a day
+(`ASSISTANT_DAILY_LIMIT`); the staff helper has its own limit of 100 a day. Set your own monthly spending limit in the Anthropic console too. The key stays on the server.
 Chats are not stored, and the privacy page says that questions are sent to Anthropic. Check Anthropic's pricing page for current costs.
 
 ---
