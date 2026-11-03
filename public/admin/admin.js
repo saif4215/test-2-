@@ -427,6 +427,18 @@ async function viewPhotos(main) {
 }
 
 /* ---------- setup ---------- */
+/** What the app menu and the café's Square item list say, side by side. The chat reads Square's descriptions; nothing here changes either list. */
+function squareMenuCard(m) {
+  const money = (c) => (Array.isArray(c) ? c.map((x) => "$" + (x / 100).toFixed(2)).join("–") : "$" + (c / 100).toFixed(2));
+  const list = (title, note, rows) => rows.length ? h("div", {}, h("h3", { text: title }), h("p", { class: "hint", text: note }), h("ul", { class: "plain" }, rows.map((r) => h("li", { text: r })))) : null;
+  if (!m.ok) return h("div", { class: "card" }, h("h2", { text: "Your Square item list" }), h("p", { class: "msg bad", role: "alert", text: `${m.error} The chat is not using it. Check that the Square access token is allowed to read items.` }));
+  return h("div", { class: "card" }, h("h2", { text: "Your Square item list" }),
+    h("p", { text: `The chat can use what you wrote about your items in Square (${m.items} items there, ${m.matched} match the app menu by name). It reads Square and never changes it.` }),
+    list("Prices that do not match", "For these the chat does not state a price and tells the customer to call. Fix whichever side is wrong (the app menu is the Menu tab here).", m.differ.map((d) => `${d.name}: app ${money(d.app)}, Square ${money(d.square)}`)),
+    list("In Square but not in the app menu", "Customers cannot order these in the app. Add them in the Menu tab if they should be able to.", m.onlyInSquare),
+    list("In the app menu but not found in Square", "Usually a different spelling of the name. The chat then uses the app menu only for these.", m.onlyInApp));
+}
+
 async function viewSetup(main) {
   try {
     const s = await api("GET", "status"), a = await api("GET", "audit");
@@ -441,6 +453,7 @@ async function viewSetup(main) {
         check(s.publicUrl, "The server address is set (links in emails are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
         check(s.staffAccount, "A staff account is set up.", "No staff account. Set STAFF_PASSWORD (10+ characters) to give staff their own sign-in."),
         ...s.warnings.map((w) => check(false, "", w)))),
+      s.squareMenu ? squareMenuCard(s.squareMenu) : null,
       h("div", { class: "card" }, h("h2", { text: "Request counts" }), h("p", { text: Object.entries(s.counts).map(([k, n]) => `${k.replace("_", " ")}: ${n}`).join(" · ") })),
       h("div", { class: "card" }, h("h2", { text: "Recent changes" }), h("ul", { class: "plain" }, a.entries.length ? a.entries.slice(0, 40).map((e) => h("li", { text: `${when(e.at)} · ${e.user} · ${e.action}${e.detail ? " · " + e.detail : ""}` })) : h("li", { text: "Nothing yet." }))));
   } catch (err) { main.append(h("p", { class: "msg bad", text: err.message })); }

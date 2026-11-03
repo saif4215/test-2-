@@ -29,14 +29,14 @@ export function useAssistantMode() {
   return mode;
 }
 
-/** Resolves { ok: true, reply, add } (add: items to review, only when an AI is connected) or { ok: false, error }. Never invents an answer. */
+/** Resolves { ok: true, reply, add, handoff } (add: items to review, only when an AI is connected; handoff: a person should answer, so the chat shows a Call button) or { ok: false, error }. Never invents an answer. */
 export async function askAssistant(messages) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch(`${apiUrl}/api/assistant`, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ messages: trimHistory(messages) }) });
     const json = await res.json().catch(() => ({}));
-    if (res.ok && json.ok && json.reply) return { ok: true, reply: json.reply, add: Array.isArray(json.add) ? json.add : [] };
+    if (res.ok && json.ok && json.reply) return { ok: true, reply: json.reply, add: Array.isArray(json.add) ? json.add : [], handoff: json.handoff === true };
     return { ok: false, error: json.error || "The assistant could not answer. Please try again, or call us." };
   } catch {
     return { ok: false, error: "We could not reach Maruf Cafe. Check your connection and try again, or call us." };

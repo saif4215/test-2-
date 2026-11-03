@@ -33,7 +33,8 @@ test("what the AI says about an order is cleaned: only real items, whole quantit
   assert.equal(parseAgentReply('{"reply":"x","add":[{"id":"latte","qty":500}]}', MENU).add[0].qty, 20, "never more than the café's server takes");
   const many = { groups: { A: { B: Array.from({ length: 15 }, (_, i) => ({ id: `i${i}`, name: `I${i}`, cents: 100 })) } } };
   assert.equal(parseAgentReply(JSON.stringify({ reply: "x", add: many.groups.A.B.map((i) => ({ id: i.id, qty: 1 })) }), many).add.length, 10);
-  assert.deepEqual(parseAgentReply("We open at 7 AM.", MENU), { reply: "We open at 7 AM.", add: [] }, "a plain answer still works");
+  assert.deepEqual(parseAgentReply("We open at 7 AM.", MENU), { reply: "We open at 7 AM.", add: [], handoff: false }, "a plain answer still works");
+  assert.equal(parseAgentReply('{"reply":"Call us","handoff":true}', MENU).handoff, true); assert.equal(parseAgentReply('{"reply":"x","handoff":"yes"}', MENU).handoff, false);
   assert.equal(parseAgentReply('{"add":[{"id":"latte","qty":1}]}', MENU).reply.length > 0, true, "an order always comes with words");
   assert.deepEqual(parseAgentReply('{"reply":"hi","add":"latte"}', MENU).add, []);
   assert.equal(extractJson("no json here"), null);

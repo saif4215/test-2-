@@ -164,6 +164,20 @@ To upgrade it to a real AI helper that handles open-ended questions and helps pl
 2. In your host's settings add `ANTHROPIC_API_KEY` = that key. (Optional: `ASSISTANT_MODEL`; the default is `claude-haiku-5-5`, the fast low-cost model.)
 3. Redeploy. The chat now uses the AI, and the two helpers below switch on by themselves. With no key they are **hidden**, not greyed out.
 
+### Connecting the chat to your Square item list
+
+When Square is connected for orders (section 6), the chat also **reads your item list from Square** (read only; it never changes anything in
+Square). Whatever you wrote in an item's description in Square becomes something the chat can say ("Latte: espresso with steamed milk..."),
+with or without an AI key. Needs no extra settings: it uses the same access token, which must be allowed to read items (the default
+for a token made in your own Square developer application). It checks Square every 5 minutes. If Square cannot be reached the chat just goes on without it.
+
+- **Prices:** the app orders from its own menu (the Menu tab in the dashboard), so a customer is always charged the price they were shown.
+  Where Square and the app menu disagree on an item, the chat **does not state a price** and tells the customer to call, and the Setup tab
+  lists the items so you can fix whichever side is wrong. Items are matched by name.
+- **Not used from Square:** hours, sold-out items and stock. Those stay as set in the dashboard.
+- **Call us:** whenever the chat cannot answer (not in your details, allergies and ingredients, a date, an unlisted price), it says so and the
+  app shows a **Call** button with your number, with or without AI. A small "Call" link is always at the bottom of the chat.
+
 ### What the AI key turns on
 
 - **Smarter chat answers** for open-ended questions.

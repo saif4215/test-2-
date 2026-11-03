@@ -44,7 +44,7 @@ const content = mergeContent(normalizeContent(JSON.parse(readFileSync(path.join(
 const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos } = content;
 const publicContent = { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos };
 
-const answersSrc = readFileSync(path.join(ROOT, "lib", "answers.mjs"), "utf8").replace(/^import .*$/m, "").replace("export function basicAnswer", "function basicAnswer");
+const answersSrc = readFileSync(path.join(ROOT, "lib", "answers.mjs"), "utf8").replace(/^import .*$/gm, "").replace("export function basicAnswer", "function basicAnswer");
 const fmtHourSrc = /export function fmtHour[\s\S]*?\n}\n/.exec(readFileSync(path.join(ROOT, "lib", "render.mjs"), "utf8"))[0].replace("export ", "");
 // the stand-in must not contain "</script>" (it is a separate file, but keep it safe if it is ever inlined)
 const shim = `// Stand-in for the café's server, for a preview that has no server. Written by scripts/make-preview.mjs: do not edit.
@@ -52,6 +52,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
   window.__MARUF_PREVIEW = true;
   var CONTENT = ${JSON.stringify(content)}, MENU = ${JSON.stringify(menu)}, PUBLIC_CONTENT = ${JSON.stringify(publicContent)};
   ${fmtHourSrc}
+  function normalizeName(s) { return String(s || "").toLowerCase().replace(/[’']/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim(); }
   ${answersSrc}
   var PRICE = {};
   Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { if (typeof it.cents === "number") PRICE[it.id] = it.cents; }); }); });

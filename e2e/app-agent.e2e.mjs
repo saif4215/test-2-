@@ -12,6 +12,7 @@ const ai = http.createServer(async (req, res) => {
   const last = String(body.messages.at(-1).content);
   let text = "We open at 7 AM.";
   if (/lattes and a bagel/i.test(last)) text = '```json\n' + JSON.stringify({ reply: "Two iced lattes and a bagel. Please check them below.", add: [{ id: "drinks-coffee-latte", qty: 2, note: "Iced" }, { id: "food-breakfast-bagel-and-cream-cheese", qty: 1 }, { id: "not-on-the-menu", qty: 5 }] }) + '\n```';
+  else if (/mystery/i.test(last)) text = JSON.stringify({ reply: "I'm not sure about that one. Please call (929) 335-3296.", handoff: true, add: [] });
   else if (/^REQUEST/.test(last)) text = JSON.stringify({ summary: "Sam wants food for 40 people.", check: ["Is the date free?"], reply: "Hi Sam, thanks for asking. [STAFF: confirm the date] Maruf Cafe" });
   else if (/^OPEN REQUESTS/.test(last)) text = JSON.stringify({ overview: "One request is waiting.", attention: [{ n: 1, why: "no reply yet" }] });
   res.setHeader("content-type", "application/json"); res.end(JSON.stringify({ content: [{ type: "text", text }] }));
@@ -62,6 +63,13 @@ await button("Send question").click();
 await p.getByText("We open at 7 AM.", { exact: false }).first().waitFor({ timeout: 8000 });
 ok(!(await seen("Check before adding")) || (await p.getByText("Check before adding").filter({ visible: true }).count()) === 1, "a plain question does not add a second order card");
 
+// when the AI says a person should answer, the chat shows a Call button
+await p.getByRole("textbox", { name: "Your question" }).fill("Is the mystery special spicy?");
+await button("Send question").click();
+await p.getByText("I'm not sure about that one", { exact: false }).first().waitFor({ timeout: 8000 });
+ok((await p.getByRole("button", { name: "Call Maruf Cafe at (929) 335-3296" }).filter({ visible: true }).count()) >= 1 && await seen("Call (929) 335-3296"), "when the answer is 'ask a person', the chat shows a Call button");
+await p.screenshot({ path: `${SHOTS}/agent-3-call.png` });
+
 // ── the staff assistant ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 await site.post({ type: "large-order", fields: { ...goodOrder(), fullName: "Sam Lee" }, website: "" });
 const d = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -86,6 +94,23 @@ const askUser = aiCalls.filter((c) => /^REQUEST/.test(String(c.messages.at(-1).c
 ok(askUser.includes("name: Sam") && !/Lee|sam@example|555-0101/.test(askUser), "the AI got the first name and the details, not the phone or email");
 await q.screenshot({ path: `${SHOTS}/agent-2-staff.png` });
 await d.close();
+
+// ── built-in chat: a question it cannot answer also offers the phone ─────────────────────────────────────────────────────────────
+{
+  const plain = await startSite({});
+  const p3 = await ctx.newPage();
+  await p3.goto(plain.u + "/app/assistant", { waitUntil: "load" });
+  await p3.getByRole("textbox", { name: "Your question" }).fill("tell me a joke");
+  await p3.getByRole("button", { name: "Send question", exact: true }).click();
+  await p3.getByText("I'm not sure about that one", { exact: false }).first().waitFor({ timeout: 8000 });
+  ok((await p3.getByRole("button", { name: "Call Maruf Cafe at (929) 335-3296" }).filter({ visible: true }).count()) >= 1, "the built-in chat offers the phone when it does not know");
+  await p3.goto(plain.u + "/app/assistant", { waitUntil: "load" });
+  await p3.getByRole("textbox", { name: "Your question" }).fill("what are your hours");
+  await p3.getByRole("button", { name: "Send question", exact: true }).click();
+  await p3.getByText("We're open now", { exact: false }).or(p3.getByText("We're closed", { exact: false })).first().waitFor({ timeout: 8000 });
+  ok((await p3.locator('[aria-label="Call Maruf Cafe at (929) 335-3296"]:visible').count()) === 1, "and when it does know, only the small Call link at the bottom remains");
+  plain.close();
+}
 
 // ── without an AI nothing about the agent shows ──────────────────────────────────────────────────────────────────────────────────
 const off = await startSite({});

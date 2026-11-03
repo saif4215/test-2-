@@ -72,7 +72,7 @@ export default function Assistant() {
     const next = [...messages.filter((m) => !m.error), { role: "user", content }];
     setMessages(next); setDraft(""); setBusy(true);
     const res = await askAssistant(next);
-    setMessages([...next, res.ok ? { role: "assistant", content: res.reply, add: res.add } : { role: "assistant", content: res.error, error: true }]);
+    setMessages([...next, res.ok ? { role: "assistant", content: res.reply, add: res.add, handoff: res.handoff } : { role: "assistant", content: res.error, error: true }]);
     setBusy(false);
   }
 
@@ -120,18 +120,21 @@ export default function Assistant() {
                     <View style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "88%", backgroundColor: m.role === "user" ? colors.ink : m.error ? "#FBEAE8" : colors.surface, borderColor: m.error ? colors.danger : colors.line, borderWidth: m.role === "user" ? 0 : 1, borderRadius: radius.card, padding: 14 }}>
                       <Text selectable accessibilityLabel={`${m.role === "user" ? "You" : "Maruf Cafe assistant"}: ${m.content}`} style={{ fontSize: 16, lineHeight: 23, color: m.role === "user" ? colors.cream : m.error ? colors.danger : colors.ink }}>{m.content}</Text>
                     </View>
+                    {m.role === "assistant" && (m.handoff || m.error) ? (
+                      <Button title={`Call ${business.phone}`} accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} variant="primary" size="medium" icon="call" onPress={call} style={{ alignSelf: "flex-start" }} />
+                    ) : null}
                     {lines.length ? <Proposal lines={lines} applied={!!m.applied} onAdd={() => addProposal(i)} /> : null}
                   </View>
                 );
               })}
               {busy ? <Small>{mode === "ai" ? "Thinking…" : "Looking that up…"}</Small> : null}
-              {lastIsAnswer && !readProposal(messages.at(-1)?.add, byId).length ? (
+              {lastIsAnswer && !messages.at(-1)?.handoff && !readProposal(messages.at(-1)?.add, byId).length ? (
                 <View style={{ gap: 10, marginTop: 6 }}>
                   <Button title="Start a large order request" size="medium" variant="gold" onPress={() => router.replace("/quote")} />
                   <Button title="Ask about renting the café" size="medium" variant="light" onPress={() => router.replace("/event-request")} />
                 </View>
               ) : null}
-              <Small style={{ marginTop: 8 }}>{mode === "ai" ? "AI can make mistakes: check what it puts together. " : "Automatic answers from the café's details. "}Maruf Cafe confirms prices, availability and allergies. This chat does not book or charge anything. Don't type card numbers.</Small>
+              <Small style={{ marginTop: 8 }}>Not sure, or want a person? <Text accessibilityRole="button" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={call} style={{ fontWeight: "800", color: colors.goldText }}>Call {business.phone}</Text>. {mode === "ai" ? "AI can make mistakes: check what it puts together. " : "Automatic answers from the café's details. "}Maruf Cafe confirms prices, availability and allergies. This chat does not book or charge anything. Don't type card numbers.</Small>
             </>
           ) : null}
         </View>

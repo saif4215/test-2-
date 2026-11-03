@@ -20,6 +20,7 @@ import { detectImage, MAX_UPLOAD_BYTES, MAX_UPLOADS } from "./lib/uploads.mjs";
 import { renderPage, robotsTxt, sitemapXml } from "./lib/render.mjs";
 import { cleanMessages, ask, provider } from "./lib/assistant.mjs";
 import { draftReply, digest } from "./lib/staff-assistant.mjs";
+import { fetchCatalog, compareMenus } from "./lib/square-catalog.mjs";
 import { basicAnswer } from "./lib/answers.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -147,6 +148,20 @@ export function createServer(env = process.env) {
     return json;
   }
 
+  /* ---- the café's item list in Square (read only), for the chat. Kept for 5 minutes; if Square cannot be reached the chat just goes on without it. ---- */
+  let sqCache = { at: 0, retryAt: 0, items: null, error: "" };
+  async function squareInfo() {
+    if (!enabled) return null;
+    const now = Date.now();
+    if ((!sqCache.items || now - sqCache.at > 300000) && now >= sqCache.retryAt) {
+      try { sqCache = { at: now, retryAt: 0, items: await fetchCatalog(apiBase, cfg.token, SQUARE_VERSION, cfg.locationId), error: "" }; }
+      catch (err) { console.error("Square item list:", err.message); sqCache = { ...sqCache, retryAt: now + 60000, error: err.message }; }
+    }
+    if (!sqCache.items) return null;
+    const { byName, report } = compareMenus(sqCache.items, publicMenu(getMenu()));
+    return { items: sqCache.items, byName, report };
+  }
+
   /** Put the customer's order into the café's Square as an unpaid pickup order. Retrying with the same key never orders twice. */
   async function placeOrder(body) {
     const { lines, name, note, phone, key } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
@@ -208,12 +223,13 @@ export function createServer(env = process.env) {
   async function assistant(body) {
     const clean = cleanMessages(body?.messages);
     if (clean.error) throw new HttpError(400, clean.error);
-    if (!assistantOn) return { ok: true, mode: "basic", ...basicAnswer(getContent(), publicMenu(getMenu()), clean.messages, new Date(), { ordering: enabled }) };
+    const sq = await squareInfo();
+    if (!assistantOn) return { ok: true, mode: "basic", ...basicAnswer(getContent(), publicMenu(getMenu()), clean.messages, new Date(), { ordering: enabled, square: sq?.byName }) };
     const day = new Date().toISOString().slice(0, 10);
     if (day !== assistantDay) { assistantDay = day; assistantCount = 0; }
     if (assistantCount >= assistantPerDay) throw new HttpError(429, "The assistant has reached its limit for today. Please call us or send a request.");
     assistantCount++;
-    try { return { ok: true, mode: "ai", ...(await ask(env, getContent(), publicMenu(getMenu()), clean.messages)) }; }
+    try { return { ok: true, mode: "ai", ...(await ask(env, getContent(), publicMenu(getMenu()), clean.messages, sq)) }; }
     catch (err) { throw new HttpError(502, err.message); }
   }
 
@@ -259,6 +275,12 @@ export function createServer(env = process.env) {
   const PAGES = ["/app/", "/privacy", "/support"];
   // The old website is gone: its addresses send people to the matching place in the app, so old links and emails still work.
   const MOVED = { "/": "/app/", "/index.html": "/app/", "/large-orders": "/app/groups", "/rent-the-cafe": "/app/groups?show=rent" };
+
+  async function squareMenuStatus() {
+    if (!enabled) return null;
+    const info = await squareInfo();
+    return info ? { ok: true, ...info.report } : { ok: false, error: "Could not read your item list from Square." };
+  }
 
   /* ---- staff dashboard API ---- */
   /** A request as the dashboard shows it: the stored values plus readable label/value pairs. */
@@ -405,7 +427,7 @@ export function createServer(env = process.env) {
       return out(200, {
         ok: true, assistant: assistantOn,
         email: !!(env.RESEND_API_KEY && env.NOTIFY_EMAIL), webhook: !!env.INQUIRY_WEBHOOK_URL, storage: true,
-        square: enabled ? cfg.environment : "off", publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
+        square: enabled ? cfg.environment : "off", squareMenu: await squareMenuStatus(), publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
         staffCanEditSite: env.STAFF_CAN_EDIT_SITE === "1", warnings: auth.warnings, counts: db.counts(),
       });
     }
