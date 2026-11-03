@@ -1,4 +1,6 @@
-import { createContext, createElement, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MAX_QTY, cartToSave, readCart, readObject } from "./memory-util";
 import { indexMenu } from "./site-merge";
 import { cleanNote, orderSummary } from "./order-util";
 import { applyChoice, controlsFor, describeCustom } from "./customize";
@@ -9,15 +11,37 @@ export const priceText = (it) => (it.cents != null ? money(it.cents) : `${money(
 
 const Ctx = createContext(null);
 
-/** The customer's running order list (kept in memory while the app is open). */
+const CART_KEY = "maruf:cart";
+
+/** The customer's running order list. It is kept on the phone, so closing the app does not lose it (and the order is emptied once it is placed). */
 export function OrderProvider({ children }) {
   const { menu } = useSite();
   const itemsById = useMemo(() => indexMenu(menu), [menu]);
   const [lines, setLines] = useState({});   // id -> qty
   const [notes, setNotes] = useState({});   // id -> what the customer typed for that item (kept short)
   const [custom, setCustomState] = useState({});   // id -> the drink choices (size, shots, pumps, milk ...), see customize.js
+  const [ready, setReady] = useState(false);
+  // what was in the order when the app was last open comes back once the phone has read it (anything added meanwhile is kept)
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const saved = readCart(readObject(await AsyncStorage.getItem(CART_KEY), null));
+        if (live) { setLines((cur) => ({ ...saved.lines, ...cur })); setNotes((cur) => ({ ...saved.notes, ...cur })); setCustomState((cur) => ({ ...saved.custom, ...cur })); }
+      } catch { /* storage is not available: start empty */ }
+      if (live) setReady(true);
+    })();
+    return () => { live = false; };
+  }, []);
+  useEffect(() => { if (ready) AsyncStorage.setItem(CART_KEY, JSON.stringify(cartToSave({ lines, notes, custom }))).catch(() => {}); }, [lines, notes, custom, ready]);
   const change = useCallback((id, d) => setLines((cur) => {
-    const next = { ...cur }, q = Math.max(0, Math.min(50, (cur[id] || 0) + d));
+    const next = { ...cur }, q = Math.max(0, Math.min(MAX_QTY, (cur[id] || 0) + d));
+    if (q) next[id] = q; else delete next[id];
+    return next;
+  }), []);
+  /** Set how many of an item are in the order (0 takes it out). */
+  const setQty = useCallback((id, qty) => setLines((cur) => {
+    const next = { ...cur }, q = Math.max(0, Math.min(MAX_QTY, Math.floor(Number(qty) || 0)));
     if (q) next[id] = q; else delete next[id];
     return next;
   }), []);
@@ -28,7 +52,7 @@ export function OrderProvider({ children }) {
   /** Add several items at once, e.g. "order again": [{ id, qty }]. */
   const addMany = useCallback((list) => setLines((cur) => {
     const next = { ...cur };
-    for (const l of list) if (l && l.id && l.qty > 0) next[l.id] = Math.min(50, (next[l.id] || 0) + l.qty);
+    for (const l of list) if (l && l.id && l.qty > 0) next[l.id] = Math.min(MAX_QTY, (next[l.id] || 0) + l.qty);
     return next;
   }), []);
   const value = useMemo(() => {
@@ -41,8 +65,8 @@ export function OrderProvider({ children }) {
     const details = {};
     for (const l of entries) { const text = [describeCustom(custom[l.id], controlsFor(l)), notes[l.id]].filter(Boolean).join("; "); if (text) details[l.id] = text; }
     const summary = orderSummary(entries, details);
-    return { lines, entries, count, low, high, exact: low === high, summary, notes, custom, details, setNote, setCustom, resetCustom, addMany, change, clear };
-  }, [lines, notes, custom, itemsById, change, clear, setNote, setCustom, resetCustom, addMany]);
+    return { lines, entries, count, low, high, exact: low === high, summary, notes, custom, details, setNote, setCustom, resetCustom, addMany, change, setQty, clear };
+  }, [lines, notes, custom, itemsById, change, setQty, clear, setNote, setCustom, resetCustom, addMany]);
   return createElement(Ctx.Provider, { value }, children);
 }
 

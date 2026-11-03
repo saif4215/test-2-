@@ -67,3 +67,6 @@ export function stageInfo(status) {
   const [title, text] = STAGE_TEXT[known];
   return { status: known, title, text, step: known === "received" ? 0 : known === "accepted" ? 1 : known === "canceled" ? -1 : 2, final: FINAL_STATUSES.includes(known) };
 }
+
+/** The tax shown as an estimate: the café's percentage of the subtotal, in cents. Square works out the real amount on the order. */
+export const estimateTax = (cents, percent) => (percent > 0 ? Math.round((cents * percent) / 100) : 0);

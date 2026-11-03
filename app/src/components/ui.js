@@ -6,6 +6,7 @@ import { photos } from "../photos";
 import { showPlaceholders } from "../config";
 import { useSite } from "../lib/site";
 import { openLink, webLinkProps } from "../lib/links";
+import { closedNotice } from "../lib/dates";
 
 /** Pull down on a phone to load the café's latest menu and details. (The web app loads them each time it opens.) */
 export function usePullRefresh() {
@@ -264,3 +265,19 @@ export const FormGroup = ({ title, children }) => (
     {children}
   </View>
 );
+
+/** A heads-up shown above the Place order button while the café is closed (nothing at all while it is open). */
+export function ClosedNotice({ style }) {
+  const { business } = useSite();
+  const n = closedNotice(business.hours);
+  if (!n) return null;
+  return (
+    <View accessibilityRole="alert" style={[{ flexDirection: "row", gap: 12, alignItems: "flex-start", backgroundColor: colors.goldSoft, borderRadius: radius.card, padding: 14 }, style]}>
+      <Ionicons name="time-outline" size={22} color={colors.goldText} style={{ marginTop: 1 }} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text style={{ fontSize: 15, fontWeight: "800", color: colors.ink }}>{n.title}</Text>
+        <Text style={{ fontSize: 14, lineHeight: 20, color: colors.ink }}>{n.text}</Text>
+      </View>
+    </View>
+  );
+}

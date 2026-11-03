@@ -68,3 +68,26 @@ export function featuredItems(menu, max = 4) {
   for (const [group, cats] of Object.entries(menu.groups)) for (const [cat, items] of Object.entries(cats)) for (const it of items) if (it.featured && !it.hidden && out.length < max) out.push({ ...it, group, cat });
   return out;
 }
+
+/**
+ * "Add something else": up to `max` items to offer next to an item or an order. Items from the other half of the menu come first
+ * (a drink is offered food, food is offered drinks), one from each category in turn so there is variety, then other categories of the same half.
+ * Items the café picked come first inside a category. Hidden items, the item itself and anything already in the order are left out.
+ */
+export function suggestFor(menu, item, have = [], max = 6) {
+  const pools = [];
+  for (const [group, cats] of Object.entries(menu.groups)) for (const [cat, items] of Object.entries(cats)) {
+    const ok = items.filter((it) => !it.hidden && it.id !== item.id && !have.includes(it.id)).map((it) => ({ ...it, group, cat }));
+    ok.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));   // stable: the rest keep the café's order
+    if (ok.length) pools.push({ group, cat, items: ok });
+  }
+  const out = [];
+  for (const pool of [pools.filter((p) => p.group !== item.group), pools.filter((p) => p.group === item.group && p.cat !== item.cat)]) {
+    for (let round = 0; out.length < max; round++) {
+      let added = false;
+      for (const p of pool) if (out.length < max && p.items[round]) { out.push(p.items[round]); added = true; }
+      if (!added) break;
+    }
+  }
+  return out;
+}

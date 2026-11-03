@@ -49,6 +49,17 @@ export function openStatus(hours, now = new Date()) {
   return { open: false, text: next ? `Closed · opens ${fmt(next.open)} tomorrow` : "Closed" };
 }
 
+/**
+ * What to tell someone placing an order while the café is closed, or null when it is open: "Maruf Cafe is closed right now. It opens 7 AM tomorrow."
+ * An order is only seen once the café looks at its orders, so the message says that instead of promising anything.
+ */
+export function closedNotice(hours, now = new Date()) {
+  const s = openStatus(hours, now);
+  if (s.open) return null;
+  const when = s.text.replace(/^Closed · /, "");
+  return { title: "Maruf Cafe is closed right now", text: `${when === "Closed" ? "" : `It ${when}. `}The café may not see your order until it opens.` };
+}
+
 /** "Good morning", "Good afternoon" or "Good evening", by the hour in New York (where the café is). */
 export function greeting(now = new Date()) {
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));

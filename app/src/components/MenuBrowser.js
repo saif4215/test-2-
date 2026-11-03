@@ -13,7 +13,7 @@ import { ART } from "../lib/menu-art";
 import { artKey } from "../lib/menu-art-key";
 import { colors, fonts, gradient, radius, shadow } from "../theme";
 
-const categoryList = (menu) => Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items: items.filter((i) => !i.hidden) }))).filter((c) => c.items.length);
+export const categoryList = (menu) => Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items: items.filter((i) => !i.hidden) }))).filter((c) => c.items.length);
 const artFor = (cat) => ART[artKey({ cat })] || null;
 const openItem = (it) => router.push({ pathname: "/item", params: { id: it.id } });
 
@@ -224,6 +224,32 @@ export function ItemTile({ item: it, width = 160 }) {
       </Pressable>
       <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>
       <View style={{ position: "absolute", right: 8, top: 8 }}><FavoriteButton item={it} size={34} onPhoto /></View>
+    </View>
+  );
+}
+
+/** Round category buttons to swipe through, like a delivery app's cuisine row. Each opens the Menu at that category. */
+export function CategoryStrip() {
+  const { menu } = useSite();
+  const categories = useMemo(() => categoryList(menu), [menu]);
+  const row = useRowScroll();
+  if (!categories.length) return null;
+  return (
+    <View>
+      <RowHead title="Browse the menu" arrows={row.arrows} />
+      <BleedRow gap={16} scrollRef={row.scrollRef} onScroll={row.onScroll}>
+        {categories.map((c) => {
+          const art = artFor(c.name);
+          return (
+            <Pressable key={c.name} accessibilityRole="button" accessibilityLabel={`${c.name}, ${c.items.length} ${c.items.length === 1 ? "item" : "items"}`} onPress={() => router.push({ pathname: "/menu", params: { cat: c.name, n: String(Date.now()) } })}
+              style={({ pressed }) => ({ width: 82, alignItems: "center", gap: 8, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] })}>
+              {art ? <Image source={art} accessible={false} resizeMode="cover" style={{ width: 74, height: 74, borderRadius: 37, backgroundColor: colors.tint }} />
+                : <View style={{ width: 74, height: 74, borderRadius: 37, backgroundColor: colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name="restaurant-outline" size={28} color={colors.goldText} /></View>}
+              <Text numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 17, fontWeight: "700", color: colors.ink, textAlign: "center" }}>{c.name}</Text>
+            </Pressable>
+          );
+        })}
+      </BleedRow>
     </View>
   );
 }

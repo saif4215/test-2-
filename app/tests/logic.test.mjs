@@ -1,15 +1,15 @@
 // Run with: npm test   (plain Node, no phone or browser needed)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDate, parseTime, isPast, openStatus, greeting } from "../src/lib/dates.js";
+import { parseDate, parseTime, isPast, openStatus, greeting, closedNotice } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
-import { mergeSite, indexMenu, featuredItems } from "../src/lib/site-merge.js";
+import { mergeSite, indexMenu, featuredItems, suggestFor } from "../src/lib/site-merge.js";
 import { trimHistory } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
-import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject } from "../src/lib/memory-util.js";
+import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS } from "../src/lib/memory-util.js";
 import { controlsFor, isShown, applyChoice, cleanCustom, describeCustom, EMPTY } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -430,4 +430,79 @@ test("the saved pickup name and phone are read back only if they are what was sa
   assert.equal(readObject("[1,2]", null), null);
   assert.equal(readObject("not json", null), null);
   assert.equal(readObject(null, null), null);
+});
+
+// ── the order kept on the phone ─────────────────────────────────────────────────────────────────────────────────────────────────
+test("a saved order comes back as it was, and only the items in the order are saved", () => {
+  const cart = { lines: { latte: 2, bagel: 1 }, notes: { latte: "extra hot", ghost: "x" }, custom: { latte: { temp: "Iced", shots: 2, extras: ["Extra foam"] }, ghost: { temp: "Hot" } } };
+  const saved = cartToSave(cart);
+  assert.deepEqual(Object.keys(saved.notes), ["latte"]);
+  assert.deepEqual(Object.keys(saved.custom), ["latte"]);
+  const back = readCart(JSON.parse(JSON.stringify(saved)));
+  assert.deepEqual(back.lines, { latte: 2, bagel: 1 });
+  assert.equal(back.notes.latte, "extra hot");
+  assert.equal(back.custom.latte.temp, "Iced");
+  assert.equal(back.custom.latte.shots, 2);
+});
+test("a damaged saved order is cleaned, never trusted", () => {
+  assert.deepEqual(readCart(null), { lines: {}, notes: {}, custom: {} });
+  assert.deepEqual(readCart("nope"), { lines: {}, notes: {}, custom: {} });
+  assert.deepEqual(readCart({ lines: [1, 2] }).lines, {});
+  const odd = readCart({ lines: { a: 0, b: -3, c: "x", d: 2.9, e: 999 }, notes: { d: 12345 }, custom: { d: { extras: 5, shots: "many", temp: { x: 1 } }, e: [1] } });
+  assert.deepEqual(odd.lines, { d: 2, e: MAX_QTY });   // zero, negative and non-numbers dropped; too many capped at what the café's server takes
+  assert.equal(odd.notes.d, undefined);
+  assert.deepEqual(odd.custom.d, { size: "", temp: "", shots: 0, flavor: "", pumps: 0, milk: "", ice: "", sweetness: "", extras: [] });
+  assert.equal(odd.custom.e, undefined);
+  assert.equal(readCustom([1]), null);
+  const many = readCart({ lines: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`i${i}`, 1])) });
+  assert.equal(Object.keys(many.lines).length, 40);
+});
+test("the order just placed is shown for 12 hours, then forgotten", () => {
+  const now = 1_700_000_000_000, order = { id: "SQORDER1ABCDEF", ref: "ZVF7", name: "Sam", total: 818, at: now - 60_000 };
+  assert.deepEqual(readActive(order, now), { id: "SQORDER1ABCDEF", ref: "ZVF7", name: "Sam", total: 818, at: now - 60_000, preview: false });
+  assert.equal(readActive({ ...order, at: now - (ACTIVE_HOURS * 3600_000 + 1) }, now), null);
+  assert.equal(readActive({ ...order, at: now + 2 * 3600_000 }, now), null);
+  assert.equal(readActive({ ...order, id: "bad id!" }, now), null);
+  assert.equal(readActive({ ...order, id: undefined }, now), null);
+  assert.equal(readActive(null, now), null);
+  assert.equal(readActive({ ...order, total: "" }, now).total, null);
+  assert.equal(readActive({ ...order, preview: true }, now).preview, true);
+});
+
+// ── "Add something else" ───────────────────────────────────────────────────────────────────────────────────────────────────────
+const shop = { groups: {
+  Drinks: { Coffee: [{ id: "d1", name: "Latte", cents: 450 }, { id: "d2", name: "Mocha", cents: 500, featured: true }], Tea: [{ id: "d3", name: "Chai", cents: 450 }] },
+  Food: { Bagels: [{ id: "f1", name: "Bagel", cents: 300 }, { id: "f2", name: "Hidden", cents: 100, hidden: true }], Sweets: [{ id: "f3", name: "Cake", cents: 600 }], Sides: [{ id: "f4", name: "Fries", cents: 400 }] },
+} };
+test("a drink is offered food first, one from each category, and never itself, hidden items or what is already ordered", () => {
+  const latte = { id: "d1", group: "Drinks", cat: "Coffee" };
+  assert.deepEqual(suggestFor(shop, latte).map((i) => i.id), ["f1", "f3", "f4", "d3"]);   // food first, then another kind of drink (not more of the same category)
+  assert.deepEqual(suggestFor(shop, latte, ["f1"]).map((i) => i.id), ["f3", "f4", "d3"]);
+  assert.deepEqual(suggestFor(shop, latte, [], 2).map((i) => i.id), ["f1", "f3"]);
+  assert.ok(!suggestFor(shop, latte).some((i) => i.hidden || i.id === "d1"));
+});
+test("food is offered drinks first, and the café's picks lead their category", () => {
+  const bagel = { id: "f1", group: "Food", cat: "Bagels" };
+  assert.deepEqual(suggestFor(shop, bagel).map((i) => i.id), ["d2", "d3", "d1", "f3", "f4"]);   // one from each drink category in turn, the picked Mocha first
+  assert.deepEqual(suggestFor({ groups: { Food: { A: [{ id: "x", name: "X", cents: 1 }] } } }, { id: "x", group: "Food", cat: "A" }), []);
+});
+
+test("tax is shown as an estimate of the café's percentage", () => {
+  assert.equal(estimateTax(1000, 8.875), 89);
+  assert.equal(estimateTax(1000, 0), 0);
+  assert.equal(estimateTax(0, 8.875), 0);
+  assert.equal(estimateTax(450, 8.875), 40);
+});
+
+test("while the café is closed an order is warned about it, and nothing is said while it is open", () => {
+  const hours = [{ label: "Mon – Sat", days: [1, 2, 3, 4, 5, 6], open: 7, close: 22 }, { label: "Sunday", days: [0], open: 7, close: 16 }];
+  const at = (iso) => new Date(iso);   // New York is UTC-5 in January
+  assert.equal(closedNotice(hours, at("2026-01-12T17:00:00Z")), null);   // Monday 12:00
+  const early = closedNotice(hours, at("2026-01-12T10:00:00Z"));          // Monday 5:00
+  assert.equal(early.title, "Maruf Cafe is closed right now");
+  assert.match(early.text, /opens 7 AM\./);
+  assert.match(early.text, /may not see your order/);
+  const late = closedNotice(hours, at("2026-01-13T04:00:00Z"));           // Monday 23:00
+  assert.match(late.text, /opens 7 AM tomorrow/);
+  assert.equal(closedNotice([], at("2026-01-13T04:00:00Z")).text, "The café may not see your order until it opens.");
 });

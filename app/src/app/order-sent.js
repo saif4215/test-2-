@@ -4,9 +4,11 @@ import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, H1, Small } from "../components/ui";
 import { FormShell } from "../components/FormShell";
+import { MapCard } from "../components/MapCard";
 import { money } from "../lib/order";
 import { ORDER_STAGES, stageInfo } from "../lib/order-util";
 import { checkOrder } from "../lib/ordering";
+import { useMemory } from "../lib/memory";
 import { useSite } from "../lib/site";
 import { openLink } from "../lib/links";
 import { colors } from "../theme";
@@ -34,7 +36,9 @@ function Tracker({ step, canceled }) {
 export default function OrderSent() {
   const { id, ref, total, name, preview } = useLocalSearchParams();
   const { business } = useSite();
-  const [status, setStatus] = useState("received");
+  const { active, activeStatus, setActiveStatus } = useMemory();
+  const mine = active?.id === String(id);   // the order Home is following
+  const [status, setStatus] = useState(mine ? activeStatus : "received");
   const [stale, setStale] = useState(false);   // the last check did not get through
   const info = stageInfo(status);
 
@@ -44,13 +48,13 @@ export default function OrderSent() {
     const check = async () => {
       const r = await checkOrder(String(id));
       if (!live) return;
-      if (r.ok) setStatus(r.status);
+      if (r.ok) { setStatus(r.status); if (mine) setActiveStatus(r.status); }
       setStale(!r.ok);
       if (!(r.ok && stageInfo(r.status).final)) timer = setTimeout(check, CHECK_EVERY_MS);
     };
     timer = setTimeout(check, FIRST_CHECK_MS);
     return () => { live = false; clearTimeout(timer); };
-  }, [id]);
+  }, [id, mine, setActiveStatus]);
 
   const done = () => (router.dismissAll ? router.dismissAll() : router.replace("/"));
   const canceled = info.status === "canceled";
@@ -91,6 +95,7 @@ export default function OrderSent() {
       <Small>Pickup at {business.name}, {business.address.join(", ")}.</Small>
       <View style={{ gap: 12 }}>
         <Button title="Done" variant="primary" onPress={done} />
+        <MapCard compact />
         <Button title="Call us" variant="outline" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
       </View>
     </FormShell>

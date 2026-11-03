@@ -1,4 +1,5 @@
 import { View } from "react-native";
+import { ActiveOrderCard } from "../../components/ActiveOrder";
 import { H1, Reveal, TrustBadge } from "../../components/ui";
 import { MenuPage, OrderBar } from "../../components/MenuBrowser";
 import { CloserLook } from "../../components/Viewers";
@@ -15,6 +16,7 @@ export default function Menu() {
         bottomPad={order.count ? 150 : 120}
         header={(
           <Reveal style={{ marginTop: 18, marginBottom: 4, gap: 8 }}>
+            <ActiveOrderCard compact style={{ marginBottom: 6 }} />
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
               <H1 style={{ fontSize: 38, lineHeight: 44 }}>Menu</H1>
               <TrustBadge label={business.badge} />

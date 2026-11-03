@@ -12,25 +12,30 @@ async function request(path, init, ms) {
   try { return await fetch(`${apiUrl}${path}`, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
 }
 
-let known = { at: 0, on: false };
-/** Does the café's server take orders into Square? Asked once a minute at most. */
-export async function loadOrdering() {
-  if (!canReachServer()) return false;
-  if (Date.now() - known.at < 60000) return known.on;
+let known = { at: 0, on: false, tax: 0 };
+/** Does the café's server take orders into Square, and what tax does it add? Asked once a minute at most. */
+export async function loadOrderingConfig() {
+  if (!canReachServer()) return { on: false, tax: 0 };
+  if (Date.now() - known.at < 60000) return known;
   try {
     const res = await request("/api/config", { headers: { Accept: "application/json" } }, 8000);
     const json = res.ok ? await res.json() : null;
-    known = { at: Date.now(), on: json?.enabled === true };
-  } catch { known = { at: Date.now() - 50000, on: false }; }   // try again soon
-  return known.on;
+    const tax = Number(json?.taxPercent);
+    known = { at: Date.now(), on: json?.enabled === true, tax: Number.isFinite(tax) && tax > 0 && tax <= 20 ? tax : 0 };
+  } catch { known = { at: Date.now() - 50000, on: false, tax: 0 }; }   // try again soon
+  return known;
+}
+export const loadOrdering = async () => (await loadOrderingConfig()).on;
+
+/** { on, tax }: `on` is null while we do not know yet, then true or false; `tax` is the percentage the café adds (0 when none is set). */
+export function useOrderingConfig() {
+  const [cfg, setCfg] = useState({ on: null, tax: 0 });
+  useEffect(() => { let live = true; loadOrderingConfig().then((c) => { if (live) setCfg({ on: c.on, tax: c.tax }); }); return () => { live = false; }; }, []);
+  return cfg;
 }
 
 /** null while we do not know yet, then true or false. */
-export function useOrdering() {
-  const [on, setOn] = useState(null);
-  useEffect(() => { let live = true; loadOrdering().then((v) => { if (live) setOn(v); }); return () => { live = false; }; }, []);
-  return on;
-}
+export const useOrdering = () => useOrderingConfig().on;
 
 /** Send the order. Resolves { ok: true, orderId, ref, totalCents, preview } only when the café's server says it is in Square. */
 export async function sendOrder(body) {

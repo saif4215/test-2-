@@ -3,7 +3,8 @@ import { router } from "expo-router";
 import { ActionTile, Body, Button, Card, Grid, Reveal, Screen, Small, StatusPill, TrustBadge } from "../../components/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
-import { FeaturedPicks, OrderBar, PersonalRows, RowHead } from "../../components/MenuBrowser";
+import { ActiveOrderCard } from "../../components/ActiveOrder";
+import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, RowHead } from "../../components/MenuBrowser";
 import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
 import { useOrder } from "../../lib/order";
@@ -45,6 +46,7 @@ export default function Home() {
       <Reveal style={{ marginTop: 6, marginBottom: 12 }}>
         <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.ink }}>{greeting()}</Text>
       </Reveal>
+      <ActiveOrderCard style={{ marginBottom: 14 }} />
       <Reveal>
         <View style={[{ borderRadius: radius.hero, overflow: "hidden", padding: 22, paddingBottom: 0 }, gradient(colors.espresso, "linear-gradient(165deg, #3E2C1C 0%, #271B12 55%, #1A1109 100%)"), shadowStrong]}>
           {heroPhoto ? (
@@ -70,7 +72,16 @@ export default function Home() {
         </View>
       </Reveal>
 
-      <Reveal delay={120} style={{ marginTop: 18 }}>
+      <Reveal delay={120} style={{ marginTop: 26 }}>
+        <CategoryStrip />
+      </Reveal>
+
+      <View style={{ marginTop: 30, gap: 30 }}>
+        <PersonalRows only="again" />
+        <FeaturedPicks />
+      </View>
+
+      <Reveal delay={120} style={{ marginTop: 34 }}>
         <View style={{ flexDirection: "row", gap: 12 }}>
           <ActionTile icon="restaurant-outline" title="Catering" sub="Food for groups" onPress={() => router.push({ pathname: "/groups", params: { show: "food", n: String(Date.now()) } })} />
           <ActionTile icon="calendar-outline" title="Events" sub="Rent the café" label="Rent the spot: private events" onPress={() => router.push({ pathname: "/groups", params: { show: "rent", n: String(Date.now()) } })} />
@@ -78,10 +89,6 @@ export default function Home() {
         </View>
       </Reveal>
 
-      <View style={{ marginTop: 30, gap: 30 }}>
-        <PersonalRows only="again" />
-        <FeaturedPicks />
-      </View>
 
       {reviews.length ? (
         <View style={{ marginTop: 34 }}>

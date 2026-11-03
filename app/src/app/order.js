@@ -1,13 +1,16 @@
-import { Text, View } from "react-native";
+import { useMemo } from "react";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, Disclosure, H1, Small } from "../components/ui";
+import { Body, Button, Card, ClosedNotice, Disclosure, H1, Small } from "../components/ui";
 import { FormShell } from "../components/FormShell";
-import { Adder, ItemPhoto } from "../components/MenuBrowser";
+import { Adder, BleedRow, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { business } from "../config";   // only the Square Online address is used here
 import { money, priceText, useOrder } from "../lib/order";
-import { splitOrderable } from "../lib/order-util";
-import { useOrdering } from "../lib/ordering";
+import { estimateTax, splitOrderable } from "../lib/order-util";
+import { useOrderingConfig } from "../lib/ordering";
+import { useSite } from "../lib/site";
+import { suggestFor } from "../lib/site-merge";
 import { useMemory } from "../lib/memory";
 import { colors } from "../theme";
 import { openLink } from "../lib/links";
@@ -15,9 +18,14 @@ import { openLink } from "../lib/links";
 export default function MyOrder() {
   const order = useOrder();
   const memory = useMemory();
-  const ordering = useOrdering();   // true when the café's server can put an order into its Square
+  const { on: ordering, tax } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
   const canPlace = ordering === true && needsPrice.length === 0;
+  const { menu } = useSite();
+  const last = order.entries[order.entries.length - 1];
+  const more = useMemo(() => (last ? suggestFor(menu, last, Object.keys(order.lines), 6) : []), [menu, last, order.lines]);   // "Add something else"
+  const showTax = canPlace && tax > 0 && order.exact;
+  const taxCents = estimateTax(order.low, tax);
   const sent = () => memory.rememberOrder(order.entries);   // so "Order again" can offer these items next time
   return (
     <FormShell>
@@ -35,15 +43,22 @@ export default function MyOrder() {
             {order.entries.map((l) => (
               <Card key={l.id} style={{ padding: 12, flexDirection: "row", gap: 12, alignItems: "center" }}>
                 <ItemPhoto item={l} size={64} always box={{ borderRadius: 16 }} />
-                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Pressable accessibilityRole="button" accessibilityLabel={`${l.name}: change options or add a note`} onPress={() => router.push({ pathname: "/item", params: { id: l.id } })} style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text numberOfLines={2} style={{ fontWeight: "800", fontSize: 16, lineHeight: 21, color: colors.ink }}>{l.name}</Text>
                   <Small>{priceText(l)} each</Small>
                   {order.details[l.id] ? <Text style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>Request: {order.details[l.id]}</Text> : null}
-                </View>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.goldText }}>Edit</Text>
+                </Pressable>
                 <Adder item={l} />
               </Card>
             ))}
           </View>
+          {more.length ? (
+            <View>
+              <RowHead title="Add something else" />
+              <BleedRow>{more.map((it) => <ItemTile key={`more-${it.id}`} item={it} width={132} />)}</BleedRow>
+            </View>
+          ) : null}
           <Card style={{ padding: 18, gap: 10 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={{ fontSize: 15, color: colors.muted }}>{order.count} {order.count === 1 ? "item" : "items"}</Text>
@@ -52,8 +67,21 @@ export default function MyOrder() {
               <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>{order.exact ? "Subtotal" : "Subtotal (from)"}</Text>
               <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{money(order.low)}</Text>
             </View>
+            {showTax ? (
+              <>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 15, color: colors.muted }}>Estimated tax ({tax}%)</Text>
+                  <Text style={{ fontSize: 15, color: colors.muted }}>{money(taxCents)}</Text>
+                </View>
+                <View style={{ height: 1, backgroundColor: colors.line }} />
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>Estimated total</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{money(order.low + taxCents)}</Text>
+                </View>
+              </>
+            ) : null}
             {!order.exact ? <Small>Some items have more than one size. Your final price depends on the sizes you choose.</Small> : null}
-            <Small>Menu prices before tax. For large orders, Maruf Cafe confirms your final quote with you.</Small>
+            <Small>{showTax ? "The café works out the exact tax when it takes your order. " : "Menu prices before tax. "}For large orders, Maruf Cafe confirms your final quote with you.</Small>
           </Card>
           {ordering === true && needsPrice.length ? (
             <Card style={{ padding: 16, gap: 6 }}>
@@ -64,6 +92,7 @@ export default function MyOrder() {
           <View style={{ gap: 12 }}>
             {canPlace ? (
               <>
+                <ClosedNotice />
                 <Button title="Place order for pickup" variant="gold" icon="bag-check-outline" onPress={() => router.push("/checkout")} />
                 <Small style={{ textAlign: "center" }}>You pay at the counter when you pick it up.</Small>
                 <Disclosure title="Other ways to order" hint="A quote for a big order, or our Square Online store">

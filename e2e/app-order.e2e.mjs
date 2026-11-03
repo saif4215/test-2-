@@ -37,6 +37,7 @@ p.on("pageerror", (e) => fails.push("pageerror: " + e.message));
 const seenOn = (page) => (text) => page.getByText(text, { exact: false }).filter({ visible: true }).first().isVisible().catch(() => false);
 const seen = seenOn(p);
 const button = (name) => p.getByRole("button", { name, exact: true }).first();
+const shown = (text) => p.getByText(text, { exact: false }).filter({ visible: true }).first();   // the Home screen under the modal also says it, but hidden
 const add = (item) => p.getByRole("button", { name: `Add ${item} to order`, exact: true }).first().click();
 
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
@@ -101,16 +102,16 @@ await p.screenshot({ path: `${SHOTS}/order-3-sent.png` });
 
 // the café works on it in Square; the screen follows
 fulfillment = "RESERVED";
-await p.getByText("Maruf Cafe accepted your order").first().waitFor({ timeout: 12000 });
+await shown("Maruf Cafe accepted your order").waitFor({ timeout: 12000 });
 ok(true, "when the café accepts the order, the screen says so");
 fulfillment = "PREPARED";
-await p.getByText("Ready for pickup").first().waitFor({ timeout: 22000 });
+await shown("Ready for pickup").waitFor({ timeout: 22000 });
 ok(await seen("Come to the counter and pay there."), "when it is ready, the screen says so");
 await p.screenshot({ path: `${SHOTS}/order-4-ready.png` });
 
 // the order was cleared, and coming back after a reload still shows this order
 await p.reload({ waitUntil: "load" });
-await p.getByText("Ready for pickup").first().waitFor({ timeout: 22000 });
+await shown("Ready for pickup").waitFor({ timeout: 22000 });
 ok(true, "reloading the confirmation still shows the order and where it stands");
 
 // next time the name and phone are already there

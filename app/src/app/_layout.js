@@ -4,6 +4,7 @@ import { useFonts } from "expo-font";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { OrderWatcher } from "../components/ActiveOrder";
 import { LinkSheet } from "../components/LinkSheet";
 import { MemoryProvider } from "../lib/memory";
 import { OrderProvider } from "../lib/order";
@@ -36,6 +37,7 @@ export default function RootLayout() {
           <Stack.Screen name="order-sent" options={{ presentation: "modal", title: "Order sent" }} />
           <Stack.Screen name="item" options={{ presentation: "modal", title: "Details" }} />
         </Stack>
+        <OrderWatcher />
         <LinkSheet />
       </OrderProvider>
       </MemoryProvider>
