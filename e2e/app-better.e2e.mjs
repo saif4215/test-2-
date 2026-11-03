@@ -112,6 +112,18 @@ await p.reload({ waitUntil: "load" });
 await p.waitForTimeout(1200);
 ok((await p.getByRole("button", { name: /^Your order / }).count()) === 0, "and it stays closed");
 
+// ── clearing the order asks first ──────────────────────────────────────────────────────────────────────────────────────────────
+await p.goto(site.u + "/app/menu", { waitUntil: "load" });
+await p.getByRole("button", { name: "Add Latte to order", exact: true }).first().click();
+await orderBar().click();
+await button("Clear my order").click();
+ok(await seen("Remove everything from your order?"), "Clear my order asks before throwing the order away");
+await button("Keep it").click();
+ok((await p.getByRole("button", { name: "Place order for pickup" }).count()) > 0 && !(await seen("Remove everything from your order?")), "Keep it leaves the order as it was");
+await button("Clear my order").click();
+await button("Yes, clear it").click();
+ok(await seen("Nothing here yet"), "Yes, clear it empties the order");
+
 // ── closed: the customer is told before ordering ─────────────────────────────────────────────────────────────────────────────────
 async function orderPageAt(iso) {
   const c = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

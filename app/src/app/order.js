@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +24,7 @@ export default function MyOrder() {
   const { menu } = useSite();
   const last = order.entries[order.entries.length - 1];
   const more = useMemo(() => (last ? suggestFor(menu, last, Object.keys(order.lines), 6) : []), [menu, last, order.lines]);   // "Add something else"
+  const [asking, setAsking] = useState(false);   // "Clear my order" asks once more before throwing the order away
   const showTax = canPlace && tax > 0 && order.exact;
   const taxCents = estimateTax(order.low, tax);
   const sent = () => memory.rememberOrder(order.entries);   // so "Order again" can offer these items next time
@@ -106,7 +107,15 @@ export default function MyOrder() {
                 <Button title="Order pickup on Square Online" variant="primary" icon="open-outline" href={business.orderUrl} onPress={sent} />
               </>
             )}
-            <Button title="Clear my order" variant="outline" size="medium" onPress={order.clear} />
+            {asking ? (
+              <Card style={{ padding: 14, gap: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: colors.ink }}>Remove everything from your order?</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}><Button title="Keep it" variant="outline" size="medium" onPress={() => setAsking(false)} /></View>
+                  <View style={{ flex: 1 }}><Button title="Yes, clear it" variant="primary" size="medium" onPress={() => { setAsking(false); order.clear(); }} /></View>
+                </View>
+              </Card>
+            ) : <Button title="Clear my order" variant="outline" size="medium" onPress={() => setAsking(true)} />}
           </View>
         </>
       )}

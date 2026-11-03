@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, Vibration, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemory } from "../lib/memory";
@@ -18,11 +18,16 @@ export function OrderWatcher() {
   const id = active?.id;
   useEffect(() => {
     if (!id) return undefined;
-    let live = true, timer, failures = 0;
+    let live = true, timer, failures = 0, last = null;
     const check = async () => {
       const r = await checkOrder(id);
       if (!live) return;
-      if (r.ok) { failures = 0; setActiveStatus(r.status); if (stageInfo(r.status).final) return; } else failures += 1;
+      if (r.ok) {
+        failures = 0; setActiveStatus(r.status);
+        if (r.status === "ready" && last && last !== "ready") { try { Vibration.vibrate([0, 300, 150, 300]); } catch { /* no vibration here */ } }   // a nudge when it turns ready while the app is open
+        last = r.status;
+        if (stageInfo(r.status).final) return;
+      } else failures += 1;
       timer = setTimeout(check, Math.min(SLOWEST_MS, WATCH_MS * 2 ** Math.min(failures, 3)));
     };
     check();
