@@ -7,13 +7,22 @@ Four tabs: **Home** · **Menu** (with an order list) · **Groups** (large orders
 
 ## Run it on your phone (no accounts needed)
 
+From the `maruf-cafe` folder (not `app`) on your own computer, which needs Node 22.12 or newer:
+
 ```bash
-cd maruf-cafe/app
-npm install
-EXPO_PUBLIC_API_URL=https://YOUR-SERVER npx expo start
+npm run phone
 ```
 
-Install **Expo Go** on your phone and scan the QR code. `npx expo start --web` runs it in a browser.
+It starts the café's server on your computer (with empty throwaway data, so test orders never mix with real ones), starts Expo with that
+server's address built in, and prints a **QR code** in the terminal. Install **Expo Go** (App Store or Google Play), then on an iPhone open
+the Camera app and point it at the code; on Android open Expo Go and tap *Scan QR code*. The chat, ordering (once Square is set, see
+`../DEPLOY.md`) and the request forms all work on the phone. **The phone must be on the same Wi-Fi as the computer** (not a guest network, and
+allow Node through the computer's firewall if it asks). Press Ctrl+C to stop. Options: `npm run phone -- --tunnel` (phone on any network; needs
+access to expo.dev and ngrok.com, and the chat and ordering then need a public server in `EXPO_PUBLIC_API_URL`), `-- --no-server` (use the
+server already in `EXPO_PUBLIC_API_URL`), `-- --host 192.168.1.20` (if it guesses your computer's address wrong).
+
+The manual way, from this folder: `npm install`, then `EXPO_PUBLIC_API_URL=http://YOUR-COMPUTER-IP:8080 npx expo start`. `npx expo start --web` runs it in a browser.
+If Expo Go says the project is incompatible, the Expo Go on your phone is for a different Expo SDK than this app (SDK 57): update Expo Go, or tell me and I will build a test version you install instead.
 
 ## Where requests go
 
