@@ -26,6 +26,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "export:web": "expo export --platform web",
+    "publish:phone": "npx --yes eas-cli@latest update --branch preview --message \"Phone test\" --non-interactive",
     "test": "node --import ./tests/register.mjs --test tests/logic.test.mjs"
   },
   "private": true
