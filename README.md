@@ -1,6 +1,6 @@
 # Maruf Cafe
 
-A phone app (also served on the web) for a Staten Island café that takes large orders, catering requests and private event rentals, with a staff dashboard and a small Node server behind it. The server has no packages to install (Node 22.12 or newer); the app is built once with `npm run build`.
+A phone app (also served on the web) for a Staten Island café that takes large orders, catering requests and private event rentals, with a staff dashboard and a small Node server behind it. The server has no packages to install (Node 22.13 or newer); the app is built once with `npm run build`.
 
 ## What is here
 - **The phone app** (`app/`, served on the web at `/app/`; four tabs: Home, Menu, Groups, Contact): menu and order list, large-order and catering quote requests, event rental requests, directions (Google Maps, Apple Maps, Waze), FAQ, a chat (built-in answers from your menu and details, or a real AI helper once a key is added), and 3D models (a burger you can spin and take apart, and the Maruf cup, open with coffee and a logo lid beside it). The 3D models draw in the web app at `/app/` only; the phone-store builds skip them. See `app/README.md`.
@@ -15,7 +15,7 @@ Setup, email, hosting and what the café still has to fill in: **`DEPLOY.md`**. 
 ## Run it
 
     cd maruf-cafe
-    node server.mjs            # Node 22.12+, no npm install needed
+    node server.mjs            # Node 22.13+, no npm install needed
     ADMIN_PASSWORD=choose-a-long-one node server.mjs   # also switches on /admin/
 
 Open http://localhost:8080 (it opens the app at `/app/`).

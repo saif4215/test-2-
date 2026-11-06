@@ -3,7 +3,7 @@
   "private": true,
   "description": "Maruf Cafe server and phone app",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.13"
   },
   "scripts": {
     "build": "node scripts/build-app.mjs",

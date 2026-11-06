@@ -7,7 +7,7 @@ Four tabs: **Home** · **Menu** (with an order list) · **Groups** (large orders
 
 ## Run it on your phone (no accounts needed)
 
-From the `maruf-cafe` folder (not `app`) on your own computer, which needs Node 22.12 or newer:
+From the `maruf-cafe` folder (not `app`) on your own computer, which needs Node 22.13 or newer:
 
 ```bash
 npm run phone

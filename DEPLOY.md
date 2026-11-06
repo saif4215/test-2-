@@ -1,7 +1,7 @@
 # Put Maruf Cafe online, set it up, and run it day to day
 
 This one server runs everything: the phone app (`/app/`), the staff dashboard (`/admin/`) and the backend for quote and event requests.
-It needs **Node 22.12 or newer** and no `npm install` (the database is built into Node).
+It needs **Node 22.13 or newer** and no `npm install` (the database is built into Node).
 
 You can do all of this from a phone. Part 1 gets it online. Part 2 makes sure **you never miss a request**. Part 3
 is the dashboard. Part 4 is the list of things only the café can fill in.
@@ -13,7 +13,7 @@ is the dashboard. Part 4 is the list of things only the café can fill in.
 This is a plain Node program, so it runs almost anywhere, and you choose the host. It needs:
 
 - **Folder and command:** the `maruf-cafe` folder of the repository (the repository root is a different project), started with
-  `node server.mjs` on **Node 22.12 or newer**. Nothing to install or build: the phone app is already in `public/app`.
+  `node server.mjs` on **Node 22.13 or newer**. Nothing to install or build: the phone app is already in `public/app`.
 - **Port:** it listens on the `PORT` setting (default 8080).
 - **A disk that survives restarts**, with `DATA_DIR` set to its path. Requests, photos and menu edits live there.
 - **HTTPS:** most hosts give you this for free. Use an address that looks like the café's, not the host's default one, if you can.
@@ -51,7 +51,7 @@ free plan keeps files (many do not; see Part 2). Some hosts do not redeploy by t
 
 ### Way 3: Your own server (a small rented Linux server, or a computer at the café)
 
-Install Node 22.12+, copy the `maruf-cafe` folder to the server, put the settings in a file such as `/etc/maruf-cafe.env`, and run it with
+Install Node 22.13+, copy the `maruf-cafe` folder to the server, put the settings in a file such as `/etc/maruf-cafe.env`, and run it with
 systemd so it restarts by itself:
 
 ```ini

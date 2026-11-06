@@ -35,8 +35,8 @@ async function pickPort(want) {
 const run = (cmd, a, opts = {}) => spawn(cmd, a, { stdio: "inherit", shell: win, ...opts });
 
 async function main() {
-  const major = Number(process.versions.node.split(".")[0]);
-  if (major < 22) { say(`This needs Node 22.12 or newer (this is ${process.versions.node}). Get it from nodejs.org, then run this again.`); process.exit(1); }
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (major < 22 || (major === 22 && minor < 13)) { say(`This needs Node 22.13 or newer (this is ${process.versions.node}). Get it from nodejs.org, then run this again.`); process.exit(1); }
 
   const hostArg = args.indexOf("--host") >= 0 ? args[args.indexOf("--host") + 1] : "";
   const host = hostArg || lanAddress();

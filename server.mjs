@@ -1,5 +1,5 @@
 // Maruf Cafe: hosts the phone app, takes quote/event requests, runs the staff dashboard and the AI helper (and optional ordering into the café's Square).
-// No packages to install. Needs Node 22.12 or newer (it uses Node's built-in SQLite).
+// No packages to install. Needs Node 22.13 or newer (it uses Node's built-in SQLite).
 //
 //   node server.mjs
 //
