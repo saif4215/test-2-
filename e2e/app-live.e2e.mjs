@@ -48,7 +48,7 @@ ok(await p.getByText("Up to 40 seated").first().isVisible(), "venue capacity ent
 await p.getByRole("button", { name: /Basic Gathering/ }).click();
 ok(await p.getByText("Ask for pricing").first().isVisible(), "option price shows only because the café set it");
 await p.getByRole("tab", { name: /Contact/ }).first().click();
-ok(await p.getByText("hello@example.com").first().isVisible(), "email shows once the café adds it");
+ok(await p.getByText("hello@example.com").first().waitFor({ state: "visible", timeout: 5000 }).then(() => true, () => false), "email shows once the café adds it");
 await p.screenshot({ path: (process.env.SHOTS_DIR || "/tmp") + "/up-app-contact.png" });
 await p.getByRole("tab", { name: /Home/ }).first().click();
 await p.waitForTimeout(500);

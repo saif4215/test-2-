@@ -24,7 +24,7 @@ server already in `EXPO_PUBLIC_API_URL`), `-- --host 192.168.1.20` (if it guesse
 **No computer: publish to Expo, then open it in Expo Go.** With an Expo account (free), put an access token (expo.dev, Account settings, Access tokens) in the environment as `EXPO_TOKEN` and allow `expo.dev` and its subdomains in the network settings, then run `npm run publish:phone` in this folder (first once: `npx eas-cli init`). It publishes the app to your Expo account; open the Expo Go app, sign in to the same account, and the project is listed under Projects. Set `EXPO_PUBLIC_API_URL` to a public server first, or the chat, ordering and forms will not work on the phone. Not tested yet: expo.dev was unreachable when this was written.
 
 The manual way, from this folder: `npm install`, then `EXPO_PUBLIC_API_URL=http://YOUR-COMPUTER-IP:8080 npx expo start`. `npx expo start --web` runs it in a browser.
-If Expo Go says the project is incompatible, the Expo Go on your phone is for a different Expo SDK than this app (SDK 57): update Expo Go, or tell me and I will build a test version you install instead.
+If Expo Go says the project is incompatible, the Expo Go on your phone is for a different Expo SDK than this app (it now uses SDK 58): update Expo Go, or tell me and I will build a test version you install instead.
 
 ## Where requests go
 

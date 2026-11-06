@@ -24,8 +24,11 @@ await p.goto(site.u + "/app/", { waitUntil: "load" });
 await p.getByRole("button", { name: /^Burgers, / }).first().scrollIntoViewIfNeeded();
 ok(await p.getByRole("button", { name: /^Coffee, 19 items/ }).first().isVisible(), "Home has a row of round category buttons, with how many items each holds");
 await p.getByRole("button", { name: /^Burgers, / }).first().click();
-await p.waitForTimeout(900);
-const head = await p.getByRole("heading", { name: "Burgers" }).filter({ visible: true }).first().boundingBox().catch(() => null);
+let head = null;
+for (let i = 0; i < 20 && !(head && head.y > 100 && head.y < 400); i++) {   // the Menu scrolls to the category; give it a moment
+  await p.waitForTimeout(250);
+  head = await p.getByRole("heading", { name: "Burgers" }).filter({ visible: true }).first().boundingBox().catch(() => null);
+}
 ok(head && head.y > 100 && head.y < 400, "tapping a category on Home opens the Menu scrolled to that category");
 
 // ── choose how many, then add ─────────────────────────────────────────────────────────────────────────────────────────────────
