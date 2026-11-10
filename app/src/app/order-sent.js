@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, H1, Small } from "../components/ui";
 import { FormShell } from "../components/FormShell";
+import { Celebrate } from "../components/Celebrate";
 import { MapCard } from "../components/MapCard";
+import { success } from "../lib/haptics";
 import { money } from "../lib/order";
 import { ORDER_STAGES, stageInfo } from "../lib/order-util";
 import { checkOrder } from "../lib/ordering";
@@ -34,13 +36,18 @@ function Tracker({ step, canceled }) {
 
 /** Shown after the café's server says the order is in Square. It then keeps asking how the order is doing until it is picked up or canceled. */
 export default function OrderSent() {
-  const { id, ref, total, name, preview } = useLocalSearchParams();
+  const { id, ref, total, name, preview, fresh } = useLocalSearchParams();
   const { business } = useSite();
   const { active, activeStatus, setActiveStatus } = useMemory();
   const mine = active?.id === String(id);   // the order Home is following
   const [status, setStatus] = useState(mine ? activeStatus : "received");
   const [stale, setStale] = useState(false);   // the last check did not get through
   const info = stageInfo(status);
+  // A little celebration when the order has just been sent (`fresh`), and again when it turns ready while you are looking. Not when you come back to an old one.
+  const [party, setParty] = useState(0);
+  useEffect(() => { if (id && fresh) { setParty(1); success(); } }, [id, fresh]);
+  const before = useRef(status);
+  useEffect(() => { if (before.current !== "ready" && status === "ready" && fresh) { setParty((n) => n + 1); success(); } before.current = status; }, [status, fresh]);
 
   useEffect(() => {
     if (!id) return undefined;
@@ -73,6 +80,7 @@ export default function OrderSent() {
   return (
     <FormShell>
       <Stack.Screen options={{ title: "Order sent" }} />
+      <Celebrate play={party} />
       <View style={{ alignItems: "flex-start", gap: 14, paddingTop: 18 }}>
         <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: canceled ? "#FBEAE8" : colors.successSoft, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name={canceled ? "close" : info.status === "ready" || info.status === "done" ? "bag-check" : "checkmark"} size={46} color={canceled ? colors.danger : colors.success} />

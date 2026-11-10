@@ -526,3 +526,14 @@ test("the assistant's request is added to a note the customer already wrote, not
   assert.equal(mergeNote("x", ""), "x");
   assert.equal(mergeNote("a".repeat(95), "bbbbbbbb").length, 100);
 });
+
+test("close to closing time the café says how many minutes are left", () => {
+  const hours = [{ label: "Mon – Sat", days: [1, 2, 3, 4, 5, 6], open: 7, close: 22 }];
+  const at = (iso) => new Date(iso);   // New York is UTC-5 in January
+  const soon = openStatus(hours, at("2026-01-13T02:30:00Z"));   // Monday 9:30 PM
+  assert.equal(soon.open, true); assert.equal(soon.closesSoon, true); assert.equal(soon.text, "Open now · closes in 30 min");
+  const later = openStatus(hours, at("2026-01-12T20:00:00Z"));   // Monday 3 PM
+  assert.equal(later.closesSoon, false); assert.equal(later.text, "Open now · until 10 PM");
+  assert.equal(openStatus(hours, at("2026-01-13T02:15:00Z")).closesSoon, true, "45 minutes left still counts");
+  assert.equal(openStatus(hours, at("2026-01-13T02:14:00Z")).closesSoon, false, "46 minutes left does not");
+});

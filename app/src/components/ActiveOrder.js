@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemory } from "../lib/memory";
 import { ORDER_STAGES, stageInfo } from "../lib/order-util";
 import { checkOrder } from "../lib/ordering";
+import { success } from "../lib/haptics";
 import { colors, radius, shadow } from "../theme";
 
 const WATCH_MS = 20000, SLOWEST_MS = 120000;
@@ -24,7 +25,7 @@ export function OrderWatcher() {
       if (!live) return;
       if (r.ok) {
         failures = 0; setActiveStatus(r.status);
-        if (r.status === "ready" && last && last !== "ready") { try { Vibration.vibrate([0, 300, 150, 300]); } catch { /* no vibration here */ } }   // a nudge when it turns ready while the app is open
+        if (r.status === "ready" && last && last !== "ready") { success(); try { Vibration.vibrate([0, 300, 150, 300]); } catch { /* no vibration here */ } }   // a nudge when it turns ready while the app is open
         last = r.status;
         if (stageInfo(r.status).final) return;
       } else failures += 1;

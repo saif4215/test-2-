@@ -7,6 +7,7 @@ import { BleedRow, FavoriteButton, ItemPhoto, ItemTile, RowHead } from "../compo
 import { Customizer } from "../components/Customizer";
 import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
+import { select, success } from "../lib/haptics";
 import { MAX_QTY } from "../lib/memory-util";
 import { useOrdering } from "../lib/ordering";
 import { indexMenu, suggestFor } from "../lib/site-merge";
@@ -18,9 +19,9 @@ function QtyStepper({ qty, min, onChange, name }) {
   const btn = (disabled) => ({ width: 44, height: 48, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.35 : 1 });
   return (
     <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.tint, borderRadius: 18 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Fewer ${name}`} disabled={qty <= min} onPress={() => onChange(qty - 1)} style={btn(qty <= min)}><Ionicons name={qty <= 1 && min === 0 ? "trash-outline" : "remove"} size={20} color={colors.ink} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Fewer ${name}`} disabled={qty <= min} onPress={() => { select(); onChange(qty - 1); }} style={btn(qty <= min)}><Ionicons name={qty <= 1 && min === 0 ? "trash-outline" : "remove"} size={20} color={colors.ink} /></Pressable>
       <Text accessibilityLiveRegion="polite" accessibilityLabel={`${qty} ${name}`} style={{ minWidth: 26, textAlign: "center", fontSize: 18, fontWeight: "800", color: colors.ink }}>{qty}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={`More ${name}`} disabled={qty >= MAX_QTY} onPress={() => onChange(qty + 1)} style={btn(qty >= MAX_QTY)}><Ionicons name="add" size={20} color={colors.ink} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`More ${name}`} disabled={qty >= MAX_QTY} onPress={() => { select(); onChange(qty + 1); }} style={btn(qty >= MAX_QTY)}><Ionicons name="add" size={20} color={colors.ink} /></Pressable>
     </View>
   );
 }
@@ -55,6 +56,7 @@ export default function ItemDetails() {
   const apply = () => {
     if (!changed) { router.replace("/order"); return; }
     order.setQty(item.id, qty);
+    success();
     setAdded(true);
     setTimeout(leave, 350);   // a moment to see it was added, then back to the menu
   };

@@ -60,29 +60,29 @@ const place = p.getByRole("button", { name: "Place order for pickup" }).first();
 await place.waitFor();
 ok(await seen("You pay at the counter when you pick it up."), "My order says the customer pays at the counter");
 await p.screenshot({ path: `${SHOTS}/order-1-my-order.png` });
-await place.click();
-await button("Place order").waitFor();
-ok(await seen("3 items") === false && await seen("2 × Latte") && await seen("1 × Bagel & Cream Cheese"), "the pickup screen lists the items with quantities");
-ok(await seen("Pick up at Maruf Cafe") && await seen("365 Veterans Rd W"), "the pickup screen shows where to pick it up");
+ok(await seen("Latte") && await seen("Bagel & Cream Cheese") && await seen("3 items") && await seen("Subtotal"), "My order lists the items, how many, and the subtotal");
+ok(await seen("Pick up at Maruf Cafe") && await seen("365 Veterans Rd W"), "the same screen shows where to pick it up");
+ok(await p.getByRole("textbox", { name: "Name", exact: true }).isVisible() && await p.getByRole("textbox", { name: "Phone Number", exact: true }).isVisible(), "and asks for a name and phone right there: placing an order is one screen");
 
 // missing details are caught before anything is sent
-await button("Place order").click();
+await place.click();
 await p.waitForTimeout(300);
 ok(await seen("Enter a name for the order.") && await seen("Enter a 10-digit phone number"), "a name and a phone number are asked for");
 ok(squareCalls.length === 0, "nothing reached Square yet");
 const name = p.getByRole("textbox", { name: "Name", exact: true }), phone = p.getByRole("textbox", { name: "Phone Number", exact: true });
 await name.fill("Sam Lee");
 await phone.fill("(718) 555-0123");
+await p.getByRole("button", { name: /^Add a note for the café/ }).click();
 await p.getByRole("textbox", { name: "Anything the café should know?" }).fill("I will be there at 5:30");
 await p.screenshot({ path: `${SHOTS}/order-2-pickup.png` });
 
 // the café's Square is down once: the order is not lost, the error is plain, and trying again does not order twice
 failNext = 1;
-await button("Place order").click();
+await place.click();
 await p.getByText("We couldn't send your order to the café").first().waitFor({ timeout: 10000 });
 ok(true, "a failed send says so (and is not shown as sent)");
-ok(await seen("2 × Latte"), "the order is still there after a failed send");
-await button("Place order").click();
+ok(await seen("Latte") && await seen("3 items"), "the order is still there after a failed send");
+await place.click();
 await p.getByText("Order code", { exact: false }).first().waitFor({ timeout: 10000 });
 const posts = squareCalls.filter((c) => c.method === "POST");
 ok(posts.length === 2 && posts[0].json.idempotency_key === posts[1].json.idempotency_key, "trying again reuses the same key, so Square can never make two orders");
@@ -118,8 +118,7 @@ ok(true, "reloading the confirmation still shows the order and where it stands")
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
 await add("Latte");
 await p.getByRole("button", { name: /^View my order/ }).first().click();
-await p.getByRole("button", { name: "Place order for pickup" }).first().click();
-await button("Place order").waitFor();
+await p.getByRole("button", { name: "Place order for pickup" }).first().waitFor();
 await p.waitForTimeout(500);
 ok((await name.inputValue()) === "Sam Lee" && (await phone.inputValue()) === "(718) 555-0123", `the name and phone from last time are filled in (${await name.inputValue()} / ${await phone.inputValue()})`);
 

@@ -10,6 +10,7 @@ import { reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
 import { featuredItems, indexMenu, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
+import { select, tap } from "../lib/haptics";
 import { artKey } from "../lib/menu-art-key";
 import { colors, fonts, gradient, radius, shadow } from "../theme";
 
@@ -27,7 +28,11 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   const pad = width >= 768 ? 32 : 20;
   const inner = Math.min(width, 980) - pad * 2;
   const categories = useMemo(() => categoryList(menu), [menu]);
-  const names = useMemo(() => [...categories.map((c) => c.name), ...placeholderCategories.filter((p) => !categories.some((c) => c.name === p))], [categories]);
+  const [scope, setScope] = useState("all");   // "all", or one half of the menu ("Drinks" or "Food"): fewer rows to swipe through
+  const groups = useMemo(() => [...new Set(categories.map((c) => c.group))], [categories]);
+  const names = useMemo(() => (scope === "all"
+    ? [...categories.map((c) => c.name), ...placeholderCategories.filter((p) => !categories.some((c) => c.name === p))]
+    : categories.filter((c) => c.group === scope).map((c) => c.name)), [categories, scope]);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(null);
   const [grid, setGrid] = useState({});   // categories opened with "See all"
@@ -44,7 +49,12 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
     scroller.current?.scrollTo({ y: Math.max(0, pos.current.body + y - pos.current.sticky - 6), animated: true });
   };
   const pick = (name) => { setActive(name); activeRef.current = name; if (q) { setQuery(""); setTimeout(() => goTo(name), 140); } else goTo(name); };
-  useEffect(() => { if (wantedCat) { setQuery(""); setActive(String(wantedCat)); activeRef.current = String(wantedCat); const t = setTimeout(() => goTo(String(wantedCat)), 200); return () => clearTimeout(t); } return undefined; }, [wantedCat, wantedNonce]);
+  const pickScope = (next) => {
+    setScope(next); setActive(null); activeRef.current = null; chipBar.current?.scrollTo({ x: 0, animated: false });
+    // back to the first row of what is now shown (the top of the list does not depend on where the old rows were)
+    setTimeout(() => scroller.current?.scrollTo({ y: Math.max(0, pos.current.body - pos.current.sticky + 20), animated: true }), 60);
+  };
+  useEffect(() => { if (wantedCat) { setScope("all"); setQuery(""); setActive(String(wantedCat)); activeRef.current = String(wantedCat); const t = setTimeout(() => goTo(String(wantedCat)), 200); return () => clearTimeout(t); } return undefined; }, [wantedCat, wantedNonce]);
 
   // keep the highlighted category button in step with the row on screen
   const onScroll = (e) => {
@@ -74,6 +84,19 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
               <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
             ) : null}
           </View>
+          {groups.length > 1 && !q ? (
+            <View accessibilityRole="tablist" accessibilityLabel="Show drinks, food or everything" style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              {[["all", "All"], ...groups.map((g) => [g, g])].map(([id, label]) => {
+                const on = scope === id;
+                return (
+                  <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label === "All" ? "Show everything" : `Show ${label.toLowerCase()} only`} onPress={() => pickScope(id)}
+                    style={{ paddingHorizontal: 18, minHeight: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.gold : colors.tint }}>
+                    <Text style={{ fontSize: 14.5, fontWeight: "800", color: colors.ink }}>{label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
           <ScrollView ref={chipBar} horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Menu categories" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
             {names.map((n) => (
               <View key={n} onLayout={(e) => { pos.current.chips[n] = e.nativeEvent.layout.x; }}>
@@ -166,7 +189,7 @@ export function Adder({ item: it, size = 46 }) {
   const qty = order.lines[it.id] || 0;
   if (!qty) {
     return (
-      <Pressable accessibilityRole="button" accessibilityLabel={`Add ${it.name} to order`} onPress={() => order.change(it.id, +1)}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Add ${it.name} to order`} onPress={() => { tap(); order.change(it.id, +1); }}
         style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }], boxShadow: "0px 6px 14px rgba(185,130,31,0.35)" })}>
         <Ionicons name="add" size={Math.round(size * 0.57)} color={colors.ink} />
       </Pressable>
@@ -174,9 +197,9 @@ export function Adder({ item: it, size = 46 }) {
   }
   return (
     <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.ink, borderRadius: 24, padding: 3 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${it.name}`} onPress={() => order.change(it.id, -1)} hitSlop={4} style={{ width: 38, height: 40, borderRadius: 19, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={19} color={colors.cream} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${it.name}`} onPress={() => { select(); order.change(it.id, -1); }} hitSlop={4} style={{ width: 38, height: 40, borderRadius: 19, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={19} color={colors.cream} /></Pressable>
       <Text style={{ minWidth: 18, textAlign: "center", fontWeight: "800", fontSize: 16, color: colors.cream }}>{qty}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Add one more ${it.name}`} onPress={() => order.change(it.id, +1)} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="add" size={20} color={colors.ink} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Add one more ${it.name}`} onPress={() => { tap(); order.change(it.id, +1); }} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="add" size={20} color={colors.ink} /></Pressable>
     </View>
   );
 }
@@ -186,7 +209,7 @@ export function FavoriteButton({ item: it, size = 34, onPhoto }) {
   const { favorites, toggleFavorite } = useMemory();
   const on = favorites.includes(it.id);
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={on ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`} onPress={() => toggleFavorite(it.id)} hitSlop={6}
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={on ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`} onPress={() => { tap(); toggleFavorite(it.id); }} hitSlop={6}
       style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: onPhoto ? "rgba(255,255,255,0.92)" : colors.surface, borderWidth: onPhoto ? 0 : 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] })}>
       <Ionicons name={on ? "heart" : "heart-outline"} size={Math.round(size * 0.58)} color={on ? colors.danger : colors.ink} />
     </Pressable>
@@ -339,7 +362,7 @@ export function PersonalRows({ only, style }) {
     <View style={[{ gap: 26 }, style]}>
       {again.length ? (
         <View>
-          <RowHead title="Order again" arrows={againRow.arrows} action={{ label: "Add all", icon: "add-circle", a11y: "Add everything from my last order", onPress: () => order.addMany(lastLines) }} />
+          <RowHead title="Order again" arrows={againRow.arrows} action={{ label: "Reorder", icon: "add-circle", a11y: "Reorder my last order", onPress: () => { order.addMany(lastLines); router.push("/order"); } }} />
           <BleedRow scrollRef={againRow.scrollRef} onScroll={againRow.onScroll}>{again.map((it) => <ItemTile key={`again-${it.id}`} item={it} />)}</BleedRow>
         </View>
       ) : null}

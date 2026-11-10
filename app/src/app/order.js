@@ -1,17 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, ClosedNotice, Disclosure, H1, Small } from "../components/ui";
-import { FormShell } from "../components/FormShell";
+import { Body, Button, Card, ClosedNotice, Disclosure, Field, FormGroup, H1, Small } from "../components/ui";
+import { FormShell, SendError } from "../components/FormShell";
 import { Adder, BleedRow, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { business } from "../config";   // only the Square Online address is used here
 import { money, priceText, useOrder } from "../lib/order";
-import { estimateTax, splitOrderable } from "../lib/order-util";
-import { useOrderingConfig } from "../lib/ordering";
+import { buildPickup, estimateTax, keyFor, orderBody, splitOrderable } from "../lib/order-util";
+import { sendOrder, useOrderingConfig } from "../lib/ordering";
 import { useSite } from "../lib/site";
 import { suggestFor } from "../lib/site-merge";
 import { useMemory } from "../lib/memory";
+import { warn } from "../lib/haptics";
 import { colors } from "../theme";
 import { openLink } from "../lib/links";
 
@@ -28,6 +29,34 @@ export default function MyOrder() {
   const showTax = canPlace && tax > 0 && order.exact;
   const taxCents = estimateTax(order.low, tax);
   const sent = () => memory.rememberOrder(order.entries);   // so "Order again" can offer these items next time
+
+  // Who is picking it up: on this same screen, so placing an order is one screen and one button.
+  const { business: shop } = useSite();
+  const [v, setV] = useState({ name: "", phone: "", note: "" });
+  const [errors, setErrors] = useState({});
+  const [state, setState] = useState({ busy: false, error: "" });
+  const key = useRef(null);   // kept between tries, so a second tap after a bad connection can never make two orders
+  useEffect(() => { setV((cur) => ({ ...cur, name: cur.name || memory.contact.name, phone: cur.phone || memory.contact.phone })); }, [memory.contact]);   // the name and phone used last time
+  const set = (k) => (t) => {
+    setV((cur) => ({ ...cur, [k]: t }));
+    if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
+    setState((st) => (st.error && !st.busy ? { ...st, error: "" } : st));   // the message was about what they have now changed
+  };
+  async function submit() {
+    const built = buildPickup(v);
+    setErrors(built.errors);
+    if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
+    const body = orderBody(order.entries, order.details, built.fields);
+    key.current = keyFor(key.current, body);
+    setState({ busy: true, error: "" });
+    const res = await sendOrder({ ...body, idempotencyKey: key.current.key });
+    if (!res.ok) { warn(); setState({ busy: false, error: res.error }); return; }
+    memory.rememberContact(built.fields.name, v.phone.trim());   // as typed, so it looks the same next time
+    memory.rememberOrder(order.entries);
+    memory.rememberActive({ id: res.orderId, ref: res.ref, total: res.totalCents, name: built.fields.name, preview: res.preview });   // Home shows where it stands
+    router.replace({ pathname: "/order-sent", params: { id: res.orderId, ref: res.ref, total: res.totalCents == null ? "" : String(res.totalCents), name: built.fields.name, fresh: "1", ...(res.preview ? { preview: "1" } : {}) } });
+    order.clear();
+  }
   return (
     <FormShell>
       <H1>My order</H1>
@@ -90,12 +119,30 @@ export default function MyOrder() {
               <Small>{needsPrice.map((l) => l.name).join(", ")} {needsPrice.length === 1 ? "has" : "have"} more than one price, depending on the size. Remove {needsPrice.length === 1 ? "it" : "them"} to place your order here, or order at the counter, on Square Online, or send a quote request.</Small>
             </Card>
           ) : null}
+          {canPlace ? (
+            <FormGroup title="Pickup">
+              <Card style={{ padding: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Ionicons name="storefront-outline" size={22} color={colors.goldText} />
+                <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                  <Text style={{ fontWeight: "800", color: colors.ink }}>Pick up at {shop.name}</Text>
+                  <Small>{shop.address.join(", ")}</Small>
+                  <Small>You pay at the counter when you pick it up.</Small>
+                </View>
+              </Card>
+              <Field label="Name" required value={v.name} onChangeText={set("name")} error={errors.name} autoComplete="name" textContentType="name" maxLength={60} />
+              <Field label="Phone Number" required value={v.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" hint="So the café can reach you about your order." />
+              <Disclosure title="Add a note for the café" hint="Optional, for example: I will be there at 5:30" defaultOpen={!!v.note}>
+                <Field label="Anything the café should know?" multiline value={v.note} onChangeText={set("note")} maxLength={200} placeholder="Optional" />
+              </Disclosure>
+            </FormGroup>
+          ) : null}
           <View style={{ gap: 12 }}>
             {canPlace ? (
               <>
                 <ClosedNotice />
-                <Button title="Place order for pickup" variant="gold" icon="bag-check-outline" onPress={() => router.push("/checkout")} />
-                <Small style={{ textAlign: "center" }}>You pay at the counter when you pick it up.</Small>
+                <SendError message={state.error} />
+                <Button title={state.busy ? "Sending…" : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy} onPress={submit} />
+                <Small style={{ textAlign: "center" }}>Placing an order sends it to Maruf Cafe. It is not confirmed until the café accepts it. You pay at the counter.</Small>
                 <Disclosure title="Other ways to order" hint="A quote for a big order, or our Square Online store">
                   <Button title="Request a quote with these items" variant="outline" size="medium" onPress={() => { sent(); router.replace({ pathname: "/quote", params: { foodItems: order.summary } }); }} />
                   <Button title="Order pickup on Square Online" variant="outline" size="medium" icon="open-outline" href={business.orderUrl} onPress={sent} />

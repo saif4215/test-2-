@@ -84,11 +84,10 @@ ok(await seen("Make it your way") || await seen("Temperature"), "opening a line 
 await p.goBack();
 
 // ── placing it, then following it from Home ───────────────────────────────────────────────────────────────────────────────────────
-await p.getByRole("button", { name: "Place order for pickup" }).first().click();
 await p.getByRole("textbox", { name: "Name", exact: true }).fill("Sam Lee");
 await p.getByRole("textbox", { name: "Phone Number", exact: true }).fill("7185550123");
-ok(await seen("Estimated total"), "the pickup screen shows the estimated total too");
-await button("Place order").click();
+ok(await seen("Estimated total"), "the total is on the same screen as the pickup details");
+await button("Place order for pickup").click();
 await p.getByText("Order code", { exact: false }).first().waitFor({ timeout: 10000 });
 ok(await seen("Directions"), "the confirmation has a Directions button");
 const code = (await p.getByLabel(/^Order code /).first().textContent()).trim();
@@ -115,9 +114,28 @@ await p.reload({ waitUntil: "load" });
 await p.waitForTimeout(1200);
 ok((await p.getByRole("button", { name: /^Your order / }).count()) === 0, "and it stays closed");
 
+// ── one tap to order the same again ───────────────────────────────────────────────────────────────────────────────────────────
+await p.goto(site.u + "/app/", { waitUntil: "load" });
+await p.getByRole("button", { name: "Reorder my last order" }).first().click();
+await p.getByRole("button", { name: "Place order for pickup" }).first().waitFor({ timeout: 8000 });
+ok(await seen("Latte") && await seen("Subtotal") && (await p.getByRole("textbox", { name: "Name", exact: true }).inputValue()) === "Sam Lee", "Reorder puts the last order in My order in one tap, with your name already filled in");
+
+// ── the Menu can show just drinks or just food ─────────────────────────────────────────────────────────────────────────────────
+await p.goto(site.u + "/app/menu", { waitUntil: "load" });
+const heading = (n) => p.getByRole("heading", { name: n, exact: true }).filter({ visible: true }).count();
+await p.getByRole("tab", { name: "Show food only" }).click();
+await p.waitForTimeout(500);
+ok((await p.getByRole("button", { name: /^Burgers$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Coffee$/ }).count()) === 0, "choosing Food shows only the food categories");
+await p.getByRole("tab", { name: "Show drinks only" }).click();
+await p.waitForTimeout(500);
+ok((await p.getByRole("button", { name: /^Coffee$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Burgers$/ }).count()) === 0, "choosing Drinks shows only the drinks");
+await p.getByRole("tab", { name: "Show everything" }).click();
+await p.waitForTimeout(400);
+ok((await p.getByRole("button", { name: /^Burgers$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Coffee$/ }).count()) > 0, "and All brings everything back");
+
 // ── clearing the order asks first ──────────────────────────────────────────────────────────────────────────────────────────────
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
-await p.getByRole("button", { name: "Add Latte to order", exact: true }).first().click();
+// (the Reorder above already put a Latte in the order)
 await orderBar().click();
 await button("Clear my order").click();
 ok(await seen("Remove everything from your order?"), "Clear my order asks before throwing the order away");
@@ -126,6 +144,17 @@ ok((await p.getByRole("button", { name: "Place order for pickup" }).count()) > 0
 await button("Clear my order").click();
 await button("Yes, clear it").click();
 ok(await seen("Nothing here yet"), "Yes, clear it empties the order");
+
+// ── closing soon ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+{
+  const c = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await c.clock.setFixedTime(new Date("2026-01-13T02:30:00Z"));   // Monday 9:30 PM in New York: the café closes at 10
+  const q = await c.newPage();
+  await q.goto(site.u + "/app/", { waitUntil: "load" });
+  await q.getByText("closes in 30 min", { exact: false }).first().waitFor({ timeout: 8000 }).catch(() => {});
+  ok(await q.getByText("closes in 30 min", { exact: false }).first().isVisible().catch(() => false), "within 45 minutes of closing, Home says how long is left");
+  await c.close();
+}
 
 // ── closed: the customer is told before ordering ─────────────────────────────────────────────────────────────────────────────────
 async function orderPageAt(iso) {
