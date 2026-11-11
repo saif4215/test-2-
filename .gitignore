@@ -1,0 +1,7 @@
+# Keys, passwords and live data never go into git.
+.env
+.env.*
+!.env.example
+data/
+node_modules/
+.shots-tmp/

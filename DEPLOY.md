@@ -239,6 +239,10 @@ Chats are not stored, and the privacy page says that questions are sent to Anthr
 3. In your host's environment settings (never in an email, a chat or git) set `SQUARE_ENV=sandbox`, `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`,
    and `TAX_PERCENT` (the NYC combined rate is 8.875; confirm yours with your accountant, because Square does not add tax to an order sent this way).
    Restart the server. In the dashboard, **Setup** now says "App orders go into your Square (sandbox)".
+   **Check it before you trust it:** on a computer, copy `.env.example` to `.env` in the project folder, fill in the three Square lines (git ignores `.env`,
+   so the token cannot be committed by accident), and run `npm run square-check`. It says in plain words whether Square accepts the token, whether the
+   location ID belongs to your account (and lists yours if not), and whether the item list can be read. `npm run square-check -- --order` also sends one
+   test order through the app's own server and follows it. It refuses to do that in production. The token is never printed.
 4. Place an order in the app. In the Developer Dashboard open **Sandbox test accounts**, open the test account's Square Dashboard and look under
    **Orders**. You should see a pickup order marked as coming from "Maruf Cafe app", with the customer's name, phone, the items and the order code.
    Move it through accept, ready and complete there and watch the customer's screen follow. **Do not go live until you have seen this work.**
