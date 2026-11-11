@@ -83,9 +83,12 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
       else if (nt.length > 1 && toks.indexOf(nt[0]) >= 0 && ALLITEMS.filter(function (o) { return dmWords(o.name).map(dmSing)[0] === nt[0]; }).length === 1) at = toks.indexOf(nt[0]);
       if (at < 0) return;
       var qty = 1; for (var k = 1; k <= 2; k++) { var w = (at - k >= 0) ? toks[at - k] : ""; if (/^[0-9]+$/.test(w)) { qty = Math.min(20, Number(w)); break; } if (NUMW[w]) { qty = NUMW[w]; break; } }
-      var notes = []; ["iced", "hot"].forEach(function (x) { if (toks.indexOf(x) >= 0 && String(it.id).indexOf("drinks") === 0) notes.push(x.charAt(0).toUpperCase() + x.slice(1)); });
-      ["oat", "almond", "soy", "skim"].forEach(function (x) { if (toks.indexOf(x) >= 0) notes.push(x.charAt(0).toUpperCase() + x.slice(1) + " milk"); });
-      found.push({ id: it.id, qty: qty, note: notes.join(", ") });
+      // a size and the choices the item really offers (the real AI does this from the menu; this is only a word matcher)
+      var opts = it.options || [], pk = {}, sz = "";
+      if (it.sizes) { if (toks.indexOf("large") >= 0) sz = "Large"; else if (toks.indexOf("small") >= 0) sz = "Small"; }
+      if (opts.indexOf("temp") >= 0) { if (toks.indexOf("iced") >= 0) pk.temp = ["Iced"]; else if (toks.indexOf("hot") >= 0) pk.temp = ["Hot"]; }
+      if (opts.indexOf("milk") >= 0) ["oat", "almond", "banana", "coconut"].forEach(function (x) { if (toks.indexOf(x) >= 0 && toks.indexOf("milk") >= 0) pk.milk = [x.charAt(0).toUpperCase() + x.slice(1) + " milk"]; });
+      found.push({ id: it.id, qty: qty, size: sz, picks: pk, note: "" });
     });
     return found;
   }
