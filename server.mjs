@@ -83,7 +83,7 @@ export function parseOrder(body, menu, maxCents = 30000) {
     if (!menu.has(it.id)) bad("An item in your order can't be ordered in the app right now. Remove it and try again.");
     let priced;
     try { priced = priceChoice(menu.get(it.id), it); }
-    catch (err) { if (err instanceof ChoiceError) bad(`${err.message} Remove it from your order and add it again.`); throw err; }
+    catch (err) { if (err instanceof ChoiceError) bad(err.missing ? `${err.message} Open it in My order and pick one.` : `${err.message} Remove it from your order and add it again.`); throw err; }
     const typed = typeof it.note === "string" ? it.note.replace(/\s+/g, " ").trim().slice(0, 250) : "";
     const k = `${it.id}|${priced.sig}`;
     const cur = wanted.get(k) || { id: it.id, name: priced.name, cents: priced.cents, qty: 0, text: priced.text, note: "" };

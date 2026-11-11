@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Chip, Disclosure, Small } from "./ui";
-import { describeCustom, extraText, extrasCents, hasOffers, resolve } from "../lib/customize";
+import { describeCustom, extraText, extrasCents, hasOffers, missingRequired, resolve } from "../lib/customize";
 import { money, useOrder } from "../lib/order";
 import { select } from "../lib/haptics";
 import { colors, fonts, shadow } from "../theme";
@@ -26,13 +26,13 @@ function Sizes({ item, value, onChange }) {
   );
 }
 
-function Panel({ title, hint, value, children, flat }) {
+function Panel({ title, hint, needed, value, children, flat }) {
   return (
     <View style={flat ? { gap: 12, paddingTop: 14, borderTopWidth: 1, borderColor: colors.line } : { gap: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <View style={{ flexShrink: 1 }}>
           <Text style={label}>{title}</Text>
-          {hint ? <Text style={{ fontSize: 13, color: colors.muted }}>{hint}</Text> : null}
+          {hint ? <Text style={{ fontSize: 13, color: needed ? colors.danger : colors.muted, fontWeight: needed ? "800" : "400" }}>{hint}</Text> : null}
         </View>
         {value ? <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: colors.goldText, flexShrink: 1 }}>{value}</Text> : null}
       </View>
@@ -42,10 +42,10 @@ function Panel({ title, hint, value, children, flat }) {
 }
 
 /** One set of choices ("Alternative milk +$1.00", "Hot or iced"): chips, each with what it adds to the price. */
-function ChoiceSet({ item, set, picked, onPick, flat }) {
-  const hint = set.kind === "many" ? (set.max && set.max < set.choices.length ? `Choose up to ${set.max}` : "Choose any") : set.required ? "Choose one" : "Optional";
+function ChoiceSet({ item, set, picked, onPick, flat, needed }) {
+  const hint = set.kind === "many" ? (set.max && set.max < set.choices.length ? `Choose up to ${set.max}` : "Choose any") : set.required ? (needed ? "Required: please choose one" : "Required") : "Optional";
   return (
-    <Panel flat={flat} title={set.label} hint={hint} value={picked.join(", ")}>
+    <Panel flat={flat} title={set.label} hint={hint} needed={needed} value={picked.join(", ")}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {set.choices.map((c) => {
           const text = extraText(c.cents);
@@ -70,7 +70,8 @@ export function Customizer({ item }) {
   const folded = rest.length > 2;   // two or fewer optional sets are simply shown; more than that sit under "More options"
   const summary = describeCustom(item, custom), extra = extrasCents(item, custom);
   const touched = !!(custom && (custom.size || Object.values(custom.picks || {}).some((p) => p && p.length)));
-  const renderSet = (set, flat) => <ChoiceSet key={set.id} item={item} set={set} flat={flat} picked={r.picks[set.id] || []} onPick={(id, name) => order.choose(item, id, name)} />;
+  const missing = missingRequired(item, custom);
+  const renderSet = (set, flat) => <ChoiceSet key={set.id} item={item} set={set} flat={flat} needed={missing.some((m) => m.id === set.id)} picked={r.picks[set.id] || []} onPick={(id, name) => order.choose(item, id, name)} />;
   const restSummary = rest.flatMap((s) => r.picks[s.id] || []).join(", ");
 
   return (

@@ -6,6 +6,7 @@ import { Body, Button, Card, Chip, Grid, H3, Small, usePullRefresh } from "./ui"
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useMemory } from "../lib/memory";
+import { needsChoice } from "../lib/customize";
 import { reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
 import { featuredItems, indexMenu, searchMenu } from "../lib/site-merge";
@@ -186,10 +187,12 @@ export function ItemPhoto({ item, size = 88, box: boxStyle, always }) {
 /** Add button that becomes a [ - 2 + ] stepper once the item is in the order. */
 export function Adder({ item: it, size = 46 }) {
   const order = useOrder();
+  const { menu } = useSite();
   const qty = order.lines[it.id] || 0;
+  const choose = needsChoice(it, menu.optionGroups);   // hot or iced, bread, a sauce ...: the customer has to pick, so "+" opens the item
   if (!qty) {
     return (
-      <Pressable accessibilityRole="button" accessibilityLabel={`Add ${it.name} to order`} onPress={() => { tap(); order.change(it.id, +1); }}
+      <Pressable accessibilityRole="button" accessibilityLabel={choose ? `Choose options for ${it.name}` : `Add ${it.name} to order`} onPress={() => { tap(); if (choose) openItem(it); else order.change(it.id, +1); }}
         style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }], boxShadow: "0px 6px 14px rgba(185,130,31,0.35)" })}>
         <Ionicons name="add" size={Math.round(size * 0.57)} color={colors.ink} />
       </Pressable>

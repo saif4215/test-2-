@@ -51,12 +51,13 @@ test("a menu with a choice that does not exist, or a broken size, is refused wit
 
 test("the price is the size plus each choice; a bad size or choice is refused", () => {
   const entry = { name: "Latte", cents: 450, sizes: [{ name: "Small", cents: 450 }, { name: "Large", cents: 550 }], groups: [{ id: "milk", ...MILK }, { id: "heat", label: "Heat", kind: "one", required: true, choices: [{ name: "Regular", cents: 0 }, { name: "Hot", cents: 0 }] }] };
-  assert.equal(priceChoice(entry).cents, 450);
-  assert.equal(priceChoice(entry).text, "Heat: Regular");
+  assert.throws(() => priceChoice(entry), (e) => e instanceof ChoiceError && e.missing && /Choose heat for Latte/.test(e.message), "a required choice that was not made is refused");
+  assert.equal(priceChoice(entry, { picks: { heat: ["Regular"] } }).cents, 450);
+  assert.equal(priceChoice(entry, { picks: { heat: ["Regular"] } }).text, "Heat: Regular");
   assert.equal(priceChoice(entry, { size: "Large", picks: { milk: ["Oat milk"], heat: ["Hot"] } }).cents, 650);
-  assert.equal(priceChoice(entry, { size: "Large", picks: { milk: ["Oat milk"] } }).name, "Latte (Large)");
-  assert.notEqual(priceChoice(entry, { size: "Small" }).sig, priceChoice(entry, { size: "Large" }).sig);
-  for (const bad of [{ size: "Huge" }, { picks: { milk: ["Oat milk", "Almond milk"] } }, { picks: { milk: ["Soy"] } }, { picks: { nope: ["x"] } }]) assert.throws(() => priceChoice(entry, bad), ChoiceError, JSON.stringify(bad));
+  assert.equal(priceChoice(entry, { size: "Large", picks: { heat: ["Hot"] } }).name, "Latte (Large)");
+  assert.notEqual(priceChoice(entry, { size: "Small", picks: { heat: ["Hot"] } }).sig, priceChoice(entry, { size: "Large", picks: { heat: ["Hot"] } }).sig);
+  for (const bad of [{ size: "Huge" }, { picks: { heat: ["Hot"], milk: ["Oat milk", "Almond milk"] } }, { picks: { heat: ["Hot"], milk: ["Soy"] } }, { picks: { heat: ["Hot"], nope: ["x"] } }]) assert.throws(() => priceChoice(entry, bad), ChoiceError, JSON.stringify(bad));
   assert.throws(() => priceChoice({ name: "Bagel", cents: 300 }, { size: "Large" }), ChoiceError);
   assert.equal(priceChoice({ name: "Bagel", cents: 300 }).cents, 300);
 });

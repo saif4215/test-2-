@@ -22,6 +22,7 @@ export default function MyOrder() {
   const { on: ordering, tax } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
   const canPlace = ordering === true && needsPrice.length === 0;
+  const incomplete = order.incomplete;   // a must-pick choice (hot or iced ...) is still missing on these lines
   const { menu } = useSite();
   const last = order.entries[order.entries.length - 1];
   const more = useMemo(() => (last ? suggestFor(menu, last, Object.keys(order.lines), 6) : []), [menu, last, order.lines]);   // "Add something else"
@@ -43,6 +44,7 @@ export default function MyOrder() {
     setState((st) => (st.error && !st.busy ? { ...st, error: "" } : st));   // the message was about what they have now changed
   };
   async function submit() {
+    if (incomplete.length) { setState({ busy: false, error: `Choose ${incomplete[0].missing[0].label.toLowerCase()} for ${incomplete[0].name} first.` }); return; }
     const built = buildPickup(v);
     setErrors(built.errors);
     if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
@@ -77,6 +79,7 @@ export default function MyOrder() {
                   <Text numberOfLines={2} style={{ fontWeight: "800", fontSize: 16, lineHeight: 21, color: colors.ink }}>{l.name}</Text>
                   <Small>{l.unit != null ? money(l.unit) : priceText(l)} each</Small>
                   {order.details[l.id] ? <Text style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>{order.details[l.id]}</Text> : null}
+                  {l.missing.length ? <Text style={{ fontSize: 13, lineHeight: 18, color: colors.danger, fontWeight: "800" }}>Choose {l.missing.map((m) => m.label.toLowerCase()).join(" and ")}</Text> : null}
                   <Text style={{ fontSize: 13, fontWeight: "700", color: colors.goldText }}>Edit</Text>
                 </Pressable>
                 <Adder item={l} />
@@ -141,7 +144,7 @@ export default function MyOrder() {
               <>
                 <ClosedNotice />
                 <SendError message={state.error} />
-                <Button title={state.busy ? "Sending…" : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy} onPress={submit} />
+                <Button title={state.busy ? "Sending…" : incomplete.length ? `Choose ${incomplete[0].missing[0].label.toLowerCase()} first` : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy || incomplete.length > 0} onPress={submit} />
                 <Small style={{ textAlign: "center" }}>Placing an order sends it to Maruf Cafe. It is not confirmed until the café accepts it. You pay at the counter.</Small>
                 <Disclosure title="Other ways to order" hint="A quote for a big order, or our Square Online store">
                   <Button title="Request a quote with these items" variant="outline" size="medium" onPress={() => { sent(); router.replace({ pathname: "/quote", params: { foodItems: order.summary } }); }} />

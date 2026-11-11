@@ -942,7 +942,8 @@
           "name": "Iced",
           "cents": 0
         }
-      ]
+      ],
+      "required": true
     },
     "milk": {
       "label": "Alternative milk",

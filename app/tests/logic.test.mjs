@@ -10,7 +10,7 @@ import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS } from "../src/lib/memory-util.js";
-import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice } from "../src/lib/customize.js";
+import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -305,9 +305,15 @@ test("an item with nothing to choose offers nothing; sizes and choices come from
   assert.equal(hasOffers({ cents: 300, sizes: [{ name: "Small", cents: 300 }] }), false, "one size is no choice");
 });
 
-test("nothing picked means the first size and the must-pick defaults, at the menu price", () => {
+test("nothing picked means the first size at the menu price, and a must-pick choice is never filled in for the customer", () => {
   assert.deepEqual(resolve(LATTE, undefined), { size: "Small", picks: {} });
-  assert.deepEqual(resolve(TENDERS, undefined), { size: "", picks: { heat: ["Regular"] } });
+  assert.deepEqual(resolve(TENDERS, undefined), { size: "", picks: {} });
+  assert.deepEqual(missingRequired(TENDERS, undefined), [{ id: "heat", label: "Hot or regular" }]);
+  assert.deepEqual(missingRequired(TENDERS, { picks: { heat: ["Hot"] } }), []);
+  assert.deepEqual(missingRequired(LATTE, undefined), [], "optional choices are never missing");
+  assert.equal(needsChoice({ options: ["milk", "heat"] }, { milk: SETS.milk, heat: SETS.heat }), true);
+  assert.equal(needsChoice({ options: ["milk"] }, { milk: SETS.milk }), false);
+  assert.equal(needsChoice({ id: "bagel" }, {}), false);
   assert.equal(unitCents(LATTE, undefined), 450);
   assert.equal(unitCents(BAGEL, undefined), 300);
 });
@@ -342,7 +348,8 @@ test("tapping choices: one replaces one, tapping it again clears it, must-picks 
   let t = togglePick(TENDERS, undefined, "heat", "Hot");
   assert.deepEqual(resolve(TENDERS, t).picks.heat, ["Hot"]);
   t = togglePick(TENDERS, t, "heat", "Hot");
-  assert.deepEqual(resolve(TENDERS, t).picks.heat, ["Hot"], "a must-pick cannot be cleared");
+  assert.equal(resolve(TENDERS, t).picks.heat, undefined, "tapping it again clears it, and the order then asks again");
+  assert.equal(missingRequired(TENDERS, t).length, 1);
   c = togglePick(LATTE, c, "syrup", "Vanilla"); c = togglePick(LATTE, c, "syrup", "Caramel"); c = togglePick(LATTE, c, "syrup", "Hazelnut");
   assert.deepEqual(resolve(LATTE, c).picks.syrup, ["Vanilla", "Caramel"], "a third syrup is not added");
   c = togglePick(LATTE, c, "syrup", "Vanilla");
@@ -354,7 +361,8 @@ test("tapping choices: one replaces one, tapping it again clears it, must-picks 
 test("what the customer asked for reads as one short line, in the menu's order", () => {
   assert.equal(describeCustom(LATTE, undefined), "Small");
   assert.equal(describeCustom(LATTE, { size: "Large", picks: { syrup: ["Caramel"], temp: ["Iced"], milk: ["Oat milk"] } }), "Large, Iced, Oat milk, Caramel");
-  assert.equal(describeCustom(TENDERS, undefined), "Regular");
+  assert.equal(describeCustom(TENDERS, undefined), "");
+  assert.equal(describeCustom(TENDERS, { picks: { heat: ["Hot"] } }), "Hot");
   assert.equal(describeCustom(BAGEL, undefined), "");
 });
 
@@ -379,7 +387,9 @@ test("the app and the server work out the same price for every item on the real 
     const lastSize = item.sizes ? item.sizes[item.sizes.length - 1].name : undefined;
     const picks = {};
     for (const set of item.optionSets || []) picks[set.id] = set.kind === "many" ? set.choices.slice(0, set.max || set.choices.length).map((c) => c.name) : [set.choices[set.choices.length - 1].name];
-    for (const custom of [undefined, { size: lastSize, picks }]) {
+    const must = {};   // a must-pick choice has no default, so even the plainest order picks the first one
+    for (const set of item.optionSets || []) if (set.required) must[set.id] = [set.choices[0].name];
+    for (const custom of [{ picks: must }, { size: lastSize, picks }]) {
       const mine = unitCents(item, custom), theirs = priceChoice(entry, orderChoice(item, custom));
       assert.equal(mine, theirs.cents, `${item.name}: the price agrees`);
     }

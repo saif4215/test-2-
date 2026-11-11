@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BleedRow, FavoriteButton, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
 import { money, priceText, useOrder } from "../lib/order";
-import { unitCents } from "../lib/customize";
+import { missingRequired, unitCents } from "../lib/customize";
 import { useSite } from "../lib/site";
 import { select, success } from "../lib/haptics";
 import { MAX_QTY } from "../lib/memory-util";
@@ -53,8 +53,10 @@ export default function ItemDetails() {
   }
   const unit = unitCents(item, order.custom[item.id]) ?? item.min, total = unit * qty, from = item.cents == null ? "from " : "";   // the price follows the size and choices
   const changed = qty !== inOrder;
+  const missing = missingRequired(item, order.custom[item.id]);   // hot or iced, bread ... must be chosen before the item can be added
   const leave = () => { if (router.canGoBack()) router.back(); else router.replace("/menu"); };
   const apply = () => {
+    if (missing.length && qty > 0) return;
     if (!changed) { router.replace("/order"); return; }
     order.setQty(item.id, qty);
     success();
@@ -99,9 +101,10 @@ export default function ItemDetails() {
           <QtyStepper qty={qty} min={inOrder ? 0 : 1} name={item.name} onChange={setQty} />
           <View style={{ flex: 1 }}>
             <Button
-              title={added ? "Added" : !inOrder ? `Add to order · ${from}${money(total)}` : !changed ? "View my order" : qty === 0 ? "Remove from order" : `Update order · ${from}${money(total)}`}
+              title={added ? "Added" : missing.length && qty > 0 ? `Choose ${missing[0].label.toLowerCase()}` : !inOrder ? `Add to order · ${from}${money(total)}` : !changed ? "View my order" : qty === 0 ? "Remove from order" : `Update order · ${from}${money(total)}`}
               variant={added ? "primary" : !inOrder || changed ? "gold" : "primary"} icon={added ? "checkmark" : !changed && inOrder ? "bag-handle-outline" : qty === 0 ? "trash-outline" : undefined} style={{ paddingHorizontal: 12 }}
-              accessibilityLabel={added ? "Added to your order" : !inOrder ? `Add ${item.name} to order` : undefined}
+              disabled={missing.length > 0 && qty > 0 && !added}
+              accessibilityLabel={added ? "Added to your order" : missing.length && qty > 0 ? `Choose ${missing[0].label.toLowerCase()} first` : !inOrder ? `Add ${item.name} to order` : undefined}
               onPress={added ? undefined : apply} />
           </View>
         </View>

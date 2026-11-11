@@ -3,6 +3,7 @@
 import http from "node:http";
 import { chromium } from "playwright-core";
 import { startSite } from "../test-helpers.mjs";
+import { addLatte } from "./helpers.mjs";
 
 // A stand-in for Square: remembers the orders it is given and answers for them, with a fulfillment state the test can change.
 const squareCalls = [], orders = new Map();
@@ -47,7 +48,7 @@ const shown = (text) => p.getByText(text, { exact: false }).filter({ visible: tr
 const add = (item) => p.getByRole("button", { name: `Add ${item} to order`, exact: true }).first().click();
 
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
-await add("Latte");
+await addLatte(p);
 await p.getByRole("button", { name: "Add one more Latte" }).first().click();
 await add("Bagel & Cream Cheese");
 

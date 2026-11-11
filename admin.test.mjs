@@ -171,7 +171,7 @@ test("menu edits change the public menu, and hidden items cannot be ordered", as
   assert.equal(pub.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents, 999);
   assert.equal(pub.groups.Drinks.Coffee.some((i) => i.id === "drinks-coffee-espresso"), false, "hidden items are not public");
   assert.equal((await (await a.get("menu")).json.menu.groups.Drinks.Coffee.some((i) => i.id === "drinks-coffee-espresso")), true, "but the owner still sees them");
-  const buy = (id) => fetch(t.u + "/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id, qty: 1 }], name: "Sam", phone: "7185550123", idempotencyKey: "11111111-2222-3333-4444-555555555555" }) });
+  const buy = (id) => fetch(t.u + "/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ id, qty: 1, ...(id.includes("latte") ? { picks: { temp: ["Hot"] } } : {}) }], name: "Sam", phone: "7185550123", idempotencyKey: "11111111-2222-3333-4444-555555555555" }) });
   assert.equal((await buy("drinks-coffee-latte")).status, 200);
   assert.equal(sq.calls[0].json.order.line_items[0].base_price_money.amount, 999, "the order uses the new price");
   assert.equal((await buy("drinks-coffee-espresso")).status, 400, "hidden item is refused");

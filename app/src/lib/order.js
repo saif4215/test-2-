@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MAX_QTY, cartToSave, readCart, readObject } from "./memory-util";
 import { indexMenu } from "./site-merge";
 import { cleanNote, orderSummary } from "./order-util";
-import { describeCustom, orderChoice, setSize as sizeChoice, togglePick, unitCents } from "./customize";
+import { describeCustom, missingRequired, orderChoice, setSize as sizeChoice, togglePick, unitCents } from "./customize";
 import { useSite } from "./site";
 
 const money = (c) => `$${(c / 100).toFixed(2)}`;
@@ -73,7 +73,7 @@ export function OrderProvider({ children }) {
     // An item the café has since removed from the menu simply drops out of the list. Each line knows its price with the size and choices.
     const entries = Object.entries(lines).filter(([id]) => itemsById.has(id)).map(([id, qty]) => {
       const item = itemsById.get(id);
-      return { ...item, qty, unit: unitCents(item, custom[id]), choice: orderChoice(item, custom[id]) };
+      return { ...item, qty, unit: unitCents(item, custom[id]), choice: orderChoice(item, custom[id]), missing: missingRequired(item, custom[id]) };
     });
     const low = entries.reduce((s, l) => s + (l.unit ?? l.min) * l.qty, 0);
     const high = entries.reduce((s, l) => s + (l.unit ?? l.max) * l.qty, 0);
@@ -82,7 +82,8 @@ export function OrderProvider({ children }) {
     const details = {};
     for (const l of entries) { const text = [describeCustom(l, custom[l.id]), notes[l.id]].filter(Boolean).join("; "); if (text) details[l.id] = text; }
     const summary = orderSummary(entries, details);
-    return { lines, entries, count, low, high, exact: low === high, summary, notes, custom, details, setNote, chooseSize, choose, resetCustom, addMany, change, setQty, clear };
+    const incomplete = entries.filter((l) => l.missing.length);   // lines that still need a must-pick choice (hot or iced ...)
+    return { lines, entries, incomplete, count, low, high, exact: low === high, summary, notes, custom, details, setNote, chooseSize, choose, resetCustom, addMany, change, setQty, clear };
   }, [lines, notes, custom, itemsById, change, setQty, clear, setNote, chooseSize, choose, resetCustom, addMany]);
   return createElement(Ctx.Provider, { value }, children);
 }

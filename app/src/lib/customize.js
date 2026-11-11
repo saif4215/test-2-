@@ -3,7 +3,8 @@
 // Everything an item offers comes from the café's menu (see lib/options.mjs on the server, which prices the real order the same way):
 //   item.sizes      [{ name, cents }]  the first one is the default
 //   item.optionSets [{ id, label, kind: "one" | "many", required?, max?, choices: [{ name, cents }] }]   (the menu's option groups this item uses)
-// What the customer picked is { size, picks: { setId: [names] } }. Nothing picked means the first size and the required defaults.
+// What the customer picked is { size, picks: { setId: [names] } }. Nothing picked means the first size. A set marked `required` (hot or iced, bread, sauce ...) has no default:
+// the customer has to choose, and the order cannot be placed until they have.
 
 export const EMPTY = Object.freeze({ size: "", picks: Object.freeze({}) });
 
@@ -14,7 +15,7 @@ export const extraText = (cents) => (cents > 0 ? `+${money(cents)}` : "");
 /** Does this item offer anything to choose? */
 export const hasOffers = (item) => !!(item && ((item.sizes && item.sizes.length > 1) || (item.optionSets && item.optionSets.length)));
 
-/** The choice as it will really be ordered: the size filled in, required choices filled in, and anything the menu no longer offers dropped. */
+/** The choice as it will really be ordered: the first size when none is picked, and anything the menu no longer offers dropped. Required sets are NOT filled in: see missingRequired. */
 export function resolve(item, custom) {
   const c = custom && typeof custom === "object" ? custom : {};
   const sizes = (item && item.sizes) || [];
@@ -24,11 +25,19 @@ export function resolve(item, custom) {
     const asked = Array.isArray(c.picks && c.picks[set.id]) ? c.picks[set.id] : [];
     let names = [...new Set(asked.filter((n) => set.choices.some((x) => x.name === n)))];
     names = names.slice(0, set.kind === "one" ? 1 : set.max || set.choices.length);
-    if (!names.length && set.required) names = [set.choices[0].name];
     if (names.length) picks[set.id] = names;
   }
   return { size, picks };
 }
+
+/** The required sets the customer has not chosen yet, for an item in the order: [{ id, label }]. Empty when the item can be ordered as it is. */
+export function missingRequired(item, custom) {
+  const r = resolve(item, custom);
+  return ((item && item.optionSets) || []).filter((s) => s.required && !(r.picks[s.id] && r.picks[s.id].length)).map((s) => ({ id: s.id, label: s.label }));
+}
+
+/** Does this item (as the menu lists it) have a choice the customer must make? Then a quick "+" opens the item instead of adding it. */
+export const needsChoice = (item, optionGroups) => !!(item && Array.isArray(item.options) && item.options.some((id) => optionGroups && optionGroups[id] && optionGroups[id].required));
 
 /** The price of one, in cents, with the size and choices: the size's price plus what each choice adds. Null for an item that only has a price range. */
 export function unitCents(item, custom) {
@@ -74,7 +83,7 @@ export function togglePick(item, custom, setId, name) {
   if (!set || !set.choices.some((c) => c.name === name)) return custom;
   const now = resolve(item, custom).picks[setId] || [];
   let next;
-  if (set.kind === "one") next = now.includes(name) ? (set.required ? now : []) : [name];
+  if (set.kind === "one") next = now.includes(name) ? [] : [name];   // tapping the chosen one again clears it (a required set then asks again)
   else if (now.includes(name)) next = now.filter((n) => n !== name);
   else if (now.length >= (set.max || set.choices.length)) next = now;
   else next = [...now, name];
