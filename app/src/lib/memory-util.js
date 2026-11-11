@@ -8,13 +8,13 @@ export function toggleFavorite(list, id) {
 }
 
 /**
- * Remember an order the customer sent: [{ id, qty }], newest first, at most MAX_RECENT. An empty order is not remembered,
- * and sending the same items again moves that order to the front instead of listing it twice.
+ * Remember an order the customer sent: [{ id, qty, choice? }], newest first, at most MAX_RECENT. `choice` is the size and choices they picked,
+ * so ordering again brings back the same drink. An empty order is not remembered, and sending the same order again moves it to the front instead of listing it twice.
  */
 export function recordOrder(history, entries) {
-  const lines = entries.filter((l) => l && l.id && l.qty > 0).map((l) => ({ id: l.id, qty: l.qty }));
+  const lines = entries.filter((l) => l && l.id && l.qty > 0).map((l) => ({ id: l.id, qty: l.qty, ...(l.choice && typeof l.choice === "object" ? { choice: l.choice } : {}) }));
   if (!lines.length) return history;
-  const key = (o) => o.map((l) => `${l.id}:${l.qty}`).sort().join("|");
+  const key = (o) => o.map((l) => `${l.id}:${l.qty}:${JSON.stringify(l.choice || null)}`).sort().join("|");
   return [lines, ...history.filter((h) => key(h) !== key(lines))].slice(0, MAX_RECENT);
 }
 
@@ -40,16 +40,18 @@ export function readObject(raw, fallback) {
 export const MAX_QTY = 20;   // the café's server takes at most 20 of one item in an order
 
 const str = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
-const num = (v, n) => Math.max(0, Math.min(n, Math.floor(Number(v) || 0)));
 
-/** Keep only the drink choices we know, with the right kinds of values, so a damaged saved order can never crash a screen. */
+/** Keep only a size and choices of the right shape, so a damaged (or older) saved order can never crash a screen. The menu decides later which ones still exist. */
 export function readCustom(c) {
   if (!c || typeof c !== "object" || Array.isArray(c)) return null;
-  const out = { size: str(c.size, 30), temp: str(c.temp, 30), shots: num(c.shots, 10), flavor: str(c.flavor, 30), pumps: num(c.pumps, 20), milk: str(c.milk, 30), ice: str(c.ice, 30), sweetness: str(c.sweetness, 30), extras: Array.isArray(c.extras) ? c.extras.filter((x) => typeof x === "string").slice(0, 10).map((x) => x.slice(0, 30)) : [] };
-  return out;
+  const picks = {};
+  if (c.picks && typeof c.picks === "object" && !Array.isArray(c.picks)) {
+    for (const id of Object.keys(c.picks).slice(0, 16)) if (id.length <= 40 && Array.isArray(c.picks[id])) picks[id] = c.picks[id].filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 40));
+  }
+  return { size: str(c.size, 30), picks };
 }
 
-/** What was saved of the order: { lines: id -> qty, notes: id -> text, custom: id -> drink choices }. Anything that does not look right is dropped. */
+/** What was saved of the order: { lines: id -> qty, notes: id -> text, custom: id -> size and choices }. Anything that does not look right is dropped. */
 export function readCart(v) {
   const out = { lines: {}, notes: {}, custom: {} };
   if (!v || typeof v !== "object" || !v.lines || typeof v.lines !== "object" || Array.isArray(v.lines)) return out;

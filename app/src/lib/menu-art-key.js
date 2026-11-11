@@ -15,7 +15,7 @@ const BY_NAME = [
   // other drinks
   [/hot chocolate|cocoa/, "hotchoc"], [/strawberry banana/, "smoothie"],
 ];
-const BY_CATEGORY = [[/coffee/, "coffee"], [/refresher/, "refresher"], [/\btea\b/, "tea"], [/smoothie/, "smoothie"], [/breakfast/, "breakfast"], [/sandwich/, "sandwich"], [/burger/, "burger"],
+const BY_CATEGORY = [[/coffee/, "coffee"], [/latte/, "icedlatte"], [/refresher/, "refresher"], [/\btea\b/, "tea"], [/smoothie/, "smoothie"], [/breakfast/, "breakfast"], [/sandwich/, "sandwich"], [/burger/, "burger"],
   [/bowl|salad/, "bowl"], [/chicken|wing/, "chicken"], [/side/, "sides"], [/sweet|dessert/, "sweets"]];
 
 export function artKey({ name = "", cat = "" } = {}) {

@@ -46,7 +46,7 @@ export default function MyOrder() {
     const built = buildPickup(v);
     setErrors(built.errors);
     if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
-    const body = orderBody(order.entries, order.details, built.fields);
+    const body = orderBody(order.entries, order.notes, built.fields);
     key.current = keyFor(key.current, body);
     setState({ busy: true, error: "" });
     const res = await sendOrder({ ...body, idempotencyKey: key.current.key });
@@ -75,8 +75,8 @@ export default function MyOrder() {
                 <ItemPhoto item={l} size={64} always box={{ borderRadius: 16 }} />
                 <Pressable accessibilityRole="button" accessibilityLabel={`${l.name}: change options or add a note`} onPress={() => router.push({ pathname: "/item", params: { id: l.id } })} style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text numberOfLines={2} style={{ fontWeight: "800", fontSize: 16, lineHeight: 21, color: colors.ink }}>{l.name}</Text>
-                  <Small>{priceText(l)} each</Small>
-                  {order.details[l.id] ? <Text style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>Request: {order.details[l.id]}</Text> : null}
+                  <Small>{l.unit != null ? money(l.unit) : priceText(l)} each</Small>
+                  {order.details[l.id] ? <Text style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>{order.details[l.id]}</Text> : null}
                   <Text style={{ fontSize: 13, fontWeight: "700", color: colors.goldText }}>Edit</Text>
                 </Pressable>
                 <Adder item={l} />

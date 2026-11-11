@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BleedRow, FavoriteButton, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
 import { money, priceText, useOrder } from "../lib/order";
+import { unitCents } from "../lib/customize";
 import { useSite } from "../lib/site";
 import { select, success } from "../lib/haptics";
 import { MAX_QTY } from "../lib/memory-util";
@@ -50,7 +51,7 @@ export default function ItemDetails() {
       </View>
     );
   }
-  const unit = item.cents ?? item.min, total = unit * qty, from = item.cents == null ? "from " : "";
+  const unit = unitCents(item, order.custom[item.id]) ?? item.min, total = unit * qty, from = item.cents == null ? "from " : "";   // the price follows the size and choices
   const changed = qty !== inOrder;
   const leave = () => { if (router.canGoBack()) router.back(); else router.replace("/menu"); };
   const apply = () => {

@@ -181,16 +181,18 @@ async function viewMenu(main) {
   const filter = h("input", { type: "search", placeholder: "Find an item…", "aria-label": "Find a menu item", oninput: apply });
   const tree = h("div");
   main.append(
-    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the app, or “Show on Home” to feature up to 4 items on the app’s home screen, then press Save. Prices are in dollars. For a size-based price, use the low and high boxes." }),
+    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the app, or “Show on Home” to feature up to 4 items on the app’s home screen, then press Save. Prices are in dollars. Drinks with sizes show one price per size, and “Choices offered” picks which extras (milk, syrup, add-ons…) an item offers. The extras and what they cost are at the bottom, under “Choices and extras”." }),
     h("div", { class: "row" }, h("div", { class: "grow" }, filter), me.role === "owner" && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
       if (!confirm("Throw away all your menu edits and go back to the original menu?")) return;
       try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })),
     tree);
 
   function itemRow(it) {
-    const ranged = it.cents == null;
+    const ranged = it.cents == null && !it.sizes;
     const name = h("input", { value: it.name, "aria-label": "Item name", maxlength: "80", "data-f": "name" });
-    const price = ranged
+    const price = it.sizes
+      ? h("div", { class: "hint", text: "by size ↓" })
+      : ranged
       ? h("div", { class: "range" }, h("input", { inputmode: "decimal", value: money(it.min), "aria-label": "Low price in dollars", "data-f": "min" }), h("input", { inputmode: "decimal", value: money(it.max), "aria-label": "High price in dollars", "data-f": "max" }))
       : h("input", { inputmode: "decimal", value: money(it.cents), "aria-label": "Price in dollars", "data-f": "cents" });
     const desc = h("input", { class: "desc", value: it.desc || "", placeholder: "Description (optional)", "aria-label": "Description", maxlength: "300", "data-f": "desc" });
@@ -205,7 +207,12 @@ async function viewMenu(main) {
       catch (err) { flash(row, err.message, "bad"); } } });
     const photoBtn = h("button", { type: "button", text: it.image ? "Change picture" : "Add picture", onclick: () => file.click() });
     const rm = h("button", { type: "button", text: "Remove picture", hidden: !it.image, onclick: () => { delete row.dataset.image; thumb.hidden = true; rm.hidden = true; photoBtn.textContent = "Add picture"; } });
-    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), h("div", { class: "row" }, pick, hide));
+    // a price for each size, and which extras this item offers
+    const sizes = it.sizes ? h("div", { class: "sizes" }, it.sizes.map((z) => h("label", { class: "size" }, z.name, h("input", { inputmode: "decimal", value: money(z.cents), "aria-label": `${z.name} price in dollars`, "data-size": z.name })))) : null;
+    const groupIds = Object.keys(S.menu.optionGroups || {});
+    const opts = groupIds.length ? h("details", { class: "opts" }, h("summary", { text: `Choices offered${it.options?.length ? ` (${it.options.length})` : ""}` }),
+      groupIds.map((gid) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: (it.options || []).includes(gid), "data-opt": gid }), S.menu.optionGroups[gid].label))) : null;
+    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, sizes, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), opts, h("div", { class: "row" }, pick, hide));
     return row;
   }
 
@@ -220,6 +227,21 @@ async function viewMenu(main) {
       }
       tree.append(group);
     }
+    tree.append(choicesCard());
+  }
+
+  /** "Choices and extras": every set of choices (milk, syrup, add-ons...) with what each costs on top of the item's price. Which items offer a set is set on the item. */
+  function choicesCard() {
+    const card = h("details", { class: "card choices", "data-choices": "1" }, h("summary", { text: "Choices and extras" }),
+      h("p", { class: "hint", text: "Each choice adds its price to the item. Use 0 for a free choice. Hot or iced, bread, sauces and so on are choices too." }));
+    for (const [gid, g] of Object.entries(S.menu.optionGroups || {})) {
+      const list = h("div", { "data-gid": gid });
+      const addRow = (c) => { const r = h("div", { class: "choice" }, h("input", { value: c.name, "aria-label": `A choice for ${g.label}`, maxlength: "40", "data-c": "name" }), h("input", { inputmode: "decimal", value: money(c.cents || 0), "aria-label": "Extra cost in dollars", "data-c": "cents" }), h("button", { type: "button", class: "danger", "aria-label": `Remove ${c.name || "this choice"}`, text: "✕", onclick: () => r.remove() })); list.append(r); return r; };
+      g.choices.forEach(addRow);
+      card.append(h("div", { class: "optgroup" }, h("h3", { text: g.label }), h("small", { class: "hint", text: g.kind === "many" ? "customers can pick several" : g.required ? "customers pick one (required)" : "customers can pick one" }), list,
+        h("button", { type: "button", text: `+ Add a choice to ${g.label}`, onclick: () => addRow({ name: "", cents: 0 }).querySelector("input").focus() })));
+    }
+    return card;
   }
   function apply() {
     const q = filter.value.trim().toLowerCase();
@@ -230,6 +252,20 @@ async function viewMenu(main) {
 
   function collect() {
     const out = { currency: "USD", groups: {} }, problems = [];
+    // the sets of choices, from the "Choices and extras" card (their kind and limits stay as they were)
+    const og = {};
+    for (const list of tree.querySelectorAll("[data-gid]")) {
+      const gid = list.dataset.gid, was = S.menu.optionGroups[gid], choices = [];
+      for (const r of list.querySelectorAll(".choice")) {
+        const name = r.querySelector("[data-c=name]").value.trim(); if (!name) continue;
+        const cents = toCents(r.querySelector("[data-c=cents]").value.trim() || "0");
+        if (Number.isNaN(cents)) problems.push(`“${name}” in ${was.label} needs a price like 0.50 (or 0).`);
+        choices.push({ name, cents });
+      }
+      if (!choices.length) problems.push(`${was.label} needs at least one choice. To stop offering it, untick it on the items instead.`);
+      og[gid] = { ...was, choices };
+    }
+    if (Object.keys(og).length) out.optionGroups = og;
     for (const group of tree.querySelectorAll("details.group")) {
       const g = group.dataset.group; out.groups[g] = {};
       for (const cat of group.querySelectorAll("[data-cat]")) {
@@ -238,8 +274,17 @@ async function viewMenu(main) {
           const val = (f) => row.querySelector(`[data-f=${f}]`)?.value ?? "";
           const it = { id: row.dataset.id || undefined, name: val("name").trim() };
           if (!it.name) { problems.push("Every item needs a name."); row.classList.add("bad"); continue; }
-          if (row.querySelector("[data-f=cents]")) { it.cents = toCents(val("cents")); if (Number.isNaN(it.cents)) problems.push(`“${it.name}” needs a price like 4.50.`); }
+          const sizeInputs = [...row.querySelectorAll("[data-size]")];
+          if (sizeInputs.length) {
+            it.sizes = sizeInputs.map((i) => ({ name: i.dataset.size, cents: toCents(i.value) }));
+            if (it.sizes.some((z) => Number.isNaN(z.cents))) problems.push(`“${it.name}” needs a price for every size, like 4.50.`);
+            it.cents = it.sizes[0].cents;
+          }
+          else if (row.querySelector("[data-f=cents]")) { it.cents = toCents(val("cents")); if (Number.isNaN(it.cents)) problems.push(`“${it.name}” needs a price like 4.50.`); }
           else { it.min = toCents(val("min")); it.max = toCents(val("max")); if (Number.isNaN(it.min) || Number.isNaN(it.max) || it.min > it.max) problems.push(`“${it.name}” needs a low and a high price (low first).`); }
+          const offered = [...row.querySelectorAll("[data-opt]")];
+          if (offered.length) { const ids = offered.filter((i) => i.checked).map((i) => i.dataset.opt); if (ids.length) it.options = ids; }
+          else if (row.dataset.options) it.options = row.dataset.options.split(",");
           const d = val("desc").trim(); if (d) it.desc = d;
           if (row.dataset.image) it.image = row.dataset.image;
           if (row.querySelector("[data-f=hidden]").checked) it.hidden = true;
@@ -434,7 +479,7 @@ function squareMenuCard(m) {
   if (!m.ok) return h("div", { class: "card" }, h("h2", { text: "Your Square item list" }), h("p", { class: "msg bad", role: "alert", text: `${m.error} The chat is not using it. Check that the Square access token is allowed to read items.` }));
   return h("div", { class: "card" }, h("h2", { text: "Your Square item list" }),
     h("p", { text: `The chat can use what you wrote about your items in Square (${m.items} items there, ${m.matched} match the app menu by name). It reads Square and never changes it.` }),
-    list("Prices that do not match", "For these the chat does not state a price and tells the customer to call. Fix whichever side is wrong (the app menu is the Menu tab here).", m.differ.map((d) => `${d.name}: app ${money(d.app)}, Square ${money(d.square)}`)),
+    list("Prices that do not match", "For these the chat does not state a price and tells the customer to call. Fix whichever side is wrong (the app menu is the Menu tab here).", m.differ.map((d) => `${d.name}: app ${[].concat(d.app).map(money).join(" / ")}, Square ${[].concat(d.square).map(money).join(" / ")}`)),
     list("In Square but not in the app menu", "Customers cannot order these in the app. Add them in the Menu tab if they should be able to.", m.onlyInSquare),
     list("In the app menu but not found in Square", "Usually a different spelling of the name. The chat then uses the app menu only for these.", m.onlyInApp));
 }

@@ -32,7 +32,7 @@ test("no AI key: the chat still works with built-in answers, labelled as such, a
   assert.deepEqual(await (await fetch(t.u + "/api/assistant")).json(), { enabled: true, mode: "basic" });
   const q = async (text) => (await ask(t, [{ role: "user", content: text }])).json;
   const hi = await q("hi"); assert.equal(hi.ok, true); assert.equal(hi.mode, "basic");
-  assert.match((await q("How much is a latte?")).reply, /Latte: \$4\.50/);
+  assert.match((await q("How much is a latte?")).reply, /Latte: Small \$4\.50 \/ Large \$5\.50/);
   assert.match((await q("What are your hours?")).reply, /7 AM to 10 PM/);
   assert.match((await q("where are you")).reply, /365 Veterans Rd W/);
   assert.match((await q("how do I rent the cafe for a party")).reply, /nothing is booked until Maruf Cafe confirms/i);
@@ -51,11 +51,11 @@ test("built-in answers follow the live menu and details: edited prices, hidden i
   const t = await startSite();
   const a = await t.login();
   const menu = (await a.get("menu")).json.menu;
-  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents = 575;
+  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").sizes = [{ name: "Small", cents: 575 }, { name: "Large", cents: 675 }];
   menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-americano").hidden = true;
   await a.put("menu", { menu });
   const q = async (text) => (await ask(t, [{ role: "user", content: text }])).json.reply;
-  assert.match(await q("price of a latte"), /Latte: \$5\.75/);
+  assert.match(await q("price of a latte"), /Latte: Small \$5\.75 \/ Large \$6\.75/);
   assert.doesNotMatch(await q("how much is an americano"), /Americano: \$/);
   t.close();
 });
@@ -70,7 +70,7 @@ test("a question goes to Claude with the café's real details, and the key stays
   assert.equal(c.url, "/v1/messages"); assert.equal(c.key, "sk-ant-secret"); assert.ok(c.version);
   assert.equal(c.body.model, "claude-haiku-5-5"); assert.ok(c.body.max_tokens <= 800);
   assert.deepEqual(c.body.messages, [{ role: "user", content: "How much is a latte?" }]);
-  for (const fact of ["365 Veterans Rd W", "(929) 335-3296", "Latte $4.50", "NOT PROVIDED", "Never state or imply that a date is available"]) assert.ok(c.body.system.includes(fact), fact);
+  for (const fact of ["365 Veterans Rd W", "(929) 335-3296", "Latte Small $4.50 / Large $5.50", "CHOICES AND EXTRAS", "Alternative milk", "NOT PROVIDED", "Never state or imply that a date is available"]) assert.ok(c.body.system.includes(fact), fact);
   assert.doesNotMatch(JSON.stringify(r.json), /sk-ant/);
   assert.doesNotMatch(await (await fetch(t.u + "/content.json")).text() + await (await fetch(t.u + "/api/config")).text(), /sk-ant/);
   assert.equal((await (await t.login()).get("status")).json.assistant, true);
@@ -82,11 +82,11 @@ test("the assistant sees the live menu: hidden items and edited prices", async (
   const t = await startSite({ ANTHROPIC_API_KEY: "k", ANTHROPIC_API_BASE: m.base });
   const a = await t.login();
   const menu = (await a.get("menu")).json.menu;
-  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents = 575;
+  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").sizes = [{ name: "Small", cents: 575 }, { name: "Large", cents: 675 }];
   menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-americano").hidden = true;
   await a.put("menu", { menu });
   await ask(t, [{ role: "user", content: "menu?" }]);
-  assert.ok(m.calls[0].body.system.includes("Latte $5.75")); assert.ok(!m.calls[0].body.system.includes("Americano"));
+  assert.ok(m.calls[0].body.system.includes("Latte Small $5.75 / Large $6.75")); assert.ok(!m.calls[0].body.system.includes("Americano"));
   m.close(); t.close();
 });
 

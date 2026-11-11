@@ -47,7 +47,7 @@ await site.post({ type: "event", fields: goodEvent() });
   // menu
   await p.getByRole("button", { name: "Menu", exact: true }).click();
   await p.getByLabel("Find a menu item").fill("Latte");
-  const price = p.locator('.item:not([hidden]) [data-f=cents]').first();
+  const price = p.locator('.item:not([hidden]) [data-size=Small]').first();   // a drink with sizes: one price box per size
   await price.waitFor();
   await price.fill("5.25");
   await p.getByRole("button", { name: "Save menu" }).click();
@@ -58,6 +58,18 @@ await site.post({ type: "event", fields: goodEvent() });
   await p.getByRole("button", { name: "Save menu" }).click();
   ok(/needs a price/.test(await p.locator(".savebar .msg").textContent()), "a bad price is explained, nothing saved");
   await price.fill("5.25");
+  // choices and extras: change what oat milk costs, and take milk off the first Latte
+  await p.locator("details.choices > summary").click();
+  await p.locator("[data-gid=milk] .choice").first().locator("[data-c=cents]").fill("1.25");
+  await p.locator(".item:not([hidden]) details.opts > summary").first().click();
+  await p.locator(".item:not([hidden]) [data-opt=milk]").first().uncheck();
+  await p.getByRole("button", { name: "Save menu" }).click();
+  await p.getByText(/Saved\. The app shows it now/).waitFor();
+  const pub2 = await (await fetch(site.u + "/menu.json")).json();
+  const latte2 = pub2.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte");
+  ok(pub2.optionGroups.milk.choices[0].cents === 125 && pub2.optionGroups.milk.choices[0].name === "Oat milk", "a choice's price edit is live");
+  ok(latte2.sizes.length === 2 && latte2.sizes[0].cents === 525 && latte2.sizes[1].cents === 550 && !latte2.options.includes("milk") && latte2.options.includes("syrup"), "sizes are kept, and an extra can be turned off for one item");
+  ok(pub2.groups.Food.Breakfast.find((i) => i.id === "food-breakfast-egg-and-cheese").options.includes("bread"), "other items keep their choices when the menu is saved");
 
   // site info + review + photo
   await p.getByRole("button", { name: "Site info" }).click();

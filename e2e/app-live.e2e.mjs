@@ -27,7 +27,7 @@ content.packages[0].price = "Ask for pricing";
 content.photos.hero = up.url;
 ok((await a.put("content", { content })).status === 200, "content saved");
 const menu = (await a.get("menu")).json.menu;
-const latte = menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte"); latte.cents = 575;
+const latte = menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte"); latte.sizes = [{ name: "Small", cents: 575 }, { name: "Large", cents: 675 }];
 const esp = menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-americano"); esp.hidden = true;
 await a.put("menu", { menu });
 

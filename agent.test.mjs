@@ -42,14 +42,24 @@ test("what the AI says about an order is cleaned: only real items, whole quantit
 });
 
 test("the order helper: the AI is told the real menu ids, and a proposal reaches the app cleaned", async () => {
-  const m = await aiMock(JSON.stringify({ reply: "Two lattes and a bagel. Check them below.", add: [{ id: "drinks-coffee-latte", qty: 2, note: "iced" }, { id: "made-up-item", qty: 1 }, { id: "drinks-coffee-latte", qty: 1 }] }));
+  const m = await aiMock(JSON.stringify({ reply: "Two lattes and a bagel. Check them below.", add: [
+    { id: "drinks-coffee-latte", qty: 2, size: "Large", picks: { milk: ["Oat milk"], temp: ["Iced"] }, note: "extra hot" }, { id: "made-up-item", qty: 1 }, { id: "drinks-coffee-latte", qty: 1 },
+    { id: "food-breakfast-bagel-and-cream-cheese", qty: 1, size: "Large", picks: { milk: ["Oat milk"] } },   // a bagel has no sizes or milk: the choices are dropped, the bagel stays
+    { id: "drinks-coffee-americano", qty: 1, picks: { milk: ["Unicorn milk"] } },   // a choice that is not on the menu is dropped
+  ] }));
   const t = await withAi(m);
-  const r = await chat(t, "2 iced lattes and a bagel please");
+  const r = await chat(t, "2 large iced oat lattes and a bagel please");
   assert.equal(r.status, 200); assert.equal(r.json.mode, "ai");
   assert.equal(r.json.reply, "Two lattes and a bagel. Check them below.");
-  assert.deepEqual(r.json.add, [{ id: "drinks-coffee-latte", name: "Latte", qty: 3, note: "iced" }], "the invented item is dropped and the same item merged");
+  assert.deepEqual(r.json.add, [
+    { id: "drinks-coffee-latte", name: "Latte", qty: 3, note: "extra hot", size: "Large", picks: { milk: ["Oat milk"], temp: ["Iced"] } },
+    { id: "food-breakfast-bagel-and-cream-cheese", name: "Bagel & Cream Cheese", qty: 1, note: "" },
+    { id: "drinks-coffee-americano", name: "Americano", qty: 1, note: "" },
+  ], "the invented item is dropped, the same item merged, and choices the menu does not offer are dropped");
   const system = m.calls[0].body.system;
-  assert.match(system, /drinks-coffee-latte = Latte \$4\.50/);
+  assert.match(system, /drinks-coffee-latte = Latte Small \$4\.50 \/ Large \$5\.50/);
+  assert.match(system, /Alternative milk \[set id: milk\] \(\+\$1\.00 each\): Oat milk, Almond milk, Banana milk, Coconut milk/);
+  assert.match(system, /Hot or regular \[set id: heat\][^\n]*Offered on: 2pc Tenders, 4pc Tenders/);
   assert.match(system, /You never place an order/);
   assert.match(system, /"add": \[\]/);
   m.close(); t.close();

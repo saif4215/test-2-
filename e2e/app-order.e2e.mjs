@@ -27,6 +27,12 @@ await new Promise((r) => square.listen(0, r));
 square.unref();
 
 const site = await startSite({ SQUARE_ACCESS_TOKEN: "tok", SQUARE_LOCATION_ID: "LOC", SQUARE_API_BASE: `http://localhost:${square.address().port}`, TAX_PERCENT: "8.875", ORDER_RATE_LIMIT_PER_MIN: "1000" });
+{ // the café's menu has no item with only a price range, so make one: Lemonade with "from $3.00 to $4.00" and no sizes
+  const adm = await site.login(), mm = (await adm.get("menu")).json.menu;
+  const lem = mm.groups.Drinks.Refreshers.find((i) => i.name === "Lemonade");
+  delete lem.sizes; delete lem.cents; delete lem.options; lem.min = 300; lem.max = 400;
+  await adm.put("menu", { menu: mm });
+}
 const b = await chromium.launch({ executablePath: "" + (process.env.CHROMIUM || "/opt/pw-browsers/chromium") + "" });
 const fails = [], ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) fails.push(m); };
 const SHOTS = process.env.SHOTS_DIR || "/tmp";
@@ -88,7 +94,7 @@ const posts = squareCalls.filter((c) => c.method === "POST");
 ok(posts.length === 2 && posts[0].json.idempotency_key === posts[1].json.idempotency_key, "trying again reuses the same key, so Square can never make two orders");
 const sent = posts[1].json;
 const o = sent.order;
-ok(o.line_items.length === 2 && o.line_items.some((l) => l.name === "Latte" && l.quantity === "2" && l.base_price_money.amount === 450), "Square got the items, quantities and the server's prices");
+ok(o.line_items.length === 2 && o.line_items.some((l) => l.name === "Latte (Small)" && l.quantity === "2" && l.base_price_money.amount === 450), "Square got the items, quantities and the server's prices");
 ok(o.fulfillments[0].type === "PICKUP" && o.fulfillments[0].pickup_details.recipient.display_name === "Sam Lee" && o.fulfillments[0].pickup_details.recipient.phone_number === "+17185550123", "Square got the pickup name and phone");
 ok(o.fulfillments[0].pickup_details.note === "I will be there at 5:30", "the note for the café reached Square");
 ok(o.source.name === "Maruf Cafe app" && /^[A-HJKMNP-Z2-9]{4}$/.test(o.reference_id), "the order is marked as coming from the app, with a short code");

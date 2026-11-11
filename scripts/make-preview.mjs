@@ -54,8 +54,19 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
   ${fmtHourSrc}
   function normalizeName(s) { return String(s || "").toLowerCase().replace(/[’']/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim(); }
   ${answersSrc}
-  var PRICE = {};
-  Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { if (typeof it.cents === "number") PRICE[it.id] = it.cents; }); }); });
+  var ITEM = {};
+  Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { if (typeof it.cents === "number") ITEM[it.id] = it; }); }); });
+  // the price of one with its size and choices, the way the café's server works it out
+  function unitFor(it, o) {
+    var cents = it.cents, sizes = it.sizes || [];
+    if (sizes.length) { var s = sizes.filter(function (z) { return z.name === o.size; })[0] || sizes[0]; cents = s.cents; }
+    (it.options || []).forEach(function (gid) {
+      var g = (MENU.optionGroups || {})[gid]; if (!g) return;
+      var names = (o.picks && o.picks[gid]) || (g.required ? [g.choices[0].name] : []);
+      names.forEach(function (n) { var c = g.choices.filter(function (x) { return x.name === n; })[0]; if (c) cents += c.cents; });
+    });
+    return cents;
+  }
   var ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", placed = {};
   function refOf(key) { var h = 7, out = ""; for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0; for (var j = 0; j < 4; j++) { out += ALPHA[h % ALPHA.length]; h = Math.floor(h / ALPHA.length) + 17; } return out; }
   // The preview has no AI behind it. A simple word matcher stands in for the order helper so the screen can be tried. It is not an AI.
@@ -98,7 +109,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
     if (pathname === "/api/order" && method === "POST") {
       var order = {}; try { order = JSON.parse(init.body); } catch (e) { /* no order */ }
       var total = 0, id = "preview" + Date.now().toString(36);
-      (order.items || []).forEach(function (it) { total += (PRICE[it.id] || 0) * (it.qty || 0); });
+      (order.items || []).forEach(function (it) { if (ITEM[it.id]) total += unitFor(ITEM[it.id], it) * (it.qty || 0); });
       placed[id] = { at: Date.now(), ref: refOf(String(order.idempotencyKey || id)), total: total };
       return reply({ ok: true, orderId: id, ref: placed[id].ref, totalCents: total, preview: true });
     }

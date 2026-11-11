@@ -9,7 +9,7 @@ import { parseCatalog, compareMenus } from "./lib/square-catalog.mjs";
 const LOC = "LOC1";
 const PAGE1 = { objects: [
   { type: "CATEGORY", id: "CAT1", category_data: { name: "Coffee" } },
-  { type: "ITEM", id: "I1", present_at_all_locations: true, item_data: { name: "Latte", description_plaintext: "Espresso with steamed milk, made fresh.", category_id: "CAT1", variations: [{ item_variation_data: { price_money: { amount: 450, currency: "USD" } } }] } },
+  { type: "ITEM", id: "I1", present_at_all_locations: true, item_data: { name: "Latte", description_plaintext: "Espresso with steamed milk, made fresh.", category_id: "CAT1", variations: [{ item_variation_data: { price_money: { amount: 450, currency: "USD" } } }, { item_variation_data: { price_money: { amount: 550, currency: "USD" } } }] } },
   { type: "ITEM", id: "I2", present_at_all_locations: true, item_data: { name: "Americano", description: "Hot water over two shots.", variations: [{ item_variation_data: { price_money: { amount: 350, currency: "USD" } } }] } },
 ], cursor: "page2" };
 const PAGE2 = { objects: [
@@ -48,7 +48,7 @@ const chat = (t, text) => fetch(t.u + "/api/assistant", { method: "POST", header
 test("reading Square's item list: names, descriptions, prices; archived, deleted and other-location items left out", () => {
   const items = parseCatalog([PAGE1, PAGE2], LOC);
   assert.deepEqual(items.map((i) => i.name), ["Latte", "Americano", "Mystery Special"]);
-  assert.equal(items[0].description, "Espresso with steamed milk, made fresh."); assert.equal(items[0].category, "Coffee"); assert.deepEqual(items[0].prices, [450]);
+  assert.equal(items[0].description, "Espresso with steamed milk, made fresh."); assert.equal(items[0].category, "Coffee"); assert.deepEqual(items[0].prices, [450, 550]);
   assert.equal(items[1].description, "Hot water over two shots.");
   assert.deepEqual(parseCatalog([null, {}, { objects: "x" }], LOC), []);
 });
@@ -65,7 +65,7 @@ test("comparing with the app menu: matches by name, finds price differences and 
 test("built-in chat: uses the café's description from Square, and never states a price that Square and the app disagree on", async () => {
   const m = await squareMock(); const t = await withSquare(m);
   const latte = await chat(t, "tell me about the latte");
-  assert.match(latte.reply, /Latte: \$4\.50 \(before tax\)\. Espresso with steamed milk, made fresh\./); assert.equal(latte.handoff, undefined);
+  assert.match(latte.reply, /Latte: Small \$4\.50 \/ Large \$5\.50 \(before tax\)\. Espresso with steamed milk, made fresh\./); assert.equal(latte.handoff, undefined);
   const americano = await chat(t, "how much is an americano");
   assert.doesNotMatch(americano.reply, /\$3\.00|\$3\.50/); assert.match(americano.reply, /call \(929\) 335-3296/i); assert.equal(americano.handoff, true);
   const coffee = await chat(t, "what coffee do you have");
@@ -111,7 +111,7 @@ test("Square is read only, with the café's token, and the item list is kept for
 test("if Square cannot be read the chat goes on without it, tries again only after a minute, and the dashboard says so", async () => {
   const m = await squareMock({ fail: true }); const t = await withSquare(m);
   const r = await chat(t, "how much is a latte");
-  assert.match(r.reply, /Latte: \$4\.50/);
+  assert.match(r.reply, /Latte: Small \$4\.50 \/ Large \$5\.50/);
   await chat(t, "hi"); await chat(t, "hours");
   assert.equal(m.calls.length, 1, "it does not hammer Square");
   const a = await t.login();
@@ -124,11 +124,11 @@ test("the dashboard lists what differs between Square and the app menu, and show
   const m = await squareMock(); const t = await withSquare(m);
   const s = (await (await t.login()).get("status")).json.squareMenu;
   assert.equal(s.ok, true); assert.equal(s.items, 3); assert.equal(s.matched, 2);
-  assert.deepEqual(s.differ, [{ name: "Americano", app: 300, square: [350] }]);
+  assert.deepEqual(s.differ, [{ name: "Americano", app: [350, 400], square: [350] }], "Square does not have the Large price");
   assert.deepEqual(s.onlyInSquare, ["Mystery Special"]);
   assert.ok(s.onlyInApp.length > 10);
   const a = await t.login(); const menu = (await a.get("menu")).json.menu;
-  menu.groups.Drinks.Coffee.find((i) => i.name === "Americano").cents = 350;
+  menu.groups.Drinks.Coffee.find((i) => i.name === "Americano").sizes = [{ name: "Small", cents: 350 }];   // one price, the one Square has
   await a.put("menu", { menu });
   assert.deepEqual((await a.get("status")).json.squareMenu.differ, [], "fixing the price clears the difference at once");
   assert.match((await chat(t, "how much is an americano")).reply, /Americano: \$3\.50/);

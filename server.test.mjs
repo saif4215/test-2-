@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createServer, orderRef, orderStatus } from "./server.mjs";
 import { basicAnswer } from "./lib/answers.mjs";
 import { normalizeContent } from "./lib/content.mjs";
+import { checkoutIndex } from "./lib/menu.mjs";
 const tmp = () => mkdtempSync(path.join(os.tmpdir(), "maruf-"));
 
 let mock, app, base, calls, mode, dataDir;
@@ -76,7 +77,7 @@ test("an order becomes an unpaid pickup order in Square, priced by the server", 
   assert.equal(o.reference_id, orderRef(KEY));
   assert.equal(o.source.name, "Maruf Cafe app");
   assert.equal(o.line_items.length, 1);
-  assert.equal(o.line_items[0].name, "Latte");
+  assert.equal(o.line_items[0].name, "Latte (Small)", "the size is on the order, so the counter can see it");
   assert.equal(o.line_items[0].base_price_money.amount, 450);
   assert.equal(o.line_items[0].quantity, "2");
   assert.equal(o.taxes[0].percentage, "8.875");
@@ -92,21 +93,71 @@ test("what the customer asked for on each item, and the order note, reach the ca
   const r = await post(body({ items: [{ id: "drinks-coffee-latte", qty: 1, note: "Iced, 2 shots, oat milk" }, { id: "drinks-coffee-latte", qty: 1 }, { id: "food-breakfast-bagel-and-cream-cheese", qty: 1 }], note: "  I will be there at 5  " }));
   assert.equal(r.status, 200, JSON.stringify(r.json));
   const o = calls[0].json.order;
-  const latte = o.line_items.find((l) => l.name === "Latte");
+  const latte = o.line_items.find((l) => l.name === "Latte (Small)");
   assert.equal(latte.quantity, "2", "the same item twice is one line");
   assert.equal(latte.note, "Iced, 2 shots, oat milk");
   assert.equal(o.fulfillments[0].pickup_details.note, "I will be there at 5");
 });
 
+test("a size and choices are priced by the server and written on the order for whoever makes it", async () => {
+  reset();
+  const r = await post(body({ items: [{ id: "drinks-coffee-latte", qty: 2, size: "Large", picks: { milk: ["Oat milk"], syrup: ["Vanilla", "Caramel"], temp: ["Iced"] }, note: "extra hot" }] }));
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const line = calls[0].json.order.line_items[0];
+  assert.equal(line.name, "Latte (Large)");
+  assert.equal(line.base_price_money.amount, 550 + 100 + 50 + 50, "large, plus oat milk, plus two syrups");
+  assert.equal(line.quantity, "2");
+  assert.equal(line.note, "Hot or iced: Iced; Alternative milk: Oat milk; Syrup: Vanilla, Caramel; extra hot");
+  assert.equal(r.json.totalCents, Math.round(2 * 750 * 1.08875));
+});
+
+test("a must-pick choice that was not made gets its first option, and choices that cost nothing are noted", async () => {
+  reset();
+  const r = await post(body({ items: [{ id: "food-tenders-wings-2pc-tenders", qty: 1 }, { id: "food-tenders-wings-wings-5-ct", qty: 1, picks: { "wing-sauce": ["BBQ"] } }, { id: "food-breakfast-egg-and-cheese", qty: 1, picks: { "breakfast-addons": ["Avocado", "Hashbrown"] } }] }));
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const lines = calls[0].json.order.line_items;
+  assert.equal(lines[0].note, "Hot or regular: Regular");
+  assert.equal(lines[1].note, "Wing sauce: BBQ");
+  assert.equal(lines[2].base_price_money.amount, 350 + 200 + 150);
+  assert.equal(lines[2].note, "Bagel or croissant: Bagel; Add on: Avocado, Hashbrown");
+});
+
+test("the same drink in two sizes is two lines; the same choices twice is one", async () => {
+  reset();
+  const r = await post(body({ items: [{ id: "drinks-coffee-latte", qty: 1, size: "Small" }, { id: "drinks-coffee-latte", qty: 1, size: "Large" }, { id: "drinks-coffee-latte", qty: 1, size: "Small" }] }));
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const lines = calls[0].json.order.line_items;
+  assert.deepEqual(lines.map((l) => [l.name, l.quantity]), [["Latte (Small)", "2"], ["Latte (Large)", "1"]]);
+});
+
+test("a size or choice the menu does not offer is refused, never guessed", async () => {
+  reset();
+  for (const item of [
+    { id: "drinks-coffee-latte", qty: 1, size: "Jumbo" },
+    { id: "drinks-coffee-espresso", qty: 1, size: "Large" },
+    { id: "drinks-coffee-espresso", qty: 1, picks: { milk: ["Oat milk"] } },
+    { id: "drinks-coffee-latte", qty: 1, picks: { milk: ["Oat milk", "Almond milk"] } },
+    { id: "drinks-coffee-latte", qty: 1, picks: { milk: ["Whole milk"] } },
+    { id: "drinks-coffee-latte", qty: 1, picks: { syrup: ["Vanilla", "Caramel", "Hazelnut", "Vanilla"] , foam: ["Vanilla", "Cardamom"] } },
+    { id: "drinks-coffee-latte", qty: 1, picks: { ghost: ["x"] } },
+  ]) {
+    assert.equal((await post(body({ items: [item] }))).status, 400, JSON.stringify(item));
+  }
+  assert.equal(calls.length, 0, "nothing should reach Square");
+});
+
 test("rejects unknown, hidden, ranged, malformed and oversized orders without calling Square", async () => {
   reset();
-  for (const items of [[{ id: "nope", qty: 1 }], [{ id: "drinks-refreshers-lemonade", qty: 1 }], [{ id: "drinks-coffee-latte", qty: 0 }], [{ id: "drinks-coffee-latte", qty: 21 }], [{ id: "drinks-coffee-latte", qty: 15 }, { id: "drinks-coffee-latte", qty: 15 }], [], "latte", [null]]) {
+  for (const items of [[{ id: "nope", qty: 1 }], [{ id: "drinks-coffee-latte", qty: 0 }], [{ id: "drinks-coffee-latte", qty: 21 }], [{ id: "drinks-coffee-latte", qty: 15 }, { id: "drinks-coffee-latte", qty: 15 }], [], "latte", [null]]) {
     assert.equal((await post(body({ items }))).status, 400, JSON.stringify(items));
   }
-  const big = await post(body({ items: ["drinks-coffee-biscoff-latte", "drinks-coffee-pistachio-latte", "drinks-coffee-banana-bread-latte"].map((id) => ({ id, qty: 20 })) }));
+  const big = await post(body({ items: ["drinks-signature-lattes-oat-brown-sugar", "drinks-signature-lattes-maple-honey-almond", "drinks-signature-lattes-dirty-chai"].map((id) => ({ id, qty: 20 })) }));
   assert.equal(big.status, 400);
   assert.match(big.json.error, /large order quote/i);
   assert.equal(calls.length, 0, "nothing should reach Square");
+  // an item with only a price range, or a hidden one, is not on the list of things that can be ordered
+  const index = checkoutIndex({ groups: { G: { C: [{ id: "ranged", name: "R", min: 300, max: 400 }, { id: "hid", name: "H", cents: 100, hidden: true }, { id: "ok", name: "O", cents: 100 }] } } });
+  assert.deepEqual([...index.keys()], ["ok"]);
 });
 
 test("needs a name, a US phone number and a valid key", async () => {

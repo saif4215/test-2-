@@ -28,10 +28,13 @@ export function buildPickup(v) {
   return { errors, fields: { name, phone, note } };
 }
 
-/** The request body for the server: ids and quantities only (the server looks up every price), plus what was asked for on each item. */
-export function orderBody(entries, details, fields) {
+/**
+ * The request body for the server: for each line the id, how many, the size and choices (the server looks up what they cost, so a price can never come from the app)
+ * and whatever the customer typed for that item. `notes` is id -> typed text.
+ */
+export function orderBody(entries, notes, fields) {
   return {
-    items: entries.map((l) => ({ id: l.id, qty: l.qty, ...(details[l.id] ? { note: details[l.id] } : {}) })),
+    items: entries.map((l) => ({ id: l.id, qty: l.qty, ...(l.choice || {}), ...(notes[l.id] ? { note: notes[l.id] } : {}) })),
     name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}),
   };
 }

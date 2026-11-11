@@ -110,7 +110,7 @@ test("staff can work requests and edit the menu, but not site info or photos", a
     assert.equal((await s.call(m, route, body)).status, 403, `${m} ${route}`);
   }
   const menu = (await s.get("menu")).json.menu;
-  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents = 610;
+  menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").sizes[0].cents = 610;   // the first size is the item's own price
   assert.equal((await s.put("menu", { menu })).status, 200, "staff can change a price");
   assert.equal((await fetch(t.u + "/menu.json").then((r) => r.json())).groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").cents, 610);
   assert.equal((await s.put("menu", { menu: { groups: {} } })).status, 400, "and menu checks still apply");
@@ -163,7 +163,7 @@ test("menu edits change the public menu, and hidden items cannot be ordered", as
   const a = await t.login();
   const menu = (await a.get("menu")).json.menu;
   const latte = menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte");
-  latte.cents = 999;
+  latte.sizes[0].cents = 999;
   menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-espresso") && (menu.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-espresso").hidden = true);
   const put = await a.put("menu", { menu });
   assert.equal(put.status, 200);
@@ -317,7 +317,7 @@ test("home picks: the owner can feature items and rename the section; hidden ite
   const pub0 = await (await fetch(t.u + "/menu.json")).json();
   const picks0 = Object.values(pub0.groups).flatMap((c) => Object.values(c).flat()).filter((i) => i.featured);
   assert.equal(picks0.length, 4, "starts with two drinks and two foods picked");
-  assert.deepEqual(picks0.map((i) => i.name).sort(), ["Chai Latte", "Classic Burger", "Fried Chicken Sandwich", "Strawberry Acai"]);
+  assert.deepEqual(picks0.map((i) => i.name).sort(), ["Chai Latte", "Classic Cheeseburger", "Fried Chicken Sandwich", "Strawberry Acai"]);
   const all = Object.values(menu.groups).flatMap((c) => Object.values(c).flat());
   all.forEach((i) => delete i.featured);
   const latte = all.find((i) => i.id === "drinks-coffee-latte"); latte.featured = true; latte.hidden = true;

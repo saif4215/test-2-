@@ -55,10 +55,14 @@ export function searchMenu(categories, query) {
   return [...byName, ...rest];
 }
 
-/** id -> item, for every item on a menu. */
+/** id -> item, for every item on a menu. An item that offers choices also carries `optionSets`: the menu's option groups it uses, each with its id. */
 export function indexMenu(menu) {
   const map = new Map();
-  for (const [group, cats] of Object.entries(menu.groups)) for (const [cat, items] of Object.entries(cats)) for (const it of items) map.set(it.id, { ...it, group, cat });
+  const setsOf = (it) => (Array.isArray(it.options) ? it.options.filter((id) => menu.optionGroups && menu.optionGroups[id]).map((id) => ({ id, ...menu.optionGroups[id] })) : []);
+  for (const [group, cats] of Object.entries(menu.groups)) for (const [cat, items] of Object.entries(cats)) for (const it of items) {
+    const optionSets = setsOf(it);
+    map.set(it.id, { ...it, group, cat, ...(optionSets.length ? { optionSets } : {}) });
+  }
   return map;
 }
 

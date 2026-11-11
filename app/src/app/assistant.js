@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Small } from "../components/ui";
 import { askAssistant, assistantMode } from "../lib/assistant";
 import { mergeNote, proposalTotal, readProposal } from "../lib/assistant-util";
+import { describeCustom } from "../lib/customize";
 import { money, priceText, useOrder } from "../lib/order";
 import { useSite } from "../lib/site";
 import { indexMenu } from "../lib/site-merge";
@@ -27,10 +28,11 @@ function Proposal({ lines, applied, onAdd }) {
         <View key={l.id} style={{ gap: 2 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
             <Text style={{ flex: 1, fontSize: 15.5, fontWeight: "700", color: colors.ink }}>{l.qty} × {l.item.name}</Text>
-            <Text style={{ fontSize: 15.5, color: colors.ink }}>{l.item.cents != null ? money(l.item.cents * l.qty) : `from ${money(l.item.min * l.qty)}`}</Text>
+            <Text style={{ fontSize: 15.5, color: colors.ink }}>{l.unit != null ? money(l.unit * l.qty) : `from ${money(l.item.min * l.qty)}`}</Text>
           </View>
+          {describeCustom(l.item, l.choice) ? <Small>{describeCustom(l.item, l.choice)}</Small> : null}
           {l.note ? <Small>Request: {l.note}</Small> : null}
-          {l.item.cents == null ? <Small>{priceText(l.item)} each, depending on size</Small> : null}
+          {l.unit == null ? <Small>{priceText(l.item)} each, depending on size</Small> : null}
         </View>
       ))}
       <View style={{ height: 1, backgroundColor: colors.line }} />
@@ -80,7 +82,7 @@ export default function Assistant() {
   const addProposal = (index) => {
     const lines = readProposal(messages[index]?.add, byId);
     if (!lines.length) return;
-    order.addMany(lines.map((l) => ({ id: l.id, qty: l.qty })));
+    order.addMany(lines.map((l) => ({ id: l.id, qty: l.qty, choice: l.choice })));
     for (const l of lines) if (l.note) order.setNote(l.id, mergeNote(order.notes[l.id], l.note));
     setMessages((cur) => cur.map((m, i) => (i === index ? { ...m, applied: true } : m)));
   };

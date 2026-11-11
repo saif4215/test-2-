@@ -1,67 +1,82 @@
-// "Make it your way" for drinks: which controls a drink shows, and the short text the choices turn into. Plain functions, tested without a phone.
-// These are requests that travel with the quote request as a note; Maruf Cafe confirms what it can make.
-import { customize as defaults, drinkControls as defaultControls } from "../config";
+// "Make it your way": the size and choices an item offers, what the customer picked, and the price that adds up to. Plain functions, tested without a phone.
+//
+// Everything an item offers comes from the café's menu (see lib/options.mjs on the server, which prices the real order the same way):
+//   item.sizes      [{ name, cents }]  the first one is the default
+//   item.optionSets [{ id, label, kind: "one" | "many", required?, max?, choices: [{ name, cents }] }]   (the menu's option groups this item uses)
+// What the customer picked is { size, picks: { setId: [names] } }. Nothing picked means the first size and the required defaults.
 
-export const EMPTY = Object.freeze({ size: "", temp: "", shots: 0, flavor: "", pumps: 0, milk: "", ice: "", sweetness: "", extras: [] });
+export const EMPTY = Object.freeze({ size: "", picks: Object.freeze({}) });
 
-/** The controls to show for an item, in order: [{ id, label, ... }]. Food has none. */
-export function controlsFor(item, cfg = defaults, rules = defaultControls) {
-  if (!item || item.group !== "Drinks") return [];
-  const cat = String(item.cat || "").toLowerCase();
-  const rule = rules.find((r) => new RegExp(r.match, "i").test(cat));
-  const ids = rule ? rule.controls : ["size"];
-  const ranged = item.cents == null;   // a price range means the price depends on size
-  const out = [];
-  for (const id of ids) {
-    if (id === "size" && ranged && cfg.sizes?.length) out.push({ id, label: "Size", options: cfg.sizes });
-    else if (id === "temp" && cfg.temps?.length) out.push({ id, label: "Temperature", options: cfg.temps });
-    else if (id === "shots" && cfg.maxShots > 0) out.push({ id, label: "Espresso shots", max: cfg.maxShots, unit: "shot" });
-    else if (id === "syrup" && cfg.flavors?.length && cfg.maxPumps > 0) out.push({ id, label: "Syrup", options: cfg.flavors, max: cfg.maxPumps, unit: "pump" });
-    else if (id === "milk" && cfg.milks?.length) out.push({ id, label: "Milk", options: cfg.milks });
-    else if (id === "ice" && cfg.ice?.length) out.push({ id, label: "Ice", options: cfg.ice, onlyIced: !/refresher/.test(cat) });
-    else if (id === "sweetness" && cfg.sweetness?.length) out.push({ id, label: "Sweetness", options: cfg.sweetness });
-    else if (id === "extras" && cfg.extras?.length) out.push({ id, label: "Extras", options: cfg.extras, multi: true });
+const money = (c) => `$${(c / 100).toFixed(2)}`;
+/** "+$1.00" or "Free" for a choice. */
+export const extraText = (cents) => (cents > 0 ? `+${money(cents)}` : "");
+
+/** Does this item offer anything to choose? */
+export const hasOffers = (item) => !!(item && ((item.sizes && item.sizes.length > 1) || (item.optionSets && item.optionSets.length)));
+
+/** The choice as it will really be ordered: the size filled in, required choices filled in, and anything the menu no longer offers dropped. */
+export function resolve(item, custom) {
+  const c = custom && typeof custom === "object" ? custom : {};
+  const sizes = (item && item.sizes) || [];
+  const size = sizes.length ? (sizes.some((s) => s.name === c.size) ? c.size : sizes[0].name) : "";
+  const picks = {};
+  for (const set of (item && item.optionSets) || []) {
+    const asked = Array.isArray(c.picks && c.picks[set.id]) ? c.picks[set.id] : [];
+    let names = [...new Set(asked.filter((n) => set.choices.some((x) => x.name === n)))];
+    names = names.slice(0, set.kind === "one" ? 1 : set.max || set.choices.length);
+    if (!names.length && set.required) names = [set.choices[0].name];
+    if (names.length) picks[set.id] = names;
   }
-  return out;
+  return { size, picks };
 }
 
-/** Is this control showing right now? Ice only follows a drink asked for Iced (refreshers always show it). */
-export const isShown = (control, custom) => !control.onlyIced || custom.temp === "Iced";
-
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-/** A choice changes, and anything that no longer applies is cleared (going from Iced back to Hot drops the ice request). */
-export function applyChoice(custom, patch) {
-  const next = { ...EMPTY, ...custom, ...patch };
-  if (patch.temp !== undefined && next.temp !== "Iced") next.ice = "";
-  if (patch.flavor && !next.pumps) next.pumps = 1;                  // picking a flavor asks for at least one pump
-  if (patch.pumps === 0) next.flavor = "";
-  return next;
+/** The price of one, in cents, with the size and choices: the size's price plus what each choice adds. Null for an item that only has a price range. */
+export function unitCents(item, custom) {
+  if (!item || item.cents == null) return null;
+  const r = resolve(item, custom);
+  let cents = r.size ? item.sizes.find((s) => s.name === r.size).cents : item.cents;
+  for (const set of item.optionSets || []) for (const n of r.picks[set.id] || []) cents += set.choices.find((x) => x.name === n).cents;
+  return cents;
 }
 
-/** Keep only what is allowed: unknown choices and out-of-range counts are dropped. Returns a fresh object. */
-export function cleanCustom(custom, controls) {
-  const c = { ...EMPTY, ...custom }, out = { ...EMPTY, extras: [] };
-  for (const ctl of controls) {
-    if (!isShown(ctl, c)) continue;
-    if (ctl.id === "shots") out.shots = Math.max(0, Math.min(ctl.max, Math.floor(Number(c.shots) || 0)));
-    else if (ctl.id === "syrup") { out.pumps = Math.max(0, Math.min(ctl.max, Math.floor(Number(c.pumps) || 0))); out.flavor = out.pumps && ctl.options.includes(c.flavor) ? c.flavor : ""; }
-    else if (ctl.id === "extras") out.extras = ctl.options.filter((o) => (c.extras || []).includes(o));
-    else if (ctl.options.includes(c[ctl.id])) out[ctl.id] = c[ctl.id];
-  }
-  return out;
+/** What the choices add on top of the size's own price, in cents. */
+export function extrasCents(item, custom) {
+  const unit = unitCents(item, custom);
+  if (unit == null) return 0;
+  const r = resolve(item, custom);
+  return unit - (r.size ? item.sizes.find((s) => s.name === r.size).cents : item.cents);
 }
 
-/** "Iced, 2 shots, 2 pumps Vanilla, Oat milk, Light ice, Whipped cream": what the customer asked for, in a fixed order. Empty when nothing was chosen. */
-export function describeCustom(custom, controls) {
-  const c = cleanCustom(custom || {}, controls), parts = [];
-  if (c.size) parts.push(c.size);
-  if (c.temp) parts.push(c.temp);
-  if (c.shots) parts.push(plural(c.shots, "shot"));
-  if (c.pumps) parts.push(`${plural(c.pumps, "pump")}${c.flavor ? ` ${c.flavor}` : " of syrup"}`);
-  if (c.milk) parts.push(c.milk);
-  if (c.ice) parts.push(c.ice);
-  if (c.sweetness) parts.push(c.sweetness);
-  parts.push(...c.extras);
+/** "Large, Iced, Oat milk, Vanilla, Caramel": what the customer asked for, in the menu's order. Empty for an item with nothing to choose. */
+export function describeCustom(item, custom) {
+  const r = resolve(item, custom), parts = [];
+  if (r.size && item.sizes.length > 1) parts.push(r.size);
+  for (const set of item.optionSets || []) parts.push(...(r.picks[set.id] || []));
   return parts.join(", ");
+}
+
+/** The choice to send with an order: { size?, picks? }. The server prices it again from its own menu. */
+export function orderChoice(item, custom) {
+  const r = resolve(item, custom), out = {};
+  if (r.size) out.size = r.size;
+  if (Object.keys(r.picks).length) out.picks = r.picks;
+  return out;
+}
+
+export const setSize = (custom, name) => ({ ...EMPTY, ...custom, size: name });
+
+/**
+ * Tap a choice. In a "choose one" set a different choice replaces the old one, and tapping the chosen one again clears it (unless the set is required).
+ * In a "choose any" set it turns that choice on or off, up to the set's limit. Returns the new custom.
+ */
+export function togglePick(item, custom, setId, name) {
+  const set = (item.optionSets || []).find((s) => s.id === setId);
+  if (!set || !set.choices.some((c) => c.name === name)) return custom;
+  const now = resolve(item, custom).picks[setId] || [];
+  let next;
+  if (set.kind === "one") next = now.includes(name) ? (set.required ? now : []) : [name];
+  else if (now.includes(name)) next = now.filter((n) => n !== name);
+  else if (now.length >= (set.max || set.choices.length)) next = now;
+  else next = [...now, name];
+  return { ...EMPTY, ...custom, picks: { ...(custom && custom.picks), [setId]: next } };
 }

@@ -78,3 +78,10 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:.5rem 0;border-t
 .thumb{max-width:120px;height:auto;border-radius:8px;display:block}
 .item.bad input{border-color:var(--bad)}
 .card > .req{border:0;margin:0;padding:.25rem .1rem;min-height:0}
+.item .sizes{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:.5rem}
+.item .size{display:flex;align-items:center;gap:.4rem;font-weight:600}
+.item .size input{width:92px}
+.item .opts{grid-column:1/-1}
+.optgroup{margin:.75rem 0 1rem}
+.optgroup .choice{display:grid;grid-template-columns:1fr 92px 44px;gap:.4rem;align-items:center;padding:.25rem 0}
+.choices>summary{font-weight:700;cursor:pointer}

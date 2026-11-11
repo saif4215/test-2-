@@ -30,7 +30,7 @@ const mk = async () => { const ctx = await b.newContext({ viewport: { width: 390
   ok(await p.getByText(/straight from the café's menu and details/).isVisible(), "without a key it says the answers come from the café's details, not AI");
   await p.getByRole("textbox", { name: "Your question" }).fill("How much is a latte?");
   await p.getByRole("button", { name: "Send question" }).click();
-  await p.getByText("Latte: $4.50 (before tax).").waitFor();
+  await p.getByText("Latte: Small $4.50 / Large $5.50 (before tax).").waitFor();
   ok(await p.getByText(/Automatic answers from the café's details/).isVisible(), "the footer says these are automatic answers");
   ok((await p.getByText(/AI can make mistakes/).count()) === 0, "no AI claim when there is no AI");
   await p.getByRole("button", { name: "What are your hours?" }).count().then(() => {});

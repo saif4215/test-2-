@@ -25,7 +25,7 @@ Open http://localhost:8080 (it opens the app at `/app/`).
 `node scripts/make-preview.mjs <output-dir>` (after `npm run build`) writes `<output-dir>/app/index.html` and every file it needs. The result runs the real phone app from any place that only hosts static files, such as a shared preview page that shows it in a phone frame: every button works. A small stand-in for the server (`app/preview-shim.js`, generated) answers the menu and details, the chat (same answers as the real keyless chat) and "send a request", which sends nothing. Put the page that shows it next to the `app/` folder and point an `<iframe>` at `app/index.html`.
 
 ## Content
-- The menu starts from `public/menu.json` (prices in cents) and is edited in the dashboard. Edits are stored in the database and win over the file. The menu was copied from marufcafe.com.
+- The menu starts from `public/menu.json` (prices in cents) and is edited in the dashboard. Edits are stored in the database and win over the file. The menu is the café's own boards (drinks and food, Small and Large prices, and the extras with what each costs), entered from photos the owner sent.
 - Business details, FAQ and event options start from `public/content.default.json` and are also edited in the dashboard.
 - "Order online" and "Gift cards" link to the cafe's real pages on marufcafe.com.
 

@@ -44,7 +44,7 @@ The app also loads the live menu (`/menu.json`) and the café's details, FAQ, ev
 | Address, phone, email, hours, social links | the dashboard (Site info), or `src/config.js` → `business` as the built-in fallback |
 | Occasions, catering cards, venue cards, event options, FAQ | `src/config.js` |
 | Calculator serving sizes and prices | `src/config.js` → `calculator` (null means "Maruf Cafe will confirm") |
-| Menu items and prices | `src/data/menu.json` (prices in cents; add `"desc": "..."` to show a description) |
+| Menu items and prices | `src/data/menu.json` (prices in cents; add `"desc": "..."` to show a description; `"sizes": [{ "name": "Small", "cents": 300 }, { "name": "Large", "cents": 350 }]` for a drink with sizes; `"options": ["milk", "syrup"]` for the extras it offers, defined under `optionGroups` with a price for each choice) |
 | Photos | put files in `assets/photos/`, then set the slot in `src/photos.js` |
 
 `src/data/menu.json` is a copy of `../public/menu.json` (the live menu). Keep them in step when the menu changes.

@@ -259,8 +259,14 @@ Chats are not stored, and the privacy page says that questions are sent to Anthr
 - **Prices come from the Menu tab in the dashboard,** looked up again by the server for every order, so a price you change or an item you hide applies
   immediately and the app can never set its own price. The items arrive in Square by name and price (not linked to your Square item library, so
   Square's item reports will not group them with items you ring up at the counter). Linking them is possible later by reading your Square catalog.
-- **Items with a price range** (for example a drink that costs more in a larger size) cannot be sent from the app, because no single price is known.
-  The order screen says which ones. Give the item one price in the Menu tab (or one item per size) to let customers order it from the app.
+- **Sizes and extras** come from the menu too. A drink with a Small and a Large price shows one price box per size in the Menu tab, and the customer picks
+  a size in the app. Extras that cost money (alternative milk +$1.00, a syrup +$0.50, cold foam +$0.75, breakfast add-ons, grilled chicken on a salad) and free
+  choices (hot or iced, bagel or croissant, hot or regular tenders, wing sauce, dressing) are listed at the bottom of the Menu tab under **Choices and extras**,
+  where you change what each costs. On each item, **Choices offered** says which of them it offers. The server adds up the size and the extras itself, and sends
+  Square a line like "Latte (Large)" at the full price with the choices written on it for whoever makes the drink.
+  An item that only has a price range (a low and a high price and no sizes) cannot be sent from the app, because no single price is known; the order screen says which.
+- **If you edited the menu in the dashboard before this version,** that saved menu wins over the file and would hide the sizes and extras. On the Menu tab the owner
+  can press **Reset to the original menu** to load the menu from the café's boards (sizes, extras and all), then re-apply any price change.
 - **Guards:** a phone number is required (so you can call the customer), one connection can place 5 orders a minute
   (`ORDER_RATE_LIMIT_PER_MIN`), and an order over $300 (`ORDER_MAX_DOLLARS`) is sent to the large-order quote instead. A prank order is cancelled in Square.
 - **Retries are safe:** if a customer's connection drops and they tap Place order again, Square receives the same request key and makes one order.

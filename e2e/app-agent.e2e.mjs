@@ -49,10 +49,10 @@ await button("Add to my order").click();
 await shown("Added to your order").waitFor();
 await button("View my order").click();
 await p.getByRole("button", { name: "Latte: change options or add a note" }).first().waitFor();
-ok(await seen("Request: Iced"), "the order has the Latte with the request the customer confirmed");
+ok(await seen("Small; Iced"), "the order has the Latte, its size, and the request the customer confirmed");
 ok(await seen("3 items"), "and the right number of items");
 const sys = aiCalls[0].system;
-ok(sys.includes("drinks-coffee-latte = Latte $4.50") && /You never place an order/.test(sys), "the AI was given the real menu and told it cannot order");
+ok(sys.includes("drinks-coffee-latte = Latte Small $4.50 / Large $5.50") && /You never place an order/.test(sys), "the AI was given the real menu and told it cannot order");
 ok(!JSON.stringify(aiCalls).includes("7185550") , "no contact details went to the AI");
 
 // a plain question gets just an answer

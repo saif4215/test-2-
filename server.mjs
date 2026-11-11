@@ -15,6 +15,7 @@ import { createAuth } from "./lib/auth.mjs";
 import { parseInquiry, FormError, display, FORMS } from "./lib/forms.mjs";
 import { notifyOwner } from "./lib/notify.mjs";
 import { normalizeMenu, publicMenu, checkoutIndex } from "./lib/menu.mjs";
+import { priceChoice, ChoiceError } from "./lib/options.mjs";
 import { normalizeContent, mergeContent } from "./lib/content.mjs";
 import { detectImage, MAX_UPLOAD_BYTES, MAX_UPLOADS } from "./lib/uploads.mjs";
 import { renderPage, robotsTxt, sitemapXml } from "./lib/render.mjs";
@@ -75,18 +76,22 @@ export function parseOrder(body, menu, maxCents = 30000) {
   const bad = (m) => { throw new HttpError(400, m); };
   if (!body || typeof body !== "object") bad("Invalid request.");
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 30) bad("Your order is empty.");
-  const wanted = new Map();
+  const wanted = new Map();   // one line per item and set of choices: two identical lines are added together
   for (const it of body.items) {
     if (!it || typeof it.id !== "string") bad("Invalid order item.");
     if (!Number.isInteger(it.qty) || it.qty < 1 || it.qty > 20) bad("Quantities must be between 1 and 20.");
     if (!menu.has(it.id)) bad("An item in your order can't be ordered in the app right now. Remove it and try again.");
-    const note = typeof it.note === "string" ? it.note.replace(/\s+/g, " ").trim().slice(0, 250) : "";
-    const cur = wanted.get(it.id) || { qty: 0, note: "" };
+    let priced;
+    try { priced = priceChoice(menu.get(it.id), it); }
+    catch (err) { if (err instanceof ChoiceError) bad(`${err.message} Remove it from your order and add it again.`); throw err; }
+    const typed = typeof it.note === "string" ? it.note.replace(/\s+/g, " ").trim().slice(0, 250) : "";
+    const k = `${it.id}|${priced.sig}`;
+    const cur = wanted.get(k) || { id: it.id, name: priced.name, cents: priced.cents, qty: 0, text: priced.text, note: "" };
     cur.qty += it.qty;
-    if (note && !cur.note) cur.note = note;
-    wanted.set(it.id, cur);
+    if (typed && !cur.note) cur.note = typed;
+    wanted.set(k, cur);
   }
-  const lines = [...wanted].map(([id, w]) => ({ id, ...w, ...menu.get(id) }));
+  const lines = [...wanted.values()].map(({ text, note, ...l }) => ({ ...l, note: [text, note].filter(Boolean).join("; ").slice(0, 500) }));
   if (lines.some((l) => l.qty > 20)) bad("Quantities must be between 1 and 20.");
   if (lines.reduce((s, l) => s + l.cents * l.qty, 0) > maxCents) bad(`That order is over $${maxCents / 100}. For a bigger order, please use Get a large order quote.`);
   const name = typeof body.name === "string" ? body.name.replace(/\s+/g, " ").trim() : "";

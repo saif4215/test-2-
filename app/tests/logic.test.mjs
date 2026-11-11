@@ -10,7 +10,7 @@ import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS } from "../src/lib/memory-util.js";
-import { controlsFor, isShown, applyChoice, cleanCustom, describeCustom, EMPTY } from "../src/lib/customize.js";
+import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
 
@@ -287,56 +287,103 @@ test("saved data that is damaged is forgotten, not trusted", () => {
   assert.deepEqual(readSaved(null, []), []);
 });
 
-test("drink controls: food has none, each kind of drink shows its own, size only when the price depends on it", () => {
-  assert.deepEqual(controlsFor({ group: "Food", cat: "Burgers", cents: 1000 }), []);
-  const ids = (it) => controlsFor(it).map((c) => c.id);
-  assert.deepEqual(ids({ group: "Drinks", cat: "Coffee", cents: 300 }), ["temp", "shots", "syrup", "milk", "ice", "extras"]);
-  assert.deepEqual(ids({ group: "Drinks", cat: "Coffee", min: 500, max: 600 }), ["size", "temp", "shots", "syrup", "milk", "ice", "extras"]);
-  assert.deepEqual(ids({ group: "Drinks", cat: "Refreshers", min: 500, max: 650 }), ["size", "ice", "sweetness"]);
-  assert.deepEqual(ids({ group: "Drinks", cat: "Tea", cents: 400 }), ["temp", "syrup", "milk", "ice"]);
-  assert.deepEqual(ids({ group: "Drinks", cat: "Smoothies / Others", cents: 600 }), ["milk", "extras"]);
-  assert.deepEqual(ids({ group: "Drinks", cat: "Brand new category", cents: 600 }), [], "an unknown drink category shows nothing, not a wrong set");
-  assert.deepEqual(controlsFor({ group: "Drinks", cat: "Coffee", cents: 300 }, { temps: [], milks: [], flavors: [], ice: [], extras: [], maxShots: 0, maxPumps: 0 }), [], "a café that lists nothing shows nothing");
+// ── sizes and priced choices ("make it your way") ─────────────────────────────────────────────────────────────────────────────
+const SETS = {
+  temp: { id: "temp", label: "Hot or iced", kind: "one", choices: [{ name: "Hot", cents: 0 }, { name: "Iced", cents: 0 }] },
+  milk: { id: "milk", label: "Alternative milk", kind: "one", choices: [{ name: "Oat milk", cents: 100 }, { name: "Almond milk", cents: 100 }] },
+  syrup: { id: "syrup", label: "Syrup", kind: "many", max: 2, choices: [{ name: "Vanilla", cents: 50 }, { name: "Caramel", cents: 50 }, { name: "Hazelnut", cents: 50 }] },
+  heat: { id: "heat", label: "Hot or regular", kind: "one", required: true, choices: [{ name: "Regular", cents: 0 }, { name: "Hot", cents: 0 }] },
+};
+const LATTE = { id: "latte", name: "Latte", cents: 450, sizes: [{ name: "Small", cents: 450 }, { name: "Large", cents: 550 }], optionSets: [SETS.temp, SETS.milk, SETS.syrup] };
+const TENDERS = { id: "tenders", name: "2pc Tenders", cents: 600, optionSets: [SETS.heat] };
+const BAGEL = { id: "bagel", name: "Bagel", cents: 300 };
+
+test("an item with nothing to choose offers nothing; sizes and choices come from the menu", () => {
+  assert.equal(hasOffers(BAGEL), false);
+  assert.equal(hasOffers(LATTE), true);
+  assert.equal(hasOffers(TENDERS), true, "a must-pick choice is something to choose");
+  assert.equal(hasOffers({ cents: 300, sizes: [{ name: "Small", cents: 300 }] }), false, "one size is no choice");
 });
 
-test("ice only follows an iced coffee or tea, and always shows for refreshers", () => {
-  const coffee = controlsFor({ group: "Drinks", cat: "Coffee", cents: 300 }).find((c) => c.id === "ice");
-  assert.equal(isShown(coffee, { temp: "Hot" }), false);
-  assert.equal(isShown(coffee, { temp: "Iced" }), true);
-  const refresher = controlsFor({ group: "Drinks", cat: "Refreshers", cents: 300 }).find((c) => c.id === "ice");
-  assert.equal(isShown(refresher, {}), true);
+test("nothing picked means the first size and the must-pick defaults, at the menu price", () => {
+  assert.deepEqual(resolve(LATTE, undefined), { size: "Small", picks: {} });
+  assert.deepEqual(resolve(TENDERS, undefined), { size: "", picks: { heat: ["Regular"] } });
+  assert.equal(unitCents(LATTE, undefined), 450);
+  assert.equal(unitCents(BAGEL, undefined), 300);
 });
 
-test("a customized drink reads as one short line, in a fixed order", () => {
-  const controls = controlsFor({ group: "Drinks", cat: "Coffee", min: 500, max: 600 });
-  assert.equal(describeCustom({}, controls), "");
-  const c = { milk: "Oat milk", temp: "Iced", size: "Large", shots: 2, pumps: 2, flavor: "Vanilla", ice: "Light ice", extras: ["Whipped cream"] };
-  assert.equal(describeCustom(c, controls), "Large, Iced, 2 shots, 2 pumps Vanilla, Oat milk, Light ice, Whipped cream");
-  assert.equal(describeCustom({ shots: 1, pumps: 1 }, controls), "1 shot, 1 pump of syrup");
-  assert.equal(describeCustom({ ice: "Light ice", temp: "Hot" }, controls), "Hot", "ice is ignored on a hot drink");
+test("the price is the size plus what each choice adds", () => {
+  assert.equal(unitCents(LATTE, { size: "Large" }), 550);
+  assert.equal(unitCents(LATTE, { size: "Large", picks: { milk: ["Oat milk"] } }), 650);
+  assert.equal(unitCents(LATTE, { size: "Small", picks: { milk: ["Oat milk"], syrup: ["Vanilla", "Caramel"], temp: ["Iced"] } }), 450 + 100 + 100);
+  assert.equal(extrasCents(LATTE, { size: "Large", picks: { milk: ["Oat milk"] } }), 100);
+  assert.equal(unitCents({ min: 300, max: 400 }, {}), null, "an item with only a price range has no single price");
 });
 
-test("choices that are not offered, or out of range, are dropped", () => {
-  const controls = controlsFor({ group: "Drinks", cat: "Coffee", cents: 300 });
-  const c = cleanCustom({ milk: "Unicorn milk", shots: 99, pumps: 99, flavor: "Vanilla", extras: ["Whipped cream", "Gold leaf"], size: "Large" }, controls);
-  assert.equal(c.milk, "");
-  assert.equal(c.shots, 4);
-  assert.equal(c.pumps, 8);
-  assert.deepEqual(c.extras, ["Whipped cream"]);
-  assert.equal(c.size, "", "no size control on a single-price drink");
-  assert.equal(cleanCustom({ shots: -3 }, controls).shots, 0);
+test("a choice the menu does not offer is ignored, never charged", () => {
+  const c = { size: "Jumbo", picks: { milk: ["Unicorn milk"], syrup: ["Vanilla", "Caramel", "Hazelnut"], ghost: ["x"], temp: ["Hot", "Iced"] } };
+  const r = resolve(LATTE, c);
+  assert.equal(r.size, "Small");
+  assert.equal(r.picks.milk, undefined);
+  assert.deepEqual(r.picks.syrup, ["Vanilla", "Caramel"], "only as many as the set allows");
+  assert.deepEqual(r.picks.temp, ["Hot"], "a choose-one set keeps one");
+  assert.equal(r.picks.ghost, undefined);
+  assert.equal(resolve(LATTE, "junk").size, "Small");
+  assert.equal(resolve(LATTE, { picks: { milk: "Oat milk" } }).picks.milk, undefined, "wrong shapes are ignored");
 });
 
-test("choosing things in the app keeps the request consistent", () => {
-  let c = applyChoice(EMPTY, { temp: "Iced" });
-  c = applyChoice(c, { ice: "Light ice" });
-  assert.equal(c.ice, "Light ice");
-  c = applyChoice(c, { temp: "Hot" });
-  assert.equal(c.ice, "", "going back to Hot drops the ice");
-  c = applyChoice(c, { flavor: "Caramel" });
-  assert.equal(c.pumps, 1, "a flavor asks for at least one pump");
-  c = applyChoice(c, { pumps: 0 });
-  assert.equal(c.flavor, "", "no pumps, no flavor");
+test("tapping choices: one replaces one, tapping it again clears it, must-picks stay, any-sets toggle up to their limit", () => {
+  let c = togglePick(LATTE, undefined, "milk", "Oat milk");
+  assert.deepEqual(resolve(LATTE, c).picks.milk, ["Oat milk"]);
+  c = togglePick(LATTE, c, "milk", "Almond milk");
+  assert.deepEqual(resolve(LATTE, c).picks.milk, ["Almond milk"]);
+  c = togglePick(LATTE, c, "milk", "Almond milk");
+  assert.equal(resolve(LATTE, c).picks.milk, undefined);
+  let t = togglePick(TENDERS, undefined, "heat", "Hot");
+  assert.deepEqual(resolve(TENDERS, t).picks.heat, ["Hot"]);
+  t = togglePick(TENDERS, t, "heat", "Hot");
+  assert.deepEqual(resolve(TENDERS, t).picks.heat, ["Hot"], "a must-pick cannot be cleared");
+  c = togglePick(LATTE, c, "syrup", "Vanilla"); c = togglePick(LATTE, c, "syrup", "Caramel"); c = togglePick(LATTE, c, "syrup", "Hazelnut");
+  assert.deepEqual(resolve(LATTE, c).picks.syrup, ["Vanilla", "Caramel"], "a third syrup is not added");
+  c = togglePick(LATTE, c, "syrup", "Vanilla");
+  assert.deepEqual(resolve(LATTE, c).picks.syrup, ["Caramel"]);
+  assert.equal(togglePick(LATTE, c, "nope", "x"), c);
+  assert.equal(setSize(c, "Large").size, "Large");
+});
+
+test("what the customer asked for reads as one short line, in the menu's order", () => {
+  assert.equal(describeCustom(LATTE, undefined), "Small");
+  assert.equal(describeCustom(LATTE, { size: "Large", picks: { syrup: ["Caramel"], temp: ["Iced"], milk: ["Oat milk"] } }), "Large, Iced, Oat milk, Caramel");
+  assert.equal(describeCustom(TENDERS, undefined), "Regular");
+  assert.equal(describeCustom(BAGEL, undefined), "");
+});
+
+test("the order carries the size and choices, not prices", () => {
+  assert.deepEqual(orderChoice(LATTE, undefined), { size: "Small" });
+  assert.deepEqual(orderChoice(LATTE, { size: "Large", picks: { milk: ["Oat milk"] } }), { size: "Large", picks: { milk: ["Oat milk"] } });
+  assert.deepEqual(orderChoice(BAGEL, undefined), {});
+});
+
+test("the app and the server work out the same price for every item on the real menu, with and without choices", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { priceChoice } = await import("../../lib/options.mjs");
+  const { checkoutIndex } = await import("../../lib/menu.mjs");
+  const menu = JSON.parse(readFileSync(new URL("../src/data/menu.json", import.meta.url), "utf8"));
+  const served = JSON.parse(readFileSync(new URL("../../public/menu.json", import.meta.url), "utf8"));
+  assert.deepEqual(menu, served, "the app's built-in menu is a copy of the live one");
+  const index = checkoutIndex(menu), items = indexMenu(menu);
+  assert.ok(items.size > 60);
+  for (const [id, item] of items) {
+    const entry = index.get(id);
+    assert.ok(entry, `${item.name} can be ordered in the app`);
+    const lastSize = item.sizes ? item.sizes[item.sizes.length - 1].name : undefined;
+    const picks = {};
+    for (const set of item.optionSets || []) picks[set.id] = set.kind === "many" ? set.choices.slice(0, set.max || set.choices.length).map((c) => c.name) : [set.choices[set.choices.length - 1].name];
+    for (const custom of [undefined, { size: lastSize, picks }]) {
+      const mine = unitCents(item, custom), theirs = priceChoice(entry, orderChoice(item, custom));
+      assert.equal(mine, theirs.cents, `${item.name}: the price agrees`);
+    }
+  }
 });
 
 test("phone and mail links are read so they can be shown on a computer with no dialer", () => {
@@ -398,11 +445,11 @@ test("pickup details need a name and a 10-digit phone, and the phone is kept as 
   assert.equal(buildPickup({ name: "Sam", phone: "7185550123", note: "y".repeat(400) }).fields.note.length, 200);
 });
 
-test("the order sent to the server holds ids, quantities and notes, never prices", () => {
-  const entries = [{ id: "latte", name: "Latte", cents: 450, qty: 2 }, { id: "bagel", name: "Bagel", cents: 300, qty: 1 }];
-  const body = orderBody(entries, { latte: "Iced, oat milk" }, { name: "Sam", phone: "7185550123", note: "" });
-  assert.deepEqual(body, { items: [{ id: "latte", qty: 2, note: "Iced, oat milk" }, { id: "bagel", qty: 1 }], name: "Sam", phone: "7185550123" });
-  assert.ok(!JSON.stringify(body).includes("450"));
+test("the order sent to the server holds ids, quantities, choices and notes, never prices", () => {
+  const entries = [{ id: "latte", name: "Latte", cents: 450, unit: 650, qty: 2, choice: { size: "Large", picks: { milk: ["Oat milk"] } } }, { id: "bagel", name: "Bagel", cents: 300, unit: 300, qty: 1, choice: {} }];
+  const body = orderBody(entries, { latte: "extra hot" }, { name: "Sam", phone: "7185550123", note: "" });
+  assert.deepEqual(body, { items: [{ id: "latte", qty: 2, size: "Large", picks: { milk: ["Oat milk"] }, note: "extra hot" }, { id: "bagel", qty: 1 }], name: "Sam", phone: "7185550123" });
+  assert.ok(!JSON.stringify(body).includes("650") && !JSON.stringify(body).includes("450"));
   assert.equal(orderBody(entries, {}, { name: "Sam", phone: "7185550123", note: "ring the bell" }).note, "ring the bell");
 });
 
@@ -434,24 +481,24 @@ test("the saved pickup name and phone are read back only if they are what was sa
 
 // ── the order kept on the phone ─────────────────────────────────────────────────────────────────────────────────────────────────
 test("a saved order comes back as it was, and only the items in the order are saved", () => {
-  const cart = { lines: { latte: 2, bagel: 1 }, notes: { latte: "extra hot", ghost: "x" }, custom: { latte: { temp: "Iced", shots: 2, extras: ["Extra foam"] }, ghost: { temp: "Hot" } } };
+  const cart = { lines: { latte: 2, bagel: 1 }, notes: { latte: "extra hot", ghost: "x" }, custom: { latte: { size: "Large", picks: { milk: ["Oat milk"] } }, ghost: { size: "Small", picks: {} } } };
   const saved = cartToSave(cart);
   assert.deepEqual(Object.keys(saved.notes), ["latte"]);
   assert.deepEqual(Object.keys(saved.custom), ["latte"]);
   const back = readCart(JSON.parse(JSON.stringify(saved)));
   assert.deepEqual(back.lines, { latte: 2, bagel: 1 });
   assert.equal(back.notes.latte, "extra hot");
-  assert.equal(back.custom.latte.temp, "Iced");
-  assert.equal(back.custom.latte.shots, 2);
+  assert.deepEqual(back.custom.latte, { size: "Large", picks: { milk: ["Oat milk"] } });
 });
 test("a damaged saved order is cleaned, never trusted", () => {
   assert.deepEqual(readCart(null), { lines: {}, notes: {}, custom: {} });
   assert.deepEqual(readCart("nope"), { lines: {}, notes: {}, custom: {} });
   assert.deepEqual(readCart({ lines: [1, 2] }).lines, {});
-  const odd = readCart({ lines: { a: 0, b: -3, c: "x", d: 2.9, e: 999 }, notes: { d: 12345 }, custom: { d: { extras: 5, shots: "many", temp: { x: 1 } }, e: [1] } });
+  const odd = readCart({ lines: { a: 0, b: -3, c: "x", d: 2.9, e: 999 }, notes: { d: 12345 }, custom: { d: { picks: 5, size: { x: 1 }, temp: "Iced" }, e: [1] } });
   assert.deepEqual(odd.lines, { d: 2, e: MAX_QTY });   // zero, negative and non-numbers dropped; too many capped at what the café's server takes
   assert.equal(odd.notes.d, undefined);
-  assert.deepEqual(odd.custom.d, { size: "", temp: "", shots: 0, flavor: "", pumps: 0, milk: "", ice: "", sweetness: "", extras: [] });
+  assert.deepEqual(odd.custom.d, { size: "", picks: {} });
+  assert.deepEqual(readCustom({ size: "Large", picks: { milk: ["Oat milk", 5], bad: "x" }, shots: 3 }), { size: "Large", picks: { milk: ["Oat milk"] } }, "an older saved order's other fields are dropped");
   assert.equal(odd.custom.e, undefined);
   assert.equal(readCustom([1]), null);
   const many = readCart({ lines: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`i${i}`, 1])) });

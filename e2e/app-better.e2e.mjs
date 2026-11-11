@@ -21,13 +21,13 @@ const orderBar = () => p.getByRole("button", { name: /^View my order \(/ }).filt
 
 // ── browse by category from Home ───────────────────────────────────────────────────────────────────────────────────────────────
 await p.goto(site.u + "/app/", { waitUntil: "load" });
-await p.getByRole("button", { name: /^Burgers, / }).first().scrollIntoViewIfNeeded();
-ok(await p.getByRole("button", { name: /^Coffee, 19 items/ }).first().isVisible(), "Home has a row of round category buttons, with how many items each holds");
-await p.getByRole("button", { name: /^Burgers, / }).first().click();
+await p.getByRole("button", { name: /^Sandwiches, / }).first().scrollIntoViewIfNeeded();
+ok(await p.getByRole("button", { name: /^Coffee, 10 items/ }).first().isVisible(), "Home has a row of round category buttons, with how many items each holds");
+await p.getByRole("button", { name: /^Sandwiches, / }).first().click();
 let head = null;
 for (let i = 0; i < 20 && !(head && head.y > 100 && head.y < 400); i++) {   // the Menu scrolls to the category; give it a moment
   await p.waitForTimeout(250);
-  head = await p.getByRole("heading", { name: "Burgers" }).filter({ visible: true }).first().boundingBox().catch(() => null);
+  head = await p.getByRole("heading", { name: "Sandwiches" }).filter({ visible: true }).first().boundingBox().catch(() => null);
 }
 ok(head && head.y > 100 && head.y < 400, "tapping a category on Home opens the Menu scrolled to that category");
 
@@ -125,13 +125,13 @@ await p.goto(site.u + "/app/menu", { waitUntil: "load" });
 const heading = (n) => p.getByRole("heading", { name: n, exact: true }).filter({ visible: true }).count();
 await p.getByRole("tab", { name: "Show food only" }).click();
 await p.waitForTimeout(500);
-ok((await p.getByRole("button", { name: /^Burgers$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Coffee$/ }).count()) === 0, "choosing Food shows only the food categories");
+ok((await p.getByRole("button", { name: /^Sandwiches$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Coffee$/ }).count()) === 0, "choosing Food shows only the food categories");
 await p.getByRole("tab", { name: "Show drinks only" }).click();
 await p.waitForTimeout(500);
-ok((await p.getByRole("button", { name: /^Coffee$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Burgers$/ }).count()) === 0, "choosing Drinks shows only the drinks");
+ok((await p.getByRole("button", { name: /^Coffee$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Sandwiches$/ }).count()) === 0, "choosing Drinks shows only the drinks");
 await p.getByRole("tab", { name: "Show everything" }).click();
 await p.waitForTimeout(400);
-ok((await p.getByRole("button", { name: /^Burgers$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Coffee$/ }).count()) > 0, "and All brings everything back");
+ok((await p.getByRole("button", { name: /^Sandwiches$/ }).count()) > 0 && (await p.getByRole("button", { name: /^Coffee$/ }).count()) > 0, "and All brings everything back");
 
 // ── clearing the order asks first ──────────────────────────────────────────────────────────────────────────────────────────────
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
