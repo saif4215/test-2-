@@ -4,6 +4,7 @@
 import { chromium } from "playwright-core";
 import { startSite } from "../test-helpers.mjs";
 import { startSquare } from "./square-standin.mjs";
+import { addLatte } from "./helpers.mjs";
 
 const square = await startSquare();
 const site = await startSite({ SQUARE_ACCESS_TOKEN: "tok", SQUARE_LOCATION_ID: "LOC", SQUARE_API_BASE: square.url, TAX_PERCENT: "8.875", ORDER_RATE_LIMIT_PER_MIN: "1000" });
@@ -34,6 +35,9 @@ ok(head && head.y > 100 && head.y < 400, "tapping a category on Home opens the M
 // ── choose how many, then add ─────────────────────────────────────────────────────────────────────────────────────────────────
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
 await p.getByRole("button", { name: /^Latte, \$4\.50/ }).first().click();
+await button("Choose hot or iced first").waitFor();
+ok(await seen("Choose hot or iced"), "a drink that needs hot or iced says so, and cannot be added until it is chosen");
+await button("Hot").click();
 await button("Add Latte to order").waitFor();
 ok(await seen("Add to order · $4.50"), "the item screen starts at one, with the price on the button");
 await button("More Latte").click(); await button("More Latte").click();
@@ -63,7 +67,7 @@ await p.waitForTimeout(900);
 ok((await p.getByRole("button", { name: /^View my order \(/ }).count()) === 0, "taking the quantity to zero removes it from the order");
 
 // ── the order is kept when the app is closed ──────────────────────────────────────────────────────────────────────────────────────
-await p.getByRole("button", { name: "Add Latte to order", exact: true }).first().click();
+await addLatte(p);
 await p.getByRole("button", { name: "Add Bagel & Cream Cheese to order", exact: true }).first().click().catch(() => {});
 await orderBar().waitFor();
 const before = await orderBar().textContent();
@@ -162,7 +166,7 @@ async function orderPageAt(iso) {
   await c.clock.setFixedTime(new Date(iso));
   const q = await c.newPage();
   await q.goto(site.u + "/app/menu", { waitUntil: "load" });
-  await q.getByRole("button", { name: "Add Latte to order", exact: true }).first().click();
+  await addLatte(q);
   await q.getByRole("button", { name: /^View my order \(/ }).first().click();
   await q.getByRole("button", { name: "Place order for pickup" }).first().waitFor();
   await q.waitForTimeout(400);

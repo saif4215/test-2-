@@ -20,12 +20,14 @@ const radio = (name) => p.getByRole("radio", { name }).filter({ visible: true })
 // ── a drink with sizes, hot or iced, milk, syrup and foam ─────────────────────────────────────────────────────────────────────
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
 await p.getByRole("button", { name: /^Latte, \$4\.50 – \$5\.50/ }).first().click();
+await button("Choose hot or iced first").waitFor();
+ok(await seen("Required: please choose one"), "hot or iced is required, and nothing is chosen for the customer");
+await button("Iced").click();
 await button("Add Latte to order").waitFor();
-ok(await seen("Add to order · $4.50"), "a latte starts at the Small price");
+ok(await seen("Add to order · $4.50"), "a latte starts at the Small price once hot or iced is chosen");
 ok(await seen("Small") && await seen("Large") && await seen("$5.50"), "both sizes are shown with their prices");
 await radio("Size: Large, $5.50").click();
 ok(await seen("Add to order · $5.50"), "choosing Large moves the price to $5.50");
-await button("Iced").click().catch(async () => { await p.getByText("Iced", { exact: true }).filter({ visible: true }).first().click(); });
 ok(await seen("Add to order · $5.50"), "hot or iced is free");
 await shown("More options").click();
 await p.getByText("Oat milk +$1.00", { exact: true }).filter({ visible: true }).first().click();
@@ -45,13 +47,13 @@ await p.getByRole("button", { name: /^View my order \(/ }).filter({ visible: tru
 // ── a food item with a required choice, and one with paid add-ons ─────────────────────────────────────────────────────────────
 await p.getByRole("button", { name: /^2pc Tenders, \$6\.00/ }).first().scrollIntoViewIfNeeded();
 await p.getByRole("button", { name: /^2pc Tenders, \$6\.00/ }).first().click();
-await button("Add 2pc Tenders to order").waitFor();
-ok(await seen("Hot or regular") && await seen("Choose one"), "tenders ask hot or regular");
-ok(await seen("Your pick") && await seen("Regular"), "the first choice is already picked, so the order always says which");
+await button("Choose hot or regular first").waitFor();
+ok(await seen("Hot or regular") && await seen("Required"), "tenders ask hot or regular, and it must be chosen");
 await p.getByText("Hot", { exact: true }).filter({ visible: true }).first().click();
 await button("Add 2pc Tenders to order").click();
 await p.getByRole("button", { name: /^Egg & Cheese, \$3\.50/ }).first().click();
-await button("Add Egg & Cheese to order").waitFor();
+await button("Choose bagel or croissant first").waitFor();
+await button("Bagel").click();
 await p.getByText("Avocado +$2.00", { exact: true }).filter({ visible: true }).first().click();
 ok(await seen("Add to order · $5.50"), "an add-on adds its price to breakfast");
 await button("Add Egg & Cheese to order").click();

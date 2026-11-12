@@ -16,6 +16,7 @@ import { parseInquiry, FormError, display, FORMS } from "./lib/forms.mjs";
 import { notifyOwner } from "./lib/notify.mjs";
 import { normalizeMenu, publicMenu, checkoutIndex } from "./lib/menu.mjs";
 import { priceChoice, ChoiceError } from "./lib/options.mjs";
+import { pickupProblem } from "./lib/pickup.mjs";
 import { normalizeContent, mergeContent } from "./lib/content.mjs";
 import { detectImage, MAX_UPLOAD_BYTES, MAX_UPLOADS } from "./lib/uploads.mjs";
 import { renderPage, robotsTxt, sitemapXml } from "./lib/render.mjs";
@@ -98,7 +99,9 @@ export function parseOrder(body, menu, maxCents = 30000) {
   if (name.length < 1 || name.length > 60) bad("Enter a name for the pickup order.");
   const note = typeof body.note === "string" ? body.note.replace(/\s+/g, " ").trim().slice(0, 200) : "";
   if (typeof body.idempotencyKey !== "string" || !/^[A-Za-z0-9-]{16,36}$/.test(body.idempotencyKey)) bad("Invalid request.");
-  return { lines, name, note, phone: normalizePhone(body.phone), key: body.idempotencyKey };
+  const pickupAt = body.pickupAt == null || body.pickupAt === "" ? "" : body.pickupAt;   // a chosen pickup time, as a UTC time; whether the café can take it is checked where the hours are known
+  if (pickupAt !== "" && (typeof pickupAt !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?Z$/.test(pickupAt))) bad("That pickup time isn't valid. Choose another.");
+  return { lines, name, note, phone: normalizePhone(body.phone), key: body.idempotencyKey, pickupAt };
 }
 
 export function createServer(env = process.env) {
@@ -109,6 +112,7 @@ export function createServer(env = process.env) {
     environment: production ? "production" : "sandbox", taxPercent,
   };
   const enabled = !!(cfg.token && cfg.locationId);
+  const pickupMinMinutes = (() => { const n = Number(env.PICKUP_MIN_MINUTES); return Number.isFinite(n) && n >= 5 && n <= 240 ? Math.round(n) : 30; })();   // the café's prep time: the earliest pickup time a customer can choose
   const maxOrderCents = (() => { const n = Number(env.ORDER_MAX_DOLLARS); return Number.isFinite(n) && n >= 10 && n <= 2000 ? Math.round(n * 100) : 30000; })();
   const apiBase = env.SQUARE_API_BASE || (production ? "https://connect.squareup.com" : "https://connect.squareupsandbox.com");
   const dataDir = env.DATA_DIR || path.join(ROOT, "data");
@@ -169,14 +173,15 @@ export function createServer(env = process.env) {
 
   /** Put the customer's order into the café's Square as an unpaid pickup order. Retrying with the same key never orders twice. */
   async function placeOrder(body) {
-    const { lines, name, note, phone, key } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
+    const { lines, name, note, phone, key, pickupAt } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
+    if (pickupAt) { const problem = pickupProblem(pickupAt, getContent().business.hours, new Date(), { minMinutes: pickupMinMinutes }); if (problem) throw new HttpError(400, problem); }
     const ref = orderRef(key);
     const order = {
       location_id: cfg.locationId, reference_id: ref, source: { name: APP_SOURCE },
       line_items: lines.map((l) => ({ name: l.name, quantity: String(l.qty), base_price_money: { amount: l.cents, currency: "USD" }, ...(l.note ? { note: l.note } : {}) })),
       fulfillments: [{
         type: "PICKUP", state: "PROPOSED",
-        pickup_details: { recipient: { display_name: name, phone_number: phone }, schedule_type: "ASAP", ...(note ? { note } : {}) },
+        pickup_details: { recipient: { display_name: name, phone_number: phone }, schedule_type: pickupAt ? "SCHEDULED" : "ASAP", ...(pickupAt ? { pickup_at: pickupAt } : {}), ...(note ? { note } : {}) },
       }],
     };
     if (cfg.taxPercent > 0) order.taxes = [{ uid: "sales-tax", name: "Sales tax", percentage: String(cfg.taxPercent), scope: "ORDER" }];
@@ -468,7 +473,7 @@ export function createServer(env = process.env) {
         return res.end();
       }
       if (p === "/api/config" && req.method === "GET") {
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 } } : { enabled: false }, { cors: true });
       }
       if (p === "/api/order") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");

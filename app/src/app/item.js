@@ -59,6 +59,7 @@ export default function ItemDetails() {
     if (missing.length && qty > 0) return;
     if (!changed) { router.replace("/order"); return; }
     order.setQty(item.id, qty);
+    if (qty === 0) { order.resetCustom(item.id); order.setNote(item.id, ""); }   // taken out: its choices are forgotten
     success();
     setAdded(true);
     setTimeout(leave, 350);   // a moment to see it was added, then back to the menu

@@ -123,7 +123,7 @@ ok(true, "reloading the confirmation still shows the order and where it stands")
 
 // next time the name and phone are already there
 await p.goto(site.u + "/app/menu", { waitUntil: "load" });
-await add("Latte");
+await addLatte(p);
 await p.getByRole("button", { name: /^View my order/ }).first().click();
 await p.getByRole("button", { name: "Place order for pickup" }).first().waitFor();
 await p.waitForTimeout(500);
@@ -133,7 +133,7 @@ ok((await name.inputValue()) === "Sam Lee" && (await phone.inputValue()) === "(7
 const off = await startSite({});
 const p2 = await ctx.newPage();
 await p2.goto(off.u + "/app/menu", { waitUntil: "load" });
-await p2.getByRole("button", { name: "Add Latte to order", exact: true }).first().click();
+await addLatte(p2);
 await p2.getByRole("button", { name: /^View my order/ }).first().click();
 await p2.getByRole("button", { name: "Request a quote with these items" }).first().waitFor();
 await p2.waitForTimeout(500);

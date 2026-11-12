@@ -116,7 +116,7 @@ await d.close();
 const off = await startSite({});
 const p2 = await ctx.newPage();
 await p2.goto(off.u + "/app/menu", { waitUntil: "load" });
-await p2.getByRole("button", { name: "Add Latte to order", exact: true }).first().waitFor();
+await p2.getByRole("button", { name: "Choose options for Latte", exact: true }).first().waitFor();
 await p2.waitForTimeout(1200);
 ok((await p2.getByRole("button", { name: /^Tell the assistant what you want/ }).count()) === 0, "with no AI, the Menu does not offer the order helper");
 await p2.goto(off.u + "/app/assistant", { waitUntil: "load" });

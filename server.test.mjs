@@ -53,7 +53,7 @@ const reset = (m = "ok") => { calls = []; mode = m; };
 test("config tells the app whether ordering is on, and exposes only public values", async () => {
   const r = await fetch(base + "/api/config");
   const text = await r.text();
-  assert.deepEqual(JSON.parse(text), { enabled: true, environment: "sandbox", taxPercent: 8.875, maxOrderCents: 30000 });
+  assert.deepEqual(JSON.parse(text), { enabled: true, environment: "sandbox", taxPercent: 8.875, maxOrderCents: 30000, pickup: { minMinutes: 30, step: 15 } });
   assert.ok(!text.includes("tok") && !text.includes("LOC"), "no token or location in the public settings");
 });
 

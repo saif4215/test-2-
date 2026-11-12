@@ -200,7 +200,7 @@ export function Adder({ item: it, size = 46 }) {
   }
   return (
     <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.ink, borderRadius: 24, padding: 3 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${it.name}`} onPress={() => { select(); order.change(it.id, -1); }} hitSlop={4} style={{ width: 38, height: 40, borderRadius: 19, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={19} color={colors.cream} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${it.name}`} onPress={() => { select(); order.change(it.id, -1); if (qty === 1) { order.resetCustom(it.id); order.setNote(it.id, ""); } }} hitSlop={4} style={{ width: 38, height: 40, borderRadius: 19, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={19} color={colors.cream} /></Pressable>
       <Text style={{ minWidth: 18, textAlign: "center", fontWeight: "800", fontSize: 16, color: colors.cream }}>{qty}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={`Add one more ${it.name}`} onPress={() => { tap(); order.change(it.id, +1); }} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="add" size={20} color={colors.ink} /></Pressable>
     </View>
