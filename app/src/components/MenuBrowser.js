@@ -21,14 +21,13 @@ const artFor = (cat) => ART[artKey({ cat })] || null;
 const openItem = (it) => router.push({ pathname: "/item", params: { id: it.id } });
 
 /**
- * The whole menu as one page, like a delivery app: a search bar and category buttons that stay at the top, then one row per
- * category. Swipe a row sideways to go through its items, scroll down for the next category, tap "See all" to open a row as a grid.
+ * The whole menu as one page: a search bar and category buttons that stay at the top, then each category with its items one
+ * under the other (name, price, and a + button). Scroll down for the next category; no sideways swiping.
  */
 export function MenuPage({ header, footer, bottomPad = 120 }) {
   const { menu } = useSite();
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
-  const inner = Math.min(width, 980) - pad * 2;
   const categories = useMemo(() => categoryList(menu), [menu]);
   const [scope, setScope] = useState("all");   // "all", or one half of the menu ("Drinks" or "Food"): fewer rows to swipe through
   const groups = useMemo(() => [...new Set(categories.map((c) => c.group))], [categories]);
@@ -37,7 +36,6 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
     : categories.filter((c) => c.group === scope).map((c) => c.name)), [categories, scope]);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(null);
-  const [grid, setGrid] = useState({});   // categories opened with "See all"
   const scroller = useRef(null), chipBar = useRef(null), activeRef = useRef(null);
   const pos = useRef({ body: 0, sticky: 120, rows: {}, chips: {} });
   const { cat: wantedCat, n: wantedNonce } = useLocalSearchParams();   // a tile on Home can open the Menu on one category
@@ -116,7 +114,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
               {results.length ? (
                 <>
                   <Small>{results.length} {results.length === 1 ? "item" : "items"} for “{q}”</Small>
-                  <Grid min={330} gap={14}>{results.map((it) => <ItemCard key={it.id} item={it} />)}</Grid>
+                  <Grid min={330} gap={10}>{results.map((it) => <ItemLine key={it.id} item={it} />)}</Grid>
                 </>
               ) : (
                 <Card style={{ padding: 24, gap: 12 }}>
@@ -133,7 +131,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
               const cat = categories.find((c) => c.name === name);
               return (
                 <View key={name} onLayout={(e) => { pos.current.rows[name] = e.nativeEvent.layout.y; }} style={{ marginTop: 26 }}>
-                  {cat ? <MenuRow cat={cat} inner={inner} open={!!grid[name]} onToggle={() => setGrid((g) => ({ ...g, [name]: !g[name] }))} /> : (
+                  {cat ? <MenuRow cat={cat} /> : (
                     <Card style={{ padding: 22, gap: 12 }}>
                       <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 24, lineHeight: 30, color: colors.ink }}>{name}</Text>
                       <Body>We're adding {name.toLowerCase()} options. Ask Maruf Cafe for a custom quote for your group and we'll put one together.</Body>
@@ -152,25 +150,32 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   );
 }
 
-/** One category: its name, then its items to swipe through (or as a grid after "See all"). */
-function MenuRow({ cat, inner, open, onToggle }) {
-  const n = cat.items.length;
-  const gap = 14, cols = Math.max(2, Math.floor((inner + gap) / (160 + gap))), w = Math.floor((inner - gap * (cols - 1)) / cols);
-  const row = useRowScroll();
+/** One category: its name, then its items one under the other (name, price and a + button on each line). No sideways swiping. */
+function MenuRow({ cat }) {
   return (
     <View>
-      <RowHead title={cat.name} count={n} arrows={!open && n > 2 ? row.arrows : null}
-        action={n > 2 ? { label: open ? "Show less" : "See all", icon: open ? "chevron-up" : "chevron-forward", a11y: open ? `Show fewer ${cat.name}` : `See all ${cat.name}`, onPress: onToggle } : null} />
-      {open ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 18, columnGap: gap }}>{cat.items.map((it) => <ItemTile key={it.id} item={it} width={w} />)}</View>
-      ) : (
-        <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{cat.items.map((it) => <ItemTile key={it.id} item={it} />)}</BleedRow>
-      )}
+      <RowHead title={cat.name} count={cat.items.length} />
+      <Grid min={330} gap={10}>{cat.items.map((it) => <ItemLine key={it.id} item={it} />)}</Grid>
     </View>
   );
 }
 
-/** The item's own picture if the café added one; otherwise a generic 3D-rendered picture for its kind of food; otherwise a placeholder (hidden in store builds). A picture that fails to load is dropped. */
+/** A menu item as one compact line: small picture, name, price, and the + button. Tap the line for the details. */
+export function ItemLine({ item: it }) {
+  return (
+    <Card style={{ paddingVertical: 8, paddingLeft: 8, paddingRight: 10, flexDirection: "row", gap: 10, alignItems: "center" }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: "row", gap: 12, alignItems: "center", opacity: pressed ? 0.85 : 1 })}>
+        <ItemPhoto item={it} size={60} always />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={2} style={{ fontSize: 16, lineHeight: 21, fontWeight: "700", color: colors.ink }}>{it.name}</Text>
+          <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15, marginTop: 1 }}>{priceText(it)}</Text>
+        </View>
+      </Pressable>
+      <Adder item={it} />
+    </Card>
+  );
+}
+
 export function ItemPhoto({ item, size = 88, box: boxStyle, always }) {
   const [broken, setBroken] = useState(false);
   const box = { width: size, height: size, borderRadius: radius.image, backgroundColor: colors.tint, ...boxStyle };

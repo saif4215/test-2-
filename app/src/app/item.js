@@ -36,7 +36,7 @@ export default function ItemDetails() {
   const { usuals, addUsual } = useMemory();
   const { width } = useWindowDimensions();
   const item = useMemo(() => indexMenu(menu).get(String(id)), [menu, id]);
-  const side = Math.min(width - 40, 520);
+  const side = Math.min(width - 40, item && hasOffers(item) ? 190 : 520);   // an item with choices gets a small picture, so the choices are on screen without scrolling
   const ordering = useOrdering();
   const inOrder = item ? order.lines[item.id] || 0 : 0;
   const [qty, setQty] = useState(inOrder || 1);   // how many to add; starts at what is already in the order
