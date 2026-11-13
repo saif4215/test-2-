@@ -9,7 +9,7 @@ import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
-import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY } from "../src/lib/memory-util.js";
+import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -629,4 +629,28 @@ test("past orders keep what was ordered, with choices, newest first, at most 20;
   assert.deepEqual(readHistory(JSON.parse(JSON.stringify(h))), h);
   assert.deepEqual(readHistory("x"), []);
   assert.deepEqual(readHistory([{ at: "soon", lines: [] }, { at: 5, lines: [{ id: 3, qty: 1 }] }, { at: 6, lines: [{ id: "a", qty: 99 }] }]), [{ at: 6, subtotal: null, lines: [{ id: "a", qty: 20 }] }]);
+});
+
+// ── points and promotions ───────────────────────────────────────────────────────────────────────────────────────────────────────
+test("points are counted once per order, and never from a bad number", () => {
+  let st = readPoints(null);
+  assert.deepEqual(st, { balance: 0, awarded: [] });
+  st = awardPoints(st, "order-1", 13);
+  assert.equal(st.balance, 13);
+  assert.equal(awardPoints(st, "order-1", 13), st, "the same order checked again adds nothing");
+  st = awardPoints(st, "order-2", 7.9);
+  assert.equal(st.balance, 20, "whole points only");
+  for (const bad of [0, -5, "x", NaN, null]) assert.equal(awardPoints(st, "order-3", bad), st, String(bad));
+  assert.equal(awardPoints(st, "", 5), st);
+  assert.deepEqual(readPoints(JSON.parse(JSON.stringify(st))), st);
+  assert.deepEqual(readPoints({ balance: -4, awarded: [1, "a"] }), { balance: 0, awarded: ["a"] });
+});
+
+test("a promotion shows until the end of its last day (New York), or until it is removed when it has no end date", () => {
+  const list = [{ title: "Open ended", text: "", until: "" }, { title: "Ends Dec 31", text: "", until: "2026-12-31" }, { title: "Ended", text: "", until: "2026-01-01" }, { title: "", until: "" }, null];
+  const names = (now) => activePromotions(list, now).map((p) => p.title);
+  assert.deepEqual(names(new Date("2026-06-01T12:00:00Z")), ["Open ended", "Ends Dec 31"]);
+  assert.deepEqual(names(new Date("2027-01-01T04:30:00Z")), ["Open ended", "Ends Dec 31"], "still Dec 31 evening in New York");
+  assert.deepEqual(names(new Date("2027-01-01T05:30:00Z")), ["Open ended"], "Jan 1 in New York");
+  assert.deepEqual(activePromotions(undefined), []);
 });

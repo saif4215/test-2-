@@ -119,7 +119,7 @@ export default function Assistant() {
                 const lines = m.role === "assistant" && !m.error ? readProposal(m.add, byId) : [];
                 return (
                   <View key={i} style={{ gap: 10 }}>
-                    <View style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "88%", backgroundColor: m.role === "user" ? colors.ink : m.error ? "#FBEAE8" : colors.surface, borderColor: m.error ? colors.danger : colors.line, borderWidth: m.role === "user" ? 0 : 1, borderRadius: radius.card, padding: 14 }}>
+                    <View style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "88%", backgroundColor: m.role === "user" ? colors.ink : m.error ? colors.dangerSoft : colors.surface, borderColor: m.error ? colors.danger : colors.line, borderWidth: m.role === "user" ? 0 : 1, borderRadius: radius.card, padding: 14 }}>
                       <Text selectable accessibilityLabel={`${m.role === "user" ? "You" : "Maruf Cafe assistant"}: ${m.content}`} style={{ fontSize: 16, lineHeight: 23, color: m.role === "user" ? colors.cream : m.error ? colors.danger : colors.ink }}>{m.content}</Text>
                     </View>
                     {m.role === "assistant" && (m.handoff || m.error) ? (
@@ -144,7 +144,7 @@ export default function Assistant() {
       {enabled ? (
         <View style={{ borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: 12, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 640, flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
-            <TextInput value={draft} onChangeText={setDraft} placeholder="Ask a question…" placeholderTextColor="#9A9087" accessibilityLabel="Your question" multiline maxLength={600} onSubmitEditing={() => send()}
+            <TextInput value={draft} onChangeText={setDraft} placeholder="Ask a question…" placeholderTextColor={colors.placeholder} accessibilityLabel="Your question" multiline maxLength={600} onSubmitEditing={() => send()}
               style={{ flex: 1, minHeight: 48, maxHeight: 120, backgroundColor: colors.bg, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
             <Pressable accessibilityRole="button" accessibilityLabel="Send question" disabled={busy || !draft.trim()} onPress={() => send()} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: busy || !draft.trim() ? colors.line : colors.ink, alignItems: "center", justifyContent: "center" }}>
               <Ionicons name="arrow-up" size={22} color={colors.cream} />

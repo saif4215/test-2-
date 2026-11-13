@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { View, useColorScheme } from "react-native";
 import { useFonts } from "expo-font";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -9,10 +9,13 @@ import { LinkSheet } from "../components/LinkSheet";
 import { MemoryProvider } from "../lib/memory";
 import { OrderProvider } from "../lib/order";
 import { SiteProvider } from "../lib/site";
-import { colors } from "../theme";
+import { applyScheme, colors, isDark } from "../theme";
 
 export default function RootLayout() {
   // The headings use DM Serif Display. Wait for it (briefly) so text does not jump when it arrives; if it never loads, carry on with the fallback.
+  // Follow the phone's light or dark setting. The colours are switched before anything draws; when the phone changes look while the app is open, the new look rides along with the site data so every screen draws again (nothing is reloaded, so the order and the screen you are on stay).
+  applyScheme(useColorScheme());
+  const look = isDark() ? "dark" : "light";
   const [fontsReady, fontError] = useFonts({ DMSerifDisplay: require("../../assets/fonts/DMSerifDisplay-Regular.ttf") });
   const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => { const t = setTimeout(() => setGaveUp(true), 2500); return () => clearTimeout(t); }, []);
@@ -21,10 +24,10 @@ export default function RootLayout() {
   if (!fontsReady && !fontError && !gaveUp) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   return (
     <SafeAreaProvider>
-      <SiteProvider>
+      <SiteProvider look={look}>
       <MemoryProvider>
       <OrderProvider>
-        <StatusBar style="dark" />
+        <StatusBar style={look === "dark" ? "light" : "dark"} />
         <Stack screenOptions={{ headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.ink, headerShadowVisible: false, contentStyle: { backgroundColor: colors.bg }, headerTitleStyle: { fontWeight: "800" }, headerTitleAlign: "left" }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="orders" options={{ headerShown: false }} />

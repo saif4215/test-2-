@@ -15,7 +15,7 @@ const WATCH_MS = 20000, SLOWEST_MS = 120000;
  * (the card on Home and Menu). Draws nothing itself. When the connection is bad it asks less often instead of more.
  */
 export function OrderWatcher() {
-  const { active, setActiveStatus } = useMemory();
+  const { active, setActiveStatus, awardPoints } = useMemory();
   const id = active?.id;
   useEffect(() => {
     if (!id) return undefined;
@@ -25,6 +25,7 @@ export function OrderWatcher() {
       if (!live) return;
       if (r.ok) {
         failures = 0; setActiveStatus(r.status);
+        if (r.status === "done" && r.points > 0) awardPoints(id, r.points);   // picked up: the points Square worked out are counted, once
         if (r.status === "ready" && last && last !== "ready") { success(); try { Vibration.vibrate([0, 300, 150, 300]); } catch { /* no vibration here */ } }   // a nudge when it turns ready while the app is open
         last = r.status;
         if (stageInfo(r.status).final) return;
@@ -33,7 +34,7 @@ export function OrderWatcher() {
     };
     check();
     return () => { live = false; clearTimeout(timer); };
-  }, [id, setActiveStatus]);
+  }, [id, setActiveStatus, awardPoints]);
   return null;
 }
 
@@ -55,7 +56,7 @@ export function ActiveOrderCard({ compact, style }) {
   if (!active) return null;
   const info = stageInfo(activeStatus), canceled = info.status === "canceled", ready = info.status === "ready", finished = info.final;
   const open = () => router.push({ pathname: "/order-sent", params: { id: active.id, ref: active.ref, total: active.total == null ? "" : String(active.total), name: active.name, ...(active.preview ? { preview: "1" } : {}) } });
-  const tone = canceled ? { bg: "#FBEAE8", fg: colors.danger, icon: "close" } : ready || info.status === "done" ? { bg: colors.successSoft, fg: colors.success, icon: "bag-check" } : { bg: colors.goldSoft, fg: colors.goldText, icon: "receipt-outline" };
+  const tone = canceled ? { bg: colors.dangerSoft, fg: colors.danger, icon: "close" } : ready || info.status === "done" ? { bg: colors.successSoft, fg: colors.success, icon: "bag-check" } : { bg: colors.goldSoft, fg: colors.goldText, icon: "receipt-outline" };
   return (
     <View style={[{ flexDirection: "row", alignItems: "center", gap: 8 }, style]}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Your order${active.ref ? ` ${active.ref}` : ""}: ${info.title}. See details`} onPress={open}

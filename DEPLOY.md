@@ -265,6 +265,18 @@ Chats are not stored, and the privacy page says that questions are sent to Anthr
   where you change what each costs. On each item, **Choices offered** says which of them it offers. The server adds up the size and the extras itself, and sends
   Square a line like "Latte (Large)" at the full price with the choices written on it for whoever makes the drink.
   An item that only has a price range (a low and a high price and no sizes) cannot be sent from the app, because no single price is known; the order screen says which.
+- **Must-pick choices.** Choices marked required (hot or iced, bagel or croissant, hot or regular tenders, wing sauce, chicken or beef) have no default: the customer has to
+  choose, and the Add and Place order buttons say what is missing. The server refuses an order that skips one.
+- **Pickup time.** My order asks "As soon as possible" or "Choose a time". Times are for today only, every 15 minutes, inside your opening hours (Site info → Hours), and
+  at least `PICKUP_MIN_MINUTES` from now (your prep time; empty means 30). A chosen time goes to Square as a scheduled pickup. Change the setting on your host, not in the app.
+- **Points.** Customers earn `POINTS_PER_DOLLAR` points (empty means 1) for each dollar, before tax, on an order they pick up. The number comes from the order in Square once
+  you complete it, so changes you make to the order at the counter count. Each order counts once. Points are kept on the customer's phone (there are no accounts), so they are
+  lost if the customer deletes the app, and they are only counted while the app can check the order within 12 hours of placing it. What points can be used for is up to you:
+  write it in the dashboard under Site info → Points, and it shows on the Home card. The app does not take points off at the counter.
+- **Promotions.** Site info → Promotions: a title, details and an optional last day. They show at the top of Home, and none show until you add one.
+- **My usual and Past orders.** A customer can save a drink the way they like it (size, milk and so on) and add it in one tap from Home, and see their last 20 orders with a
+  button to order any of them again. Both are kept on the phone only.
+- **Dark mode.** The app follows the phone's light or dark setting.
 - **If you edited the menu in the dashboard before this version,** that saved menu wins over the file and would hide the sizes and extras. On the Menu tab the owner
   can press **Reset to the original menu** to load the menu from the café's boards (sizes, extras and all), then re-apply any price change.
 - **Guards:** a phone number is required (so you can call the customer), one connection can place 5 orders a minute

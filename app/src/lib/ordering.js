@@ -12,26 +12,26 @@ async function request(path, init, ms) {
   try { return await fetch(`${apiUrl}${path}`, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
 }
 
-let known = { at: 0, on: false, tax: 0, minMinutes: 30 };
+let known = { at: 0, on: false, tax: 0, minMinutes: 30, perDollar: 1 };
 /** Does the café's server take orders into Square, and what tax does it add? Asked once a minute at most. */
 export async function loadOrderingConfig() {
-  if (!canReachServer()) return { on: false, tax: 0, minMinutes: 30 };
+  if (!canReachServer()) return { on: false, tax: 0, minMinutes: 30, perDollar: 1 };
   if (Date.now() - known.at < 60000) return known;
   try {
     const res = await request("/api/config", { headers: { Accept: "application/json" } }, 8000);
     const json = res.ok ? await res.json() : null;
     const tax = Number(json?.taxPercent);
     const prep = Number(json?.pickup?.minMinutes);   // the café's prep time: the earliest pickup time a customer can choose
-    known = { at: Date.now(), on: json?.enabled === true, tax: Number.isFinite(tax) && tax > 0 && tax <= 20 ? tax : 0, minMinutes: Number.isFinite(prep) && prep >= 5 && prep <= 240 ? prep : 30 };
-  } catch { known = { at: Date.now() - 50000, on: false, tax: 0, minMinutes: 30 }; }   // try again soon
+    known = { at: Date.now(), on: json?.enabled === true, tax: Number.isFinite(tax) && tax > 0 && tax <= 20 ? tax : 0, minMinutes: Number.isFinite(prep) && prep >= 5 && prep <= 240 ? prep : 30, perDollar: Number(json?.pointsPerDollar) > 0 && Number(json?.pointsPerDollar) <= 100 ? Number(json.pointsPerDollar) : 1 };
+  } catch { known = { at: Date.now() - 50000, on: false, tax: 0, minMinutes: 30, perDollar: 1 }; }   // try again soon
   return known;
 }
 export const loadOrdering = async () => (await loadOrderingConfig()).on;
 
 /** { on, tax, minMinutes }: `on` is null while we do not know yet, then true or false; `tax` is the percentage the café adds (0 when none is set); `minMinutes` is the earliest pickup time from now. */
 export function useOrderingConfig() {
-  const [cfg, setCfg] = useState({ on: null, tax: 0, minMinutes: 30 });
-  useEffect(() => { let live = true; loadOrderingConfig().then((c) => { if (live) setCfg({ on: c.on, tax: c.tax, minMinutes: c.minMinutes }); }); return () => { live = false; }; }, []);
+  const [cfg, setCfg] = useState({ on: null, tax: 0, minMinutes: 30, perDollar: 1 });
+  useEffect(() => { let live = true; loadOrderingConfig().then((c) => { if (live) setCfg({ on: c.on, tax: c.tax, minMinutes: c.minMinutes, perDollar: c.perDollar }); }); return () => { live = false; }; }, []);
   return cfg;
 }
 
@@ -53,6 +53,6 @@ export async function checkOrder(id) {
   try {
     const res = await request(`/api/order/${encodeURIComponent(id)}`, { headers: { Accept: "application/json" } }, 10000);
     const json = await res.json().catch(() => ({}));
-    return res.ok && json.ok ? { ok: true, status: json.status } : fail(json.error || "");
+    return res.ok && json.ok ? { ok: true, status: json.status, points: Number.isFinite(Number(json.points)) ? Math.max(0, Math.floor(Number(json.points))) : 0 } : fail(json.error || "");
   } catch { return fail(OFFLINE, { network: true }); }
 }

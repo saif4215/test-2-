@@ -26,6 +26,8 @@ export function mergeSite(base, remote, apiUrl = "") {
   if (list(remote.packages)) out.packages = remote.packages.filter((p) => p && p.title).map((p) => ({ ...p, includes: Array.isArray(p.includes) ? p.includes : [] }));
   if (text(remote.packagesNote) !== null) out.packagesNote = remote.packagesNote;
   if (text(remote.featuredTitle)) out.featuredTitle = remote.featuredTitle;
+  if (Array.isArray(remote.promotions)) out.promotions = remote.promotions.filter((p) => p && typeof p.title === "string" && p.title).map((p) => ({ title: p.title, text: typeof p.text === "string" ? p.text : "", until: typeof p.until === "string" ? p.until : "" }));
+  if (text(remote.rewardsNote) !== null) out.rewardsNote = remote.rewardsNote;
   if (remote.venue && typeof remote.venue === "object") out.venue = { ...BLANK_VENUE, ...Object.fromEntries(Object.entries(remote.venue).filter(([, v]) => typeof v === "string")) };
   if (Array.isArray(remote.gallery)) out.gallery = remote.gallery.filter((g) => g && g.url && g.alt).map((g) => ({ url: absolute(g.url, apiUrl), alt: g.alt, caption: g.caption || "" }));
   if (Array.isArray(remote.reviews)) out.reviews = remote.reviews.filter((r) => r && r.name && r.text);

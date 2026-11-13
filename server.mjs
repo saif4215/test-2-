@@ -113,6 +113,7 @@ export function createServer(env = process.env) {
   };
   const enabled = !!(cfg.token && cfg.locationId);
   const pickupMinMinutes = (() => { const n = Number(env.PICKUP_MIN_MINUTES); return Number.isFinite(n) && n >= 5 && n <= 240 ? Math.round(n) : 30; })();   // the café's prep time: the earliest pickup time a customer can choose
+  const pointsPerDollar = (() => { const n = Number(env.POINTS_PER_DOLLAR); return Number.isFinite(n) && n > 0 && n <= 100 ? n : 1; })();   // points a customer earns for each dollar on an order they pick up
   const maxOrderCents = (() => { const n = Number(env.ORDER_MAX_DOLLARS); return Number.isFinite(n) && n >= 10 && n <= 2000 ? Math.round(n * 100) : 30000; })();
   const apiBase = env.SQUARE_API_BASE || (production ? "https://connect.squareup.com" : "https://connect.squareupsandbox.com");
   const dataDir = env.DATA_DIR || path.join(ROOT, "data");
@@ -205,7 +206,11 @@ export function createServer(env = process.env) {
       throw new HttpError(502, "We can't check on your order right now.");
     }
     if (!order || order.location_id !== cfg.locationId || order.source?.name !== APP_SOURCE) throw new HttpError(404, "We can't find that order.");
-    return { ok: true, status: orderStatus(order), ref: order.reference_id || "", totalCents: order.total_money?.amount ?? null };
+    const status = orderStatus(order), total = order.total_money?.amount ?? null;
+    // Points come from Square's own order: what was really rung up, before tax, once the order is picked up. Counter changes to the order count.
+    const subtotal = total == null ? null : Math.max(0, total - (order.total_tax_money?.amount ?? 0) - (order.total_tip_money?.amount ?? 0));
+    const points = status === "done" && subtotal != null ? Math.floor((subtotal / 100) * pointsPerDollar) : 0;
+    return { ok: true, status, ref: order.reference_id || "", totalCents: total, ...(status === "done" ? { subtotalCents: subtotal, points } : {}) };
   }
 
   /* ---- quote / event requests: store first, then notify. A request counts as received only once it is stored or sent. ---- */
@@ -473,7 +478,7 @@ export function createServer(env = process.env) {
         return res.end();
       }
       if (p === "/api/config" && req.method === "GET") {
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 } } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar } : { enabled: false }, { cors: true });
       }
       if (p === "/api/order") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
@@ -506,8 +511,8 @@ export function createServer(env = process.env) {
         const head = req.method === "HEAD";
         if (p === "/menu.json") return send(res, 200, head ? "" : publicMenu(getMenu()), { cors: true, cache: "no-cache" });
         if (p === "/content.json") {
-          const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos } = getContent();
-          return send(res, 200, head ? "" : { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos }, { cors: true, cache: "no-cache" });
+          const { business, venue, faq, packages, packagesNote, featuredTitle, promotions, rewardsNote, gallery, reviews, photos } = getContent();
+          return send(res, 200, head ? "" : { business, venue, faq, packages, packagesNote, featuredTitle, promotions, rewardsNote, gallery, reviews, photos }, { cors: true, cache: "no-cache" });
         }
         if (p === "/robots.txt") return send(res, 200, robotsTxt(baseFor(req)), { type: "text/plain; charset=utf-8", cache: "no-cache" });
         if (p === "/sitemap.xml") { const base = baseFor(req); if (!base) throw new HttpError(404, "Not found."); return send(res, 200, sitemapXml(base, PAGES), { type: "application/xml; charset=utf-8", cache: "no-cache" }); }

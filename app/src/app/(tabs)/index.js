@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
 import { ActiveOrderCard } from "../../components/ActiveOrder";
 import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, RowHead } from "../../components/MenuBrowser";
+import { PromoCards, RewardsCard } from "../../components/Rewards";
 import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
 import { useOrder } from "../../lib/order";
@@ -47,6 +48,7 @@ export default function Home() {
         <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.ink }}>{greeting()}</Text>
       </Reveal>
       <ActiveOrderCard style={{ marginBottom: 14 }} />
+      <PromoCards style={{ marginBottom: 14 }} />
       <Reveal>
         <View style={[{ borderRadius: radius.hero, overflow: "hidden", padding: 22, paddingBottom: 0 }, gradient(colors.espresso, "linear-gradient(165deg, #3E2C1C 0%, #271B12 55%, #1A1109 100%)"), shadowStrong]}>
           {heroPhoto ? (
@@ -61,8 +63,8 @@ export default function Home() {
                 <StatusPill dark compact open={status.open}>{status.text.replace(/^Open now/, "Open")}</StatusPill>
                 <TrustBadge dark small label={business.badge} style={{ marginLeft: "auto" }} />
               </View>
-              <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: wide ? 60 : 46, lineHeight: wide ? 64 : 50, color: colors.cream, marginTop: 20, letterSpacing: -0.5 }}>Hungry?</Text>
-              {homeTagline ? <Text style={{ fontFamily: fonts.display, fontSize: 21, lineHeight: 28, color: colors.creamMuted, marginTop: 8, maxWidth: 340 }}>{homeTagline}</Text> : null}
+              <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: wide ? 60 : 46, lineHeight: wide ? 64 : 50, color: colors.onDark, marginTop: 20, letterSpacing: -0.5 }}>Hungry?</Text>
+              {homeTagline ? <Text style={{ fontFamily: fonts.display, fontSize: 21, lineHeight: 28, color: colors.onDarkMuted, marginTop: 8, maxWidth: 340 }}>{homeTagline}</Text> : null}
               <View style={{ marginTop: 20, alignItems: "flex-start" }}>
                 <Button title="Start an order" variant="gold" icon="arrow-forward" onPress={() => router.push("/menu")} style={{ paddingHorizontal: 28 }} />
               </View>
@@ -71,6 +73,8 @@ export default function Home() {
           </View>
         </View>
       </Reveal>
+
+      <RewardsCard style={{ marginTop: 18 }} />
 
       <Reveal delay={120} style={{ marginTop: 26 }}>
         <CategoryStrip />

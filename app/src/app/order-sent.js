@@ -38,7 +38,7 @@ function Tracker({ step, canceled }) {
 export default function OrderSent() {
   const { id, ref, total, name, preview, fresh, pickup } = useLocalSearchParams();
   const { business } = useSite();
-  const { active, activeStatus, setActiveStatus } = useMemory();
+  const { active, activeStatus, setActiveStatus, awardPoints } = useMemory();
   const mine = active?.id === String(id);   // the order Home is following
   const [status, setStatus] = useState(mine ? activeStatus : "received");
   const [stale, setStale] = useState(false);   // the last check did not get through
@@ -55,13 +55,13 @@ export default function OrderSent() {
     const check = async () => {
       const r = await checkOrder(String(id));
       if (!live) return;
-      if (r.ok) { setStatus(r.status); if (mine) setActiveStatus(r.status); }
+      if (r.ok) { setStatus(r.status); if (mine) setActiveStatus(r.status); if (r.status === "done" && r.points > 0) awardPoints(String(id), r.points); }
       setStale(!r.ok);
       if (!(r.ok && stageInfo(r.status).final)) timer = setTimeout(check, CHECK_EVERY_MS);
     };
     timer = setTimeout(check, FIRST_CHECK_MS);
     return () => { live = false; clearTimeout(timer); };
-  }, [id, mine, setActiveStatus]);
+  }, [id, mine, setActiveStatus, awardPoints]);
 
   const done = () => (router.dismissAll ? router.dismissAll() : router.replace("/"));
   const canceled = info.status === "canceled";
@@ -82,7 +82,7 @@ export default function OrderSent() {
       <Stack.Screen options={{ title: "Order sent" }} />
       <Celebrate play={party} />
       <View style={{ alignItems: "flex-start", gap: 14, paddingTop: 18 }}>
-        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: canceled ? "#FBEAE8" : colors.successSoft, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: canceled ? colors.dangerSoft : colors.successSoft, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name={canceled ? "close" : info.status === "ready" || info.status === "done" ? "bag-check" : "checkmark"} size={46} color={canceled ? colors.danger : colors.success} />
         </View>
         <H1>{info.title}</H1>

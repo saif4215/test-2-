@@ -82,6 +82,17 @@ await site.post({ type: "event", fields: goodEvent() });
   const live = await (await fetch(site.u + "/content.json")).json();
   ok(live.reviews.length === 1 && live.reviews[0].name === "Jordan P.", "a real review entered in the dashboard is served to the app");
 
+  // promotions: none to start with; one added in the dashboard is served to the app
+  ok((await (await fetch(site.u + "/content.json")).json()).promotions.length === 0, "there are no promotions until the owner adds one");
+  await p.waitForTimeout(800);   // the page redraws after the last save
+  const promo = p.locator(".card", { has: p.getByRole("heading", { name: "Promotions" }) });
+  await promo.getByRole("button", { name: "+ Add a promotion" }).click();
+  await promo.getByLabel("Title").fill("Free cookie with any large drink");
+  await p.getByRole("button", { name: "Save changes" }).click();
+  let promos = [];
+  for (let i = 0; i < 20 && !promos.length; i++) { await p.waitForTimeout(250); promos = (await (await fetch(site.u + "/content.json")).json()).promotions; }
+  ok(promos.length === 1 && promos[0].title === "Free cookie with any large drink", "a promotion entered in the dashboard is served to the app");
+
   await p.getByRole("button", { name: "Photos" }).click();
   const png = "/tmp/claude-0/test-photo.png";
   fs.writeFileSync(png, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"));

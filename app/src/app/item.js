@@ -90,7 +90,7 @@ export default function ItemDetails() {
               onPress={() => { addUsual({ itemId: item.id, name: `${item.name}${text ? ` · ${text}` : ""}`, choice }); success(); }} />;
           })() : null}
           <Disclosure icon="create-outline" title="Add a note" hint={order.notes[item.id] || "Optional, for example: no onions"} defaultOpen={!!order.notes[item.id]}>
-            <TextInput value={order.notes[item.id] || ""} onChangeText={(t) => order.setNote(item.id, t)} placeholder="For example: no onions" placeholderTextColor="#9A9087" accessibilityLabel="Note for Maruf Cafe" maxLength={100}
+            <TextInput value={order.notes[item.id] || ""} onChangeText={(t) => order.setNote(item.id, t)} placeholder="For example: no onions" placeholderTextColor={colors.placeholder} accessibilityLabel="Note for Maruf Cafe" maxLength={100}
               style={{ backgroundColor: colors.bg, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, paddingVertical: 13, minHeight: 50, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
             <Small>{ordering ? "Sent to the café with your order." : "Sent with your quote request."} It is a request, not a promise: Maruf Cafe confirms what's possible.</Small>
           </Disclosure>

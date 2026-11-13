@@ -6,7 +6,7 @@ import { money, useOrder } from "../lib/order";
 import { select } from "../lib/haptics";
 import { colors, fonts, shadow } from "../theme";
 
-const label = { fontSize: 15, fontWeight: "800", color: colors.ink };
+const label = () => ({ fontSize: 15, fontWeight: "800", color: colors.ink });
 
 /** The sizes side by side with their prices, one on at a time. */
 function Sizes({ item, value, onChange }) {
@@ -31,7 +31,7 @@ function Panel({ title, hint, needed, value, children, flat }) {
     <View style={flat ? { gap: 12, paddingTop: 14, borderTopWidth: 1, borderColor: colors.line } : { gap: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <View style={{ flexShrink: 1 }}>
-          <Text style={label}>{title}</Text>
+          <Text style={label()}>{title}</Text>
           {hint ? <Text style={{ fontSize: 13, color: needed ? colors.danger : colors.muted, fontWeight: needed ? "800" : "400" }}>{hint}</Text> : null}
         </View>
         {value ? <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: colors.goldText, flexShrink: 1 }}>{value}</Text> : null}

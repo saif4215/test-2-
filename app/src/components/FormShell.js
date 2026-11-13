@@ -38,7 +38,7 @@ export function SendError({ message }) {
   const { business } = useSite();
   if (!message) return null;
   return (
-    <View accessibilityLiveRegion="assertive" style={{ backgroundColor: "#FBEAE8", borderColor: colors.danger, borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 }}>
+    <View accessibilityLiveRegion="assertive" style={{ backgroundColor: colors.dangerSoft, borderColor: colors.danger, borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 }}>
       <Text style={{ color: colors.danger, fontWeight: "700" }}>{message}</Text>
       <Button title={`Call ${business.phone}`} variant="outline" size="medium" icon="call-outline" onPress={() => openLink(`tel:${business.phoneTel}`)} />
     </View>

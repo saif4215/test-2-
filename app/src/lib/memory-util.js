@@ -86,6 +86,28 @@ export function readHistory(v) {
   return out;
 }
 
+// ── points: earned once per order, when the café's Square says the order was picked up ─────────────────────────────────────────────
+export const MAX_AWARDED = 60;
+
+/** Parse the saved points: { balance, awarded: [order ids already counted] }. */
+export function readPoints(v) {
+  const balance = Number(v && v.balance), awarded = v && Array.isArray(v.awarded) ? v.awarded.filter((x) => typeof x === "string").slice(0, MAX_AWARDED).map((x) => x.slice(0, 80)) : [];
+  return { balance: Number.isFinite(balance) && balance > 0 ? Math.min(Math.floor(balance), 1000000) : 0, awarded };
+}
+
+/** Count an order's points once. The same order checked again, or a number that is not a positive whole number of points, changes nothing. */
+export function awardPoints(state, orderId, points) {
+  const n = Math.floor(Number(points));
+  if (typeof orderId !== "string" || !orderId || !(n >= 1) || state.awarded.includes(orderId)) return state;
+  return { balance: Math.min(state.balance + n, 1000000), awarded: [orderId, ...state.awarded].slice(0, MAX_AWARDED) };
+}
+
+/** The promotions to show today: those with no end date or an end date that is today or later (New York, the café's day). */
+export function activePromotions(list, now = new Date()) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  return (Array.isArray(list) ? list : []).filter((p) => p && typeof p.title === "string" && p.title && (!p.until || p.until >= today));
+}
+
 // ── "My order" kept on the phone, so closing the app does not lose it ─────────────────────────────────────────────────────────────
 export const MAX_QTY = 20;   // the café's server takes at most 20 of one item in an order
 

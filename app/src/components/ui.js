@@ -41,15 +41,16 @@ export function Section({ children, style, tone }) {
   return <View style={[{ marginTop: 44 }, tone === "dark" && { backgroundColor: colors.espresso, borderRadius: radius.hero, padding: 26, overflow: "hidden" }, style]}>{children}</View>;
 }
 
-const variants = {
+// read when a button draws, so they follow the light or dark look
+const variantOf = (name) => ({
   primary: { bg: colors.ink, fg: colors.cream, border: colors.ink, lift: true },
-  gold: { bg: colors.gold, fg: colors.ink, border: colors.gold, lift: true },
-  outline: { bg: "transparent", fg: colors.ink, border: "#CDBFAB" },
+  gold: { bg: colors.gold, fg: colors.onGold, border: colors.gold, lift: true },
+  outline: { bg: "transparent", fg: colors.ink, border: colors.outline },
   light: { bg: colors.surface, fg: colors.ink, border: colors.line },
-};
+})[name];
 
 export function Button({ title, onPress, href, variant = "primary", size = "large", icon, disabled, style, accessibilityLabel }) {
-  const v = variants[variant];
+  const v = variantOf(variant);
   const big = size === "large";
   return (
     <Pressable
@@ -122,7 +123,7 @@ export function StatusPill({ open, children, dark, compact }) {
   return (
     <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: compact ? 6 : 8, borderRadius: 99, paddingVertical: compact ? 6 : 7, paddingHorizontal: compact ? 10 : 12, backgroundColor: dark ? "rgba(255,255,255,0.10)" : colors.surface, borderWidth: 1, borderColor: dark ? "rgba(255,255,255,0.14)" : colors.line }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: open ? "#4CC38A" : "#A99C8C" }} />
-      <Text style={{ fontSize: compact ? 12.5 : 13, fontWeight: "700", color: dark ? colors.cream : colors.ink }}>{children}</Text>
+      <Text style={{ fontSize: compact ? 12.5 : 13, fontWeight: "700", color: dark ? colors.onDark : colors.ink }}>{children}</Text>
     </View>
   );
 }
@@ -216,7 +217,7 @@ export function TrustBadge({ label, style, dark, small }) {
   return (
     <View accessible accessibilityLabel={label} style={[{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: dark ? "rgba(217,164,65,0.16)" : colors.successSoft, borderWidth: dark ? 1 : 0, borderColor: "rgba(217,164,65,0.45)", borderRadius: 99, paddingVertical: small ? 5 : 6, paddingLeft: small ? 8 : 10, paddingRight: small ? 11 : 14 }, style]}>
       <Ionicons name="checkmark-circle" size={small ? 16 : 18} color={dark ? colors.gold : colors.success} />
-      <Text style={{ fontSize: small ? 13 : 14, fontWeight: "800", color: dark ? colors.cream : colors.ink, letterSpacing: 0.2 }}>{label}</Text>
+      <Text style={{ fontSize: small ? 13 : 14, fontWeight: "800", color: dark ? colors.onDark : colors.ink, letterSpacing: 0.2 }}>{label}</Text>
     </View>
   );
 }
@@ -238,7 +239,7 @@ export function Field({ label, value, onChangeText, error, hint, required, multi
       <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>{label}{required ? <Text style={{ color: colors.danger }}> *</Text> : null}</Text>
       <TextInput
         value={value} onChangeText={onChangeText} multiline={multiline} accessibilityLabel={label}
-        onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} placeholderTextColor="#9A9087"
+        onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} placeholderTextColor={colors.placeholder}
         style={{ backgroundColor: colors.surface, borderRadius: radius.field, borderWidth: 1.5, borderColor: error ? colors.danger : focus ? colors.gold : colors.line, paddingHorizontal: 16, paddingVertical: 13, minHeight: multiline ? 104 : 50, textAlignVertical: multiline ? "top" : "center", fontSize: 16, color: colors.ink, outlineStyle: "none" }}
         {...props}
       />

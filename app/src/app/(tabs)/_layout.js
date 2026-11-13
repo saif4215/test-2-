@@ -2,7 +2,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import { Tabs } from "expo-router/js-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useSite } from "../../lib/site";
-import { colors } from "../../theme";
+import { colors, isDark } from "../../theme";
 import { openLink } from "../../lib/links";
 
 const logo = require("../../../assets/logo-dark.png");
@@ -33,7 +33,10 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg, height: 84 }, headerShadowVisible: false,
-        headerTitle: () => <Image source={logo} accessibilityLabel="Maruf Cafe" resizeMode="contain" style={{ width: 70, height: 52 }} />,
+        // the logo is dark on a light ground: in the dark look it sits on a light chip
+        headerTitle: () => (isDark()
+          ? <View style={{ backgroundColor: "#FBF8F2", borderRadius: 14, paddingHorizontal: 8 }}><Image source={logo} accessibilityLabel="Maruf Cafe" resizeMode="contain" style={{ width: 70, height: 52 }} /></View>
+          : <Image source={logo} accessibilityLabel="Maruf Cafe" resizeMode="contain" style={{ width: 70, height: 52 }} />),
         headerTitleAlign: "left", headerRight: () => <CallPill />,
         tabBarActiveTintColor: colors.ink, tabBarInactiveTintColor: "#8F857B",
         tabBarStyle: { backgroundColor: colors.surface, borderTopWidth: 0, height: 72, paddingTop: 8, paddingBottom: 10, boxShadow: "0px -8px 28px rgba(36,26,18,0.08)" },

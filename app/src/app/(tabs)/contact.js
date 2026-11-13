@@ -33,7 +33,7 @@ function Question({ q, a }) {
     <Card>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} aria-expanded={open} onPress={() => setOpen(!open)} style={{ padding: 18, flexDirection: "row", gap: 12, alignItems: "center" }}>
         <Text style={{ flex: 1, fontWeight: "800", fontSize: 16, lineHeight: 22, color: colors.ink }}>{q}</Text>
-        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: open ? colors.gold : colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={open ? "remove" : "add"} size={18} color={open ? colors.ink : colors.goldText} /></View>
+        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: open ? colors.gold : colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={open ? "remove" : "add"} size={18} color={open ? colors.onGold : colors.goldText} /></View>
       </Pressable>
       {open ? <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}><Body>{a}</Body></View> : null}
     </Card>

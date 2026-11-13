@@ -12,7 +12,7 @@ export async function startSquare() {
     res.setHeader("Content-Type", "application/json");
     if (req.method === "POST" && req.url === "/v2/orders") {
       const sub = json.order.line_items.reduce((s, l) => s + l.base_price_money.amount * Number(l.quantity), 0);
-      const order = { id: "SQORDER" + (orders.size + 1) + "ABCDEF", state: "OPEN", location_id: json.order.location_id, reference_id: json.order.reference_id, source: json.order.source, total_money: { amount: Math.round(sub * 1.08875), currency: "USD" }, fulfillments: [{ type: "PICKUP", state: "PROPOSED" }] };
+      const order = { id: "SQORDER" + (orders.size + 1) + "ABCDEF", state: "OPEN", location_id: json.order.location_id, reference_id: json.order.reference_id, source: json.order.source, total_money: { amount: Math.round(sub * 1.08875), currency: "USD" }, total_tax_money: { amount: Math.round(sub * 1.08875) - sub, currency: "USD" }, fulfillments: [{ type: "PICKUP", state: "PROPOSED" }] };
       orders.set(order.id, order);
       return res.end(JSON.stringify({ order }));
     }

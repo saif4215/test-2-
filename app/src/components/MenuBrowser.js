@@ -80,7 +80,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
         <View style={col}>
           <View style={[{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.surface, borderColor: "rgba(36,26,18,0.06)", borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, minHeight: 50 }, shadow]}>
             <Ionicons name="search" size={20} color={colors.muted} />
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor="#9A9087" accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoCapitalize="none" maxLength={60}
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor={colors.placeholder} accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoCapitalize="none" maxLength={60}
               style={{ flex: 1, minHeight: 48, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
             {query ? (
               <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
@@ -195,7 +195,7 @@ export function Adder({ item: it, size = 46 }) {
     return (
       <Pressable accessibilityRole="button" accessibilityLabel={choose ? `Choose options for ${it.name}` : `Add ${it.name} to order`} onPress={() => { tap(); if (choose) openItem(it); else order.change(it.id, +1); }}
         style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }], boxShadow: "0px 6px 14px rgba(185,130,31,0.35)" })}>
-        <Ionicons name="add" size={Math.round(size * 0.57)} color={colors.ink} />
+        <Ionicons name="add" size={Math.round(size * 0.57)} color={colors.onGold} />
       </Pressable>
     );
   }
@@ -203,7 +203,7 @@ export function Adder({ item: it, size = 46 }) {
     <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.ink, borderRadius: 24, padding: 3 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${it.name}`} onPress={() => { select(); order.change(it.id, -1); if (qty === 1) { order.resetCustom(it.id); order.setNote(it.id, ""); } }} hitSlop={4} style={{ width: 38, height: 40, borderRadius: 19, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={19} color={colors.cream} /></Pressable>
       <Text style={{ minWidth: 18, textAlign: "center", fontWeight: "800", fontSize: 16, color: colors.cream }}>{qty}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Add one more ${it.name}`} onPress={() => { tap(); order.change(it.id, +1); }} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="add" size={20} color={colors.ink} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Add one more ${it.name}`} onPress={() => { tap(); order.change(it.id, +1); }} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="add" size={20} color={colors.onGold} /></Pressable>
     </View>
   );
 }
@@ -215,7 +215,7 @@ export function FavoriteButton({ item: it, size = 34, onPhoto }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={on ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`} onPress={() => { tap(); toggleFavorite(it.id); }} hitSlop={6}
       style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: onPhoto ? "rgba(255,255,255,0.92)" : colors.surface, borderWidth: onPhoto ? 0 : 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] })}>
-      <Ionicons name={on ? "heart" : "heart-outline"} size={Math.round(size * 0.58)} color={on ? colors.danger : colors.ink} />
+      <Ionicons name={on ? "heart" : "heart-outline"} size={Math.round(size * 0.58)} color={on ? colors.danger : onPhoto ? colors.onGold : colors.ink} />
     </Pressable>
   );
 }

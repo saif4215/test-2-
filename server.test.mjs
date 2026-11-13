@@ -53,7 +53,7 @@ const reset = (m = "ok") => { calls = []; mode = m; };
 test("config tells the app whether ordering is on, and exposes only public values", async () => {
   const r = await fetch(base + "/api/config");
   const text = await r.text();
-  assert.deepEqual(JSON.parse(text), { enabled: true, environment: "sandbox", taxPercent: 8.875, maxOrderCents: 30000, pickup: { minMinutes: 30, step: 15 } });
+  assert.deepEqual(JSON.parse(text), { enabled: true, environment: "sandbox", taxPercent: 8.875, maxOrderCents: 30000, pickup: { minMinutes: 30, step: 15 }, pointsPerDollar: 1 });
   assert.ok(!text.includes("tok") && !text.includes("LOC"), "no token or location in the public settings");
 });
 
@@ -202,7 +202,8 @@ test("an order's progress follows what the café does in Square", async () => {
     reset("fulfillment:" + state);
     const r = await status("ORDER123456");
     assert.equal(r.status, 200, state);
-    assert.deepEqual(r.json, { ok: true, status: expected, ref: "K7QF", totalCents: 900 }, state);
+    // points come from what Square rang up, before tax, and only once the order is picked up
+    assert.deepEqual(r.json, { ok: true, status: expected, ref: "K7QF", totalCents: 900, ...(expected === "done" ? { subtotalCents: 900, points: 9 } : {}) }, state);
   }
   reset("canceled");
   assert.equal((await status("ORDER123456")).json.status, "canceled");

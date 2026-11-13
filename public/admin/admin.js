@@ -322,7 +322,7 @@ const SLOT_LABELS = { hero: "Top of the home page", largeOrders: "Large orders p
 
 async function saveContent(host, button) {
   button.disabled = true;
-  try { const r = await api("PUT", "content", { content: S.content }); S.content = r.content; flash(host, "Saved. The app shows it now."); }
+  try { await api("PUT", "content", { content: S.content }); flash(host, "Saved. The app shows it now."); }   // S.content stays the same object the editors on this page are changing, so a second save in the same visit still sends the new edits
   catch (err) { flash(host, err.errors?.length > 1 ? `${err.errors[0]} (and ${err.errors.length - 1} more)` : err.message, "bad"); }
   finally { button.disabled = false; }
 }
@@ -366,6 +366,8 @@ async function viewSite(main) {
   };
 
   const faqBox = listEditor(c.faq, () => ({ q: "", a: "" }), (it) => [...bind(it, "q", "Question"), ...bind(it, "a", "Answer", { area: true, max: "1500" })], "+ Add a question", true);
+  c.promotions ||= []; c.rewardsNote ||= "";
+  const promoBox = listEditor(c.promotions, () => ({ title: "", text: "", until: "" }), (it) => [...bind(it, "title", "Title", { max: "60", ph: "for example: Free cookie with any large drink" }), ...bind(it, "text", "Details (optional)", { area: true, max: "400" }), ...bind(it, "until", "Last day it is shown (optional, like 2026-12-31)", { max: "10", hint: "Leave blank to show it until you remove it." })], "+ Add a promotion", true);
   const pkgBox = listEditor(c.packages, () => ({ id: "", title: "", blurb: "", includes: [], price: "" }), (it) => {
     const inc = { v: it.includes.join("\n") };
     return [...bind(it, "title", "Name", { max: "60" }), ...bind(it, "blurb", "One-line description"),
@@ -390,6 +392,9 @@ async function viewSite(main) {
       ...bind(c.venue, "policies", "Rental rules (deposit, cancellation, food rules…)", { area: true, max: "1500", hint: "Write your real policies here before taking bookings." })),
     h("div", { class: "card" }, h("h2", { text: "Home picks" }), h("p", { class: "hint", text: "Items ticked “Show on Home” in the Menu tab appear on the app's home screen under this title. Only call it “Most popular” if your sales show that." }),
       ...bind(c, "featuredTitle", "Title", { max: "40", ph: "Try these" })),
+    h("div", { class: "card" }, h("h2", { text: "Promotions" }), h("p", { class: "hint", text: "Shown on the app's Home screen. Only add a promotion you will honor. There are none until you add one." }), promoBox),
+    h("div", { class: "card" }, h("h2", { text: "Points" }), h("p", { class: "hint", text: "Customers earn points for each dollar (before tax) on orders they pick up, worked out from the order in Square. Say here what points can be used for. Leave blank to say nothing about it." }),
+      ...bind(c, "rewardsNote", "What points can be used for", { area: true, max: "300", ph: "for example: Ask at the counter" })),
     h("div", { class: "card" }, h("h2", { text: "Event options" }), pkgBox, ...bind(c, "packagesNote", "Note under the options", { area: true, max: "500" })),
     h("div", { class: "card" }, h("h2", { text: "Questions & answers" }), faqBox),
     h("div", { class: "card" }, h("h2", { text: "Customer reviews" }), h("p", { class: "msg warn", text: "Only add reviews that real customers actually wrote, and use their real words. Never write or change a review yourself. Reviews show in the app only when you add them here." }), revBox),

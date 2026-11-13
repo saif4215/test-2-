@@ -26,8 +26,8 @@ function GroupHero({ eyebrow, title, body, cta, icon, onPress, art }) {
         </>
       )}
       <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase", color: colors.gold }}>{eyebrow}</Text>
-      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 34, lineHeight: 39, color: colors.cream }}>{title}</Text>
-      <Text style={{ fontSize: 16, lineHeight: 24, color: colors.creamMuted, maxWidth: 420 }}>{body}</Text>
+      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 34, lineHeight: 39, color: colors.onDark }}>{title}</Text>
+      <Text style={{ fontSize: 16, lineHeight: 24, color: colors.onDarkMuted, maxWidth: 420 }}>{body}</Text>
       <View style={{ alignItems: "flex-start", marginTop: 6, marginBottom: art ? 46 : 0 }}>
         <Button title={cta} variant="gold" icon={icon} onPress={onPress} />
       </View>
@@ -43,7 +43,7 @@ function Steps() {
       <View style={{ flexDirection: "row", gap: 10 }}>
         {steps.map((s, i) => (
           <View key={s} style={{ flex: 1, alignItems: "center", gap: 8 }}>
-            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Text style={{ fontWeight: "800", color: colors.ink, fontSize: 15 }}>{i + 1}</Text></View>
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Text style={{ fontWeight: "800", color: colors.onGold, fontSize: 15 }}>{i + 1}</Text></View>
             <Text style={{ fontSize: 13.5, lineHeight: 18, fontWeight: "700", color: colors.ink, textAlign: "center" }}>{s}</Text>
           </View>
         ))}
