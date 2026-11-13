@@ -160,11 +160,15 @@ function requestCard(r, statuses, reload) {
     try { const res = await api("PATCH", `inquiries/${r.id}`, { status: statusSel.value, notes: notes.value }); flash(body, "Saved."); Object.assign(r, res.request); head.querySelector(".badge").textContent = statuses[res.request.status]; head.querySelector(".badge").className = `badge ${res.request.status}`; }
     catch (err) { flash(body, err.message, "bad"); } finally { save.disabled = false; }
   } });
+  const contacted = r.status === "new" ? h("button", { class: "primary", type: "button", text: "I contacted them", onclick: async (e) => {
+    e.target.disabled = true;
+    try { const res = await api("PATCH", `inquiries/${r.id}`, { status: "contacted", notes: notes.value }); Object.assign(r, res.request); statusSel.value = res.request.status; head.querySelector(".badge").textContent = statuses[res.request.status]; head.querySelector(".badge").className = `badge ${res.request.status}`; contacted.remove(); flash(body, "Marked as contacted."); }
+    catch (err) { e.target.disabled = false; flash(body, err.message, "bad"); } } }) : null;
   body.append(
     h("dl", { class: "facts" }, r.view.flatMap(([k, v]) => [h("dt", { text: k }), h("dd", { text: v })])),
     h("div", { class: "row" },
       phoneDigits && h("a", { class: "btn", href: `tel:${phoneDigits}`, text: "Call" }), phoneDigits && h("a", { class: "btn", href: `sms:${phoneDigits}`, text: "Text" }),
-      f.email && h("a", { class: "btn", href: `mailto:${f.email}`, text: "Email" })),
+      f.email && h("a", { class: "btn", href: `mailto:${f.email}`, text: "Email" }), contacted),
     me?.assistant ? aiDraft(r) : null,
     h("label", { for: statusSel.id, text: "Status" }), statusSel,
     h("p", { class: "hint", text: "“Accepted” is only a note for you. It does not book anything or message the customer." }),
@@ -180,8 +184,39 @@ async function viewMenu(main) {
   if (!S.menu) { try { const r = await api("GET", "menu"); S.menu = r.menu; S.menuCustom = r.custom; } catch (err) { return main.append(h("p", { class: "msg bad", text: err.message })); } }
   const filter = h("input", { type: "search", placeholder: "Find an item…", "aria-label": "Find a menu item", oninput: apply });
   const tree = h("div");
+  let dirty = false;   // true once something in the editor below was changed and not saved yet
+  const quick = h("div", { class: "card", "data-quick": "1" });
+  const allItems = () => Object.entries(S.menu.groups).flatMap(([g, cats]) => Object.entries(cats).flatMap(([c, items]) => items.map((it) => ({ it, cat: c }))));
+  /** "Sold out today?": one tap takes an item off the app (or puts it back) and saves it right away. */
+  function drawQuick() {
+    const soldOut = allItems().filter(({ it }) => it.hidden);
+    const find = h("input", { type: "search", placeholder: "Type what ran out, like Latte", "aria-label": "Mark an item sold out", autocomplete: "off", oninput: matches });
+    const found = h("div", { class: "quick" });
+    const say = h("span");
+    async function flip(it, hidden) {
+      if (dirty) { say.replaceChildren(h("span", { class: "msg warn", role: "alert", text: "You have unsaved changes below. Press Save menu first, then try again." })); return; }
+      const next = structuredClone(S.menu);
+      const hit = Object.values(next.groups).flatMap((cats) => Object.values(cats).flat()).find((x) => x.id === it.id);
+      if (!hit) return;
+      if (hidden) hit.hidden = true; else delete hit.hidden;
+      try { const r = await api("PUT", "menu", { menu: next }); S.menu = r.menu; build(); drawQuick(); quick.prepend(h("p", { class: "msg ok flash", role: "status", text: hidden ? `${it.name} is off the app now.` : `${it.name} is back on the app.` })); }
+      catch (err) { say.replaceChildren(h("span", { class: "msg bad", role: "alert", text: err.message })); }
+    }
+    function matches() {
+      const q = find.value.trim().toLowerCase();
+      found.replaceChildren(...(q ? allItems().filter(({ it }) => !it.hidden && it.name.toLowerCase().includes(q)).slice(0, 8).map(({ it, cat }) =>
+        h("button", { type: "button", class: "quickbtn", onclick: () => flip(it, true) }, h("b", { text: it.name }), h("span", { text: `${cat} · tap to mark sold out` }))) : []));
+      if (q && !found.children.length) found.append(h("p", { class: "hint", text: "Nothing on the menu matches that." }));
+    }
+    quick.replaceChildren(h("h2", { text: "Sold out today?" }),
+      soldOut.length ? h("div", { class: "quick" }, h("p", { class: "hint", text: "Off the app right now:" }), soldOut.map(({ it }) => h("button", { type: "button", class: "quickbtn off", onclick: () => flip(it, false) }, h("b", { text: it.name }), h("span", { text: "tap to put it back on the app" })))) : h("p", { class: "hint", text: "Everything is on the app. When something runs out, type its name here and tap it." }),
+      find, found, say);
+  }
+  drawQuick();
   main.append(
-    h("p", { class: "hint", text: "Change a name or price, tick “Hide” to take an item off the app, or “Show on Home” to feature up to 4 items on the app’s home screen, then press Save. Prices are in dollars. Drinks with sizes show one price per size, and “Choices offered” picks which extras (milk, syrup, add-ons…) an item offers. The extras and what they cost are at the bottom, under “Choices and extras”." }),
+    quick,
+    h("h2", { text: "Change prices and details" }),
+    h("p", { class: "hint", text: "Open a section, change a name or price (in dollars), then press Save menu. Tick “Show on Home” to feature up to 4 items on the app’s home screen. Extras like milk and syrup, and what they cost, are at the bottom under “Choices and extras”." }),
     h("div", { class: "row" }, h("div", { class: "grow" }, filter), me.role === "owner" && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
       if (!confirm("Throw away all your menu edits and go back to the original menu?")) return;
       try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })),
@@ -197,7 +232,7 @@ async function viewMenu(main) {
       : h("input", { inputmode: "decimal", value: money(it.cents), "aria-label": "Price in dollars", "data-f": "cents" });
     const desc = h("input", { class: "desc", value: it.desc || "", placeholder: "Description (optional)", "aria-label": "Description", maxlength: "300", "data-f": "desc" });
     const pick = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.featured, "data-f": "featured" }), "Show on Home");
-    const hide = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.hidden, "data-f": "hidden", onchange: (e) => row.classList.toggle("hiddenitem", e.target.checked) }), "Hide");
+    const hide = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.hidden, "data-f": "hidden", onchange: (e) => row.classList.toggle("hiddenitem", e.target.checked) }), "Sold out / hide");
     const del = h("button", { type: "button", class: "danger", "aria-label": `Delete ${it.name}`, text: "✕", onclick: () => { if (confirm(`Delete “${name.value}”?`)) row.remove(); } });
     // an optional picture shown beside the item in the app
     const thumb = h("img", { class: "thumb", alt: "", src: it.image || "", hidden: !it.image });
@@ -217,6 +252,7 @@ async function viewMenu(main) {
   }
 
   function build() {
+    dirty = false;
     tree.replaceChildren();
     for (const [g, cats] of Object.entries(S.menu.groups)) {
       const group = h("details", { class: "group", open: false, "data-group": g }, h("summary", { text: g }));
@@ -249,6 +285,8 @@ async function viewMenu(main) {
     for (const d of tree.querySelectorAll("details.group")) { if (q) d.open = true; }
   }
   build();
+  tree.addEventListener("input", () => { dirty = true; });
+  tree.addEventListener("change", () => { dirty = true; });
 
   function collect() {
     const out = { currency: "USD", groups: {} }, problems = [];
@@ -496,12 +534,12 @@ async function viewSetup(main) {
     main.append(
       h("div", { class: "card" }, h("h2", { text: "Is everything switched on?" }), h("ul", { class: "plain" },
         check(true, "Requests are saved in the database.", ""),
-        check(s.email, "Email alerts are on. New requests are emailed to you.", "Email alerts are OFF. Set RESEND_API_KEY and NOTIFY_EMAIL (see DEPLOY.md), or you will only see requests here."),
-        check(s.email || s.webhook, "You are alerted when a request arrives.", "Nothing alerts you when a request arrives. Add email alerts or a webhook."),
-        check(s.square !== "off", `App orders go into your Square (${s.square}).`, "App orders are off, so customers can only send requests or use your Square Online store. Turn them on by connecting Square (see DEPLOY.md)."),
+        check(s.email, "Email alerts are on. New requests are emailed to you.", "Email alerts are off, so you only see requests when you open this page. To turn them on, run  npm run setup  on the computer that runs the server and say yes to email."),
+        check(s.email || s.webhook, "You are alerted when a request arrives.", "Nothing tells you when a request arrives. Turn on email alerts (see the line above)."),
+        check(s.square !== "off", `App orders go into your Square (${s.square}).`, "Pickup orders are off, so customers can only send requests. To turn them on, run  npm run setup  and say yes to Square."),
         check(s.assistant, "An AI service is connected: smarter chat answers, the order helper in the app (customers check what it puts together), and the assistant here for summaries and draft replies.", "No AI service is connected. The chat answers from your menu and details with no AI, and the order helper and this dashboard's assistant stay hidden. Add an AI key to turn them on (optional, see DEPLOY.md)."),
-        check(s.publicUrl, "The server address is set (links in emails are right).", "PUBLIC_URL is not set. Emails will not include a dashboard link."),
-        check(s.staffAccount, "A staff account is set up.", "No staff account. Set STAFF_PASSWORD (10+ characters) to give staff their own sign-in."),
+        check(s.publicUrl, "The server address is set (links in emails are right).", "The server’s web address is not set, so emails will not link back here. This only matters once it is online (see DEPLOY.md)."),
+        check(s.staffAccount, "A staff account is set up.", "No separate staff sign-in yet. Only needed if staff use this page: add STAFF_PASSWORD (10+ characters) to the .env file."),
         ...s.warnings.map((w) => check(false, "", w)))),
       s.squareMenu ? squareMenuCard(s.squareMenu) : null,
       h("div", { class: "card" }, h("h2", { text: "Request counts" }), h("p", { text: Object.entries(s.counts).map(([k, n]) => `${k.replace("_", " ")}: ${n}`).join(" · ") })),

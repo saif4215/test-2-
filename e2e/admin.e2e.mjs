@@ -44,6 +44,12 @@ await site.post({ type: "event", fields: goodEvent() });
   const r = (await a.get("inquiries?q=Sam")).json.rows[0];
   ok(r.status === "quote_sent" && r.notes === "Quoted $600 by phone", "status and notes saved from the browser");
 
+  // one tap: "I contacted them" on a new request
+  await p.locator(".req", { hasText: /New/ }).first().click();
+  await p.getByRole("button", { name: "I contacted them" }).first().click();
+  await p.getByText("Marked as contacted.").waitFor();
+  ok((await a.get("inquiries?status=contacted")).json.rows.length >= 1, "one tap marks a new request as contacted");
+
   // menu
   await p.getByRole("button", { name: "Menu", exact: true }).click();
   await p.getByLabel("Find a menu item").fill("Latte");
@@ -70,6 +76,24 @@ await site.post({ type: "event", fields: goodEvent() });
   ok(pub2.optionGroups.milk.choices[0].cents === 125 && pub2.optionGroups.milk.choices[0].name === "Oat milk", "a choice's price edit is live");
   ok(latte2.sizes.length === 2 && latte2.sizes[0].cents === 525 && latte2.sizes[1].cents === 550 && !latte2.options.includes("milk") && latte2.options.includes("syrup"), "sizes are kept, and an extra can be turned off for one item");
   ok(pub2.groups.Food.Breakfast.find((i) => i.id === "food-breakfast-egg-and-cheese").options.includes("bread"), "other items keep their choices when the menu is saved");
+
+  // sold out today: one tap, saved at once, and put back with one tap
+  await p.getByLabel("Mark an item sold out").fill("Latte");
+  await p.locator("[data-quick] .quickbtn").first().click();
+  await p.getByText(/is off the app now/).waitFor();
+  const soldPub = await (await fetch(site.u + "/menu.json")).json();
+  ok(!Object.values(soldPub.groups).some((c) => Object.values(c).flat().some((i) => i.id === "drinks-coffee-latte")), "a sold-out item is off the public menu");
+  await p.locator("[data-quick] .quickbtn.off").first().click();
+  await p.getByText(/is back on the app/).waitFor();
+  const backPub = await (await fetch(site.u + "/menu.json")).json();
+  ok(Object.values(backPub.groups).some((c) => Object.values(c).flat().some((i) => i.id === "drinks-coffee-latte")), "put back on the app with one tap");
+  ok(backPub.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").sizes.length === 2, "sold out and back keeps the item's sizes");
+  await p.getByLabel("Find a menu item").fill("Latte");
+  await p.locator('.item:not([hidden]) [data-size=Small]').first().fill("5.30");
+  await p.getByLabel("Mark an item sold out").fill("Cappuccino");
+  await p.locator("[data-quick] .quickbtn").first().click();
+  ok(/unsaved changes/.test(await p.locator("[data-quick]").textContent()), "a sold-out tap with unsaved edits asks to save first instead of losing them");
+  await p.locator('.item:not([hidden]) [data-size=Small]').first().fill("5.25");
 
   // site info + review + photo
   await p.getByRole("button", { name: "Site info" }).click();

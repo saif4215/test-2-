@@ -85,3 +85,8 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:.5rem 0;border-t
 .optgroup{margin:.75rem 0 1rem}
 .optgroup .choice{display:grid;grid-template-columns:1fr 92px 44px;gap:.4rem;align-items:center;padding:.25rem 0}
 .choices>summary{font-weight:700;cursor:pointer}
+
+.quick{display:grid;gap:.4rem;margin:.5rem 0}
+.quickbtn{width:100%;display:block;text-align:left;min-height:56px;padding:.6rem 1rem;border-radius:12px}
+.quickbtn b{display:block}.quickbtn span{color:var(--mute);font-size:.88rem}
+.quickbtn.off{background:var(--badbg);border-color:#E7B7B0}
