@@ -36,7 +36,7 @@ function Tracker({ step, canceled }) {
 
 /** Shown after the café's server says the order is in Square. It then keeps asking how the order is doing until it is picked up or canceled. */
 export default function OrderSent() {
-  const { id, ref, total, name, preview, fresh } = useLocalSearchParams();
+  const { id, ref, total, name, preview, fresh, pickup } = useLocalSearchParams();
   const { business } = useSite();
   const { active, activeStatus, setActiveStatus } = useMemory();
   const mine = active?.id === String(id);   // the order Home is following
@@ -100,7 +100,7 @@ export default function OrderSent() {
       ) : null}
       <Tracker step={info.step} canceled={canceled} />
       <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}Pay at the counter when you pick it up.</Small>
-      <Small>Pickup at {business.name}, {business.address.join(", ")}.</Small>
+      <Small>{pickup ? `Pickup at ${pickup} today: ` : "Pickup at "}{business.name}, {business.address.join(", ")}.</Small>
       <View style={{ gap: 12 }}>
         <Button title="Done" variant="primary" onPress={done} />
         <MapCard compact />

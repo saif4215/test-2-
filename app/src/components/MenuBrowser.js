@@ -6,7 +6,8 @@ import { Body, Button, Card, Chip, Grid, H3, Small, usePullRefresh } from "./ui"
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useMemory } from "../lib/memory";
-import { needsChoice } from "../lib/customize";
+import { describeCustom, needsChoice, unitCents } from "../lib/customize";
+import { success } from "../lib/haptics";
 import { reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
 import { featuredItems, indexMenu, searchMenu } from "../lib/site-merge";
@@ -351,22 +352,55 @@ export function FeaturedPicks() {
  * "Order again" (the items of the last order sent) and "Your favorites": the rows people come back for. Shown only when there is something in them.
  * Each one lives in one place: Order again on Home, Your favorites on the Menu (`only` picks which).
  */
+/** One saved drink ("My usual"): its name, what it costs now, and a button that puts it in the order exactly as saved. */
+function UsualCard({ usual, item, width = 230 }) {
+  const order = useOrder();
+  const { removeUsual } = useMemory();
+  const [added, setAdded] = useState(false);
+  useEffect(() => { if (!added) return undefined; const t = setTimeout(() => setAdded(false), 1800); return () => clearTimeout(t); }, [added]);
+  const unit = unitCents(item, usual.choice), text = describeCustom(item, usual.choice);
+  return (
+    <Card style={{ width, padding: 14, gap: 6 }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${usual.name}. Details`} onPress={() => openItem(item)} style={{ gap: 2 }}>
+        <Text numberOfLines={2} style={{ fontWeight: "800", fontSize: 16, lineHeight: 21, color: colors.ink }}>{item.name}</Text>
+        <Text numberOfLines={2} style={{ fontSize: 13, lineHeight: 18, color: colors.goldText, fontWeight: "600" }}>{text || "As it comes"}</Text>
+        {unit != null ? <Text style={{ fontSize: 14, color: colors.muted }}>{money(unit)}</Text> : null}
+      </Pressable>
+      <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+        <View style={{ flex: 1 }}>
+          <Button title={added ? "Added" : "Add"} variant={added ? "primary" : "gold"} size="medium" icon={added ? "checkmark" : "add"} accessibilityLabel={added ? `${usual.name} added to your order` : `Add ${usual.name} to my order`}
+            onPress={() => { order.addMany([{ id: item.id, qty: 1, choice: usual.choice }]); success(); setAdded(true); }} />
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${usual.name} from my usuals`} onPress={() => removeUsual(usual.id)} hitSlop={8} style={{ width: 40, height: 44, alignItems: "center", justifyContent: "center" }}><Ionicons name="trash-outline" size={20} color={colors.muted} /></Pressable>
+      </View>
+    </Card>
+  );
+}
+
 export function PersonalRows({ only, style }) {
   const { menu } = useSite();
-  const { favorites, recent } = useMemory();
+  const { favorites, recent, usuals, history } = useMemory();
   const order = useOrder();
   const byId = useMemo(() => indexMenu(menu), [menu]);
   const favItems = only === "again" ? [] : favorites.map((id) => byId.get(id)).filter((it) => it && !it.hidden);
   const again = only === "favorites" ? [] : reorderIds(recent, byId).map((id) => byId.get(id)).filter((it) => it && !it.hidden);
-  const favRow = useRowScroll(), againRow = useRowScroll();
-  if (!favItems.length && !again.length) return null;
+  const favRow = useRowScroll(), againRow = useRowScroll(), usualRow = useRowScroll();
+  const myUsuals = only === "favorites" ? [] : usuals.map((u) => ({ u, item: byId.get(u.itemId) })).filter((x) => x.item && !x.item.hidden);   // a saved drink the café has taken off the menu is simply not shown
+  if (!favItems.length && !again.length && !myUsuals.length) return null;
   const lastLines = (recent[0] || []).filter((l) => byId.has(l.id));
   return (
     <View style={[{ gap: 26 }, style]}>
+      {myUsuals.length ? (
+        <View>
+          <RowHead title="My usuals" arrows={usualRow.arrows} />
+          <BleedRow scrollRef={usualRow.scrollRef} onScroll={usualRow.onScroll}>{myUsuals.map(({ u, item }) => <UsualCard key={u.id} usual={u} item={item} />)}</BleedRow>
+        </View>
+      ) : null}
       {again.length ? (
         <View>
           <RowHead title="Order again" arrows={againRow.arrows} action={{ label: "Reorder", icon: "add-circle", a11y: "Reorder my last order", onPress: () => { order.addMany(lastLines); router.push("/order"); } }} />
           <BleedRow scrollRef={againRow.scrollRef} onScroll={againRow.onScroll}>{again.map((it) => <ItemTile key={`again-${it.id}`} item={it} />)}</BleedRow>
+          {history.length ? <View style={{ marginTop: 12, alignSelf: "flex-start" }}><Button title="See past orders" variant="outline" size="medium" icon="time-outline" onPress={() => router.push("/history")} /></View> : null}
         </View>
       ) : null}
       {favItems.length ? (

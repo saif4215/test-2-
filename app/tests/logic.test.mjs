@@ -9,7 +9,7 @@ import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
-import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS } from "../src/lib/memory-util.js";
+import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -593,4 +593,40 @@ test("close to closing time the café says how many minutes are left", () => {
   assert.equal(later.closesSoon, false); assert.equal(later.text, "Open now · until 10 PM");
   assert.equal(openStatus(hours, at("2026-01-13T02:15:00Z")).closesSoon, true, "45 minutes left still counts");
   assert.equal(openStatus(hours, at("2026-01-13T02:14:00Z")).closesSoon, false, "46 minutes left does not");
+});
+
+// ── My usual drinks and past orders ─────────────────────────────────────────────────────────────────────────────────────────────
+test("a usual is saved with its choices, newest first, once, and can be removed", () => {
+  const big = { size: "Large", picks: { milk: ["Oat milk"], temp: ["Iced"] } };
+  let list = addUsual([], { itemId: "latte", name: "Latte · Large, Iced, Oat milk", choice: big }, () => "a");
+  list = addUsual(list, { itemId: "latte", name: "Latte", choice: { size: "Small", picks: { temp: ["Hot"] } } }, () => "b");
+  assert.deepEqual(list.map((u) => u.id), ["b", "a"]);
+  list = addUsual(list, { itemId: "latte", name: "Latte · Large, Iced, Oat milk", choice: big }, () => "c");
+  assert.deepEqual(list.map((u) => u.id), ["c", "b"], "the same drink made the same way moves to the front instead of being listed twice");
+  assert.deepEqual(removeUsual(list, "b").map((u) => u.id), ["c"]);
+  assert.deepEqual(addUsual(list, { itemId: "", name: "x" }), list, "nothing to save without an item");
+  let many = [];
+  for (let i = 0; i < 30; i++) many = addUsual(many, { itemId: `i${i}`, name: "x", choice: {} });
+  assert.equal(many.length, MAX_USUALS);
+});
+
+test("saved usuals are read back only if they look right", () => {
+  assert.deepEqual(readUsuals("nope"), []);
+  const back = readUsuals([{ id: "a", itemId: "latte", name: "Mine", choice: { size: "Large", picks: { milk: ["Oat milk", 5], bad: "x" }, shots: 3 } }, { id: 5, itemId: "x" }, null, { id: "b" }]);
+  assert.deepEqual(back, [{ id: "a", itemId: "latte", name: "Mine", choice: { size: "Large", picks: { milk: ["Oat milk"] } } }]);
+});
+
+test("past orders keep what was ordered, with choices, newest first, at most 20; empty orders and damaged saves are ignored", () => {
+  let h = recordHistory([], [{ id: "latte", qty: 2, choice: { size: "Large" } }, { id: "bagel", qty: 1, choice: {} }, { id: "x", qty: 0 }], { at: 1000, subtotal: 1900 });
+  assert.deepEqual(h, [{ at: 1000, subtotal: 1900, lines: [{ id: "latte", qty: 2, choice: { size: "Large" } }, { id: "bagel", qty: 1 }] }]);
+  h = recordHistory(h, [{ id: "tea", qty: 1 }], { at: 2000 });
+  assert.deepEqual(h.map((o) => o.at), [2000, 1000]);
+  assert.equal(h[0].subtotal, null);
+  assert.equal(recordHistory(h, [], { at: 3 }), h);
+  let many = [];
+  for (let i = 1; i <= 30; i++) many = recordHistory(many, [{ id: "a", qty: 1 }], { at: i });
+  assert.equal(many.length, MAX_HISTORY);
+  assert.deepEqual(readHistory(JSON.parse(JSON.stringify(h))), h);
+  assert.deepEqual(readHistory("x"), []);
+  assert.deepEqual(readHistory([{ at: "soon", lines: [] }, { at: 5, lines: [{ id: 3, qty: 1 }] }, { at: 6, lines: [{ id: "a", qty: 99 }] }]), [{ at: 6, subtotal: null, lines: [{ id: "a", qty: 20 }] }]);
 });

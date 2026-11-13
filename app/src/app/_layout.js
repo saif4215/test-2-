@@ -34,6 +34,7 @@ export default function RootLayout() {
           <Stack.Screen name="assistant" options={{ presentation: "modal", title: "Ask a question" }} />
           <Stack.Screen name="order" options={{ presentation: "modal", title: "My order" }} />
           <Stack.Screen name="checkout" options={{ presentation: "modal", title: "Pickup order" }} />
+          <Stack.Screen name="history" options={{ presentation: "modal", title: "Past orders" }} />
           <Stack.Screen name="order-sent" options={{ presentation: "modal", title: "Order sent" }} />
           <Stack.Screen name="item" options={{ presentation: "modal", title: "Details" }} />
         </Stack>

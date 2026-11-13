@@ -6,7 +6,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { BleedRow, FavoriteButton, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
 import { money, priceText, useOrder } from "../lib/order";
-import { missingRequired, unitCents } from "../lib/customize";
+import { describeCustom, hasOffers, missingRequired, orderChoice, unitCents } from "../lib/customize";
+import { useMemory } from "../lib/memory";
 import { useSite } from "../lib/site";
 import { select, success } from "../lib/haptics";
 import { MAX_QTY } from "../lib/memory-util";
@@ -32,6 +33,7 @@ export default function ItemDetails() {
   const { id } = useLocalSearchParams();
   const { menu, business } = useSite();
   const order = useOrder();
+  const { usuals, addUsual } = useMemory();
   const { width } = useWindowDimensions();
   const item = useMemo(() => indexMenu(menu).get(String(id)), [menu, id]);
   const side = Math.min(width - 40, 520);
@@ -79,6 +81,14 @@ export default function ItemDetails() {
           {item.desc ? <Body>{item.desc}</Body> : null}
           {item.cents == null ? <Small>This item comes in more than one size, so the price depends on the size you choose. Maruf Cafe confirms it with you.</Small> : null}
           <Customizer item={item} />
+          {hasOffers(item) ? (() => {
+            const choice = orderChoice(item, order.custom[item.id]), key = JSON.stringify(choice);
+            const saved = usuals.some((u) => u.itemId === item.id && JSON.stringify(u.choice) === key);   // this drink, made this way, is already one of My usuals
+            const text = describeCustom(item, order.custom[item.id]);
+            return <Button title={saved ? "Saved to My usuals" : "Save as my usual"} variant="outline" size="medium" icon={saved ? "bookmark" : "bookmark-outline"} disabled={saved || missing.length > 0}
+              accessibilityLabel={saved ? "Saved to My usuals" : missing.length ? `Choose ${missing[0].label.toLowerCase()} before saving` : `Save ${item.name}${text ? `, ${text},` : ""} as my usual`}
+              onPress={() => { addUsual({ itemId: item.id, name: `${item.name}${text ? ` · ${text}` : ""}`, choice }); success(); }} />;
+          })() : null}
           <Disclosure icon="create-outline" title="Add a note" hint={order.notes[item.id] || "Optional, for example: no onions"} defaultOpen={!!order.notes[item.id]}>
             <TextInput value={order.notes[item.id] || ""} onChangeText={(t) => order.setNote(item.id, t)} placeholder="For example: no onions" placeholderTextColor="#9A9087" accessibilityLabel="Note for Maruf Cafe" maxLength={100}
               style={{ backgroundColor: colors.bg, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 16, paddingVertical: 13, minHeight: 50, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />

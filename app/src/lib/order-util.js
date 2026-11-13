@@ -35,7 +35,7 @@ export function buildPickup(v) {
 export function orderBody(entries, notes, fields) {
   return {
     items: entries.map((l) => ({ id: l.id, qty: l.qty, ...(l.choice || {}), ...(notes[l.id] ? { note: notes[l.id] } : {}) })),
-    name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}),
+    name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}), ...(fields.pickupAt ? { pickupAt: fields.pickupAt } : {}),
   };
 }
 

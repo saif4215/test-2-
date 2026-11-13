@@ -36,6 +36,56 @@ export function readObject(raw, fallback) {
   try { const v = JSON.parse(raw); return v && typeof v === "object" && !Array.isArray(v) ? v : fallback; } catch { return fallback; }
 }
 
+// ── "My usual" drinks and the list of past orders ──────────────────────────────────────────────────────────────────────────────────
+export const MAX_USUALS = 12, MAX_HISTORY = 20;
+
+const choiceOf = (c) => {
+  if (!c || typeof c !== "object" || Array.isArray(c)) return {};
+  const out = {};
+  if (typeof c.size === "string" && c.size) out.size = c.size.slice(0, 30);
+  if (c.picks && typeof c.picks === "object" && !Array.isArray(c.picks)) {
+    const picks = {};
+    for (const id of Object.keys(c.picks).slice(0, 16)) if (id.length <= 40 && Array.isArray(c.picks[id]) && c.picks[id].length) picks[id] = c.picks[id].filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 40));
+    if (Object.keys(picks).length) out.picks = picks;
+  }
+  return out;
+};
+
+/** Save a drink the way the customer likes it: { id, itemId, name, choice }, newest first. Saving the same item with the same choices again only moves it to the front. */
+export function addUsual(list, { itemId, name, choice }, makeId = () => Math.random().toString(36).slice(2, 10)) {
+  if (typeof itemId !== "string" || !itemId) return list;
+  const c = choiceOf(choice), key = (u) => `${u.itemId}|${JSON.stringify(u.choice)}`;
+  const entry = { id: makeId(), itemId, name: str(name, 80) || "My usual", choice: c };
+  return [entry, ...list.filter((u) => key(u) !== key(entry))].slice(0, MAX_USUALS);
+}
+
+export const removeUsual = (list, id) => list.filter((u) => u.id !== id);
+
+/** Parse the saved usuals, forgetting anything that does not look right. */
+export function readUsuals(v) {
+  if (!Array.isArray(v)) return [];
+  return v.filter((u) => u && typeof u.id === "string" && typeof u.itemId === "string").slice(0, MAX_USUALS).map((u) => ({ id: u.id.slice(0, 20), itemId: u.itemId.slice(0, 80), name: str(u.name, 80) || "My usual", choice: choiceOf(u.choice) }));
+}
+
+/** Keep a past order for the history screen: { at, subtotal, lines: [{ id, qty, choice? }] }, newest first. An empty order is not kept. */
+export function recordHistory(history, entries, { at = Date.now(), subtotal = null } = {}) {
+  const lines = entries.filter((l) => l && l.id && l.qty > 0).map((l) => ({ id: l.id, qty: l.qty, ...(l.choice && Object.keys(choiceOf(l.choice)).length ? { choice: choiceOf(l.choice) } : {}) }));
+  if (!lines.length) return history;
+  return [{ at, subtotal: Number.isFinite(subtotal) ? subtotal : null, lines }, ...history].slice(0, MAX_HISTORY);
+}
+
+/** Parse the saved history, forgetting anything that does not look right. */
+export function readHistory(v) {
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  for (const o of v.slice(0, MAX_HISTORY)) {
+    if (!o || !Array.isArray(o.lines) || !Number.isFinite(Number(o.at))) continue;
+    const lines = o.lines.filter((l) => l && typeof l.id === "string" && Number(l.qty) >= 1).slice(0, 40).map((l) => ({ id: l.id.slice(0, 80), qty: Math.min(20, Math.floor(Number(l.qty))), ...(Object.keys(choiceOf(l.choice)).length ? { choice: choiceOf(l.choice) } : {}) }));
+    if (lines.length) out.push({ at: Number(o.at), subtotal: Number.isFinite(Number(o.subtotal)) && o.subtotal !== null ? Number(o.subtotal) : null, lines });
+  }
+  return out;
+}
+
 // ── "My order" kept on the phone, so closing the app does not lose it ─────────────────────────────────────────────────────────────
 export const MAX_QTY = 20;   // the café's server takes at most 20 of one item in an order
 

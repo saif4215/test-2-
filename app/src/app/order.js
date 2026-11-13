@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, ClosedNotice, Disclosure, Field, FormGroup, H1, Small } from "../components/ui";
+import { Body, Button, Card, Chip, ClosedNotice, Disclosure, Field, FormGroup, H1, Small } from "../components/ui";
 import { FormShell, SendError } from "../components/FormShell";
 import { Adder, BleedRow, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { business } from "../config";   // only the Square Online address is used here
@@ -13,13 +13,14 @@ import { useSite } from "../lib/site";
 import { suggestFor } from "../lib/site-merge";
 import { useMemory } from "../lib/memory";
 import { warn } from "../lib/haptics";
+import { pickupLabel, pickupSlots } from "../lib/pickup";
 import { colors } from "../theme";
 import { openLink } from "../lib/links";
 
 export default function MyOrder() {
   const order = useOrder();
   const memory = useMemory();
-  const { on: ordering, tax } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
+  const { on: ordering, tax, minMinutes } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
   const canPlace = ordering === true && needsPrice.length === 0;
   const incomplete = order.incomplete;   // a must-pick choice (hot or iced ...) is still missing on these lines
@@ -34,6 +35,12 @@ export default function MyOrder() {
   // Who is picking it up: on this same screen, so placing an order is one screen and one button.
   const { business: shop } = useSite();
   const [v, setV] = useState({ name: "", phone: "", note: "" });
+  // When: as soon as possible, or a time later today (the café's prep time and opening hours decide which times are offered)
+  const [when, setWhen] = useState("asap"), [slotAt, setSlotAt] = useState("");
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
+  const slots = useMemo(() => pickupSlots(shop.hours, now, { minMinutes }), [shop.hours, now, minMinutes]);
+  const slotOk = slots.some((s) => s.at === slotAt);   // a time that has passed while the screen was open is no longer offered
   const [errors, setErrors] = useState({});
   const [state, setState] = useState({ busy: false, error: "" });
   const key = useRef(null);   // kept between tries, so a second tap after a bad connection can never make two orders
@@ -45,18 +52,19 @@ export default function MyOrder() {
   };
   async function submit() {
     if (incomplete.length) { setState({ busy: false, error: `Choose ${incomplete[0].missing[0].label.toLowerCase()} for ${incomplete[0].name} first.` }); return; }
+    if (when === "later" && !slotOk) { setState({ busy: false, error: slots.length ? "Choose a pickup time, or as soon as possible." : "There are no more pickup times today. Choose as soon as possible." }); return; }
     const built = buildPickup(v);
     setErrors(built.errors);
     if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
-    const body = orderBody(order.entries, order.notes, built.fields);
+    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(when === "later" ? { pickupAt: slotAt } : {}) });
     key.current = keyFor(key.current, body);
     setState({ busy: true, error: "" });
     const res = await sendOrder({ ...body, idempotencyKey: key.current.key });
     if (!res.ok) { warn(); setState({ busy: false, error: res.error }); return; }
     memory.rememberContact(built.fields.name, v.phone.trim());   // as typed, so it looks the same next time
-    memory.rememberOrder(order.entries);
+    memory.rememberOrder(order.entries, { at: Date.now(), subtotal: order.low });
     memory.rememberActive({ id: res.orderId, ref: res.ref, total: res.totalCents, name: built.fields.name, preview: res.preview });   // Home shows where it stands
-    router.replace({ pathname: "/order-sent", params: { id: res.orderId, ref: res.ref, total: res.totalCents == null ? "" : String(res.totalCents), name: built.fields.name, fresh: "1", ...(res.preview ? { preview: "1" } : {}) } });
+    router.replace({ pathname: "/order-sent", params: { id: res.orderId, ref: res.ref, total: res.totalCents == null ? "" : String(res.totalCents), name: built.fields.name, fresh: "1", ...(when === "later" ? { pickup: pickupLabel(slotAt) } : {}), ...(res.preview ? { preview: "1" } : {}) } });
     order.clear();
   }
   return (
@@ -132,6 +140,19 @@ export default function MyOrder() {
                   <Small>You pay at the counter when you pick it up.</Small>
                 </View>
               </Card>
+              <View style={{ gap: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: colors.ink }}>When</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  <Chip label="As soon as possible" active={when === "asap"} onPress={() => setWhen("asap")} />
+                  <Chip label="Choose a time" active={when === "later"} onPress={() => { if (slots.length) setWhen("later"); }} />
+                </View>
+                {when === "later" ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {slots.slice(0, 16).map((sl) => <Chip key={sl.at} small label={sl.label} active={slotAt === sl.at} onPress={() => setSlotAt(sl.at)} />)}
+                  </View>
+                ) : null}
+                <Small>{slots.length ? `Earliest time today: ${slots[0].label}. Pickup times are for today only.` : "There are no more pickup times today, so this order is as soon as possible."}</Small>
+              </View>
               <Field label="Name" required value={v.name} onChangeText={set("name")} error={errors.name} autoComplete="name" textContentType="name" maxLength={60} />
               <Field label="Phone Number" required value={v.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" hint="So the café can reach you about your order." />
               <Disclosure title="Add a note for the café" hint="Optional, for example: I will be there at 5:30" defaultOpen={!!v.note}>
