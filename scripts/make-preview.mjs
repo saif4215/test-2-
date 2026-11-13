@@ -118,7 +118,8 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
     }
     if (pathname.indexOf("/api/order/preview") === 0) {   // no backslashes here: this text sits inside a template string
       var p = placed[pathname.slice("/api/order/".length)], age = p ? Date.now() - p.at : 0;
-      return reply({ ok: true, status: age < 12000 ? "received" : age < 30000 ? "accepted" : "ready", ref: p ? p.ref : "", totalCents: p ? p.total : null });
+      var st = age < 12000 ? "received" : age < 30000 ? "accepted" : age < 50000 ? "ready" : "done";   // the preview plays the café: accepted, ready, then picked up (which is when points arrive)
+      return reply(Object.assign({ ok: true, status: st, ref: p ? p.ref : "", totalCents: p ? p.total : null }, st === "done" && p ? { subtotalCents: p.total, points: Math.floor(p.total / 100) } : {}));
     }
     if (pathname === "/api/inquiry" && method === "POST") return reply({ ok: true });   // a preview: nothing is stored or sent
     return realFetch(input, init);
