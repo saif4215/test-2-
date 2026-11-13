@@ -24,6 +24,7 @@ import { cleanMessages, ask, provider } from "./lib/assistant.mjs";
 import { draftReply, digest } from "./lib/staff-assistant.mjs";
 import { fetchCatalog, compareMenus } from "./lib/square-catalog.mjs";
 import { basicAnswer } from "./lib/answers.mjs";
+import { loadDotEnv } from "./lib/env.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -554,6 +555,7 @@ export function createServer(env = process.env) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+  loadDotEnv(ROOT);   // settings saved by `npm run setup` (a host's own settings still win)
   const port = Number(process.env.PORT) || 8080;
   createServer().listen(port, () => {
     const e = process.env, on = !!(e.SQUARE_ACCESS_TOKEN && e.SQUARE_LOCATION_ID);

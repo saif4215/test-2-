@@ -1,5 +1,7 @@
 # Maruf Cafe
 
+**New here? Open `START-HERE.md`.** Double-click START and answer a few questions.
+
 A phone app (also served on the web) for a Staten Island café that takes large orders, catering requests and private event rentals, with a staff dashboard and a small Node server behind it. The server has no packages to install (Node 22.13 or newer); the app is built once with `npm run build`.
 
 ## What is here
@@ -14,9 +16,8 @@ Setup, email, hosting and what the café still has to fill in: **`DEPLOY.md`**. 
 
 ## Run it
 
-    cd maruf-cafe
-    node server.mjs            # Node 22.13+, no npm install needed
-    ADMIN_PASSWORD=choose-a-long-one node server.mjs   # also switches on /admin/
+    npm run go                 # asks a few questions the first time (npm run setup), then starts it and opens the dashboard
+    node server.mjs            # the plain way: Node 22.13+, no npm install needed; settings come from the environment or a .env file
 
 Open http://localhost:8080 (it opens the app at `/app/`).
 

@@ -8,8 +8,10 @@
   "scripts": {
     "build": "node scripts/build-app.mjs",
     "start": "node server.mjs",
+    "go": "node scripts/start.mjs",
+    "setup": "node scripts/setup.mjs",
     "phone": "node scripts/phone.mjs",
     "square-check": "node --no-warnings scripts/square-check.mjs",
-    "test": "node --test server.test.mjs quote.test.mjs admin.test.mjs site.test.mjs assistant.test.mjs agent.test.mjs square-chat.test.mjs phone.test.mjs square-check.test.mjs options.test.mjs pickup.test.mjs points.test.mjs"
+    "test": "node --test server.test.mjs quote.test.mjs admin.test.mjs site.test.mjs assistant.test.mjs agent.test.mjs square-chat.test.mjs phone.test.mjs square-check.test.mjs options.test.mjs pickup.test.mjs points.test.mjs easy.test.mjs"
   }
 }

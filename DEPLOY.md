@@ -1,5 +1,7 @@
 # Put Maruf Cafe online, set it up, and run it day to day
 
+> Just want it running on your own computer? Open `START-HERE.md` instead: double-click START and answer a few questions. This guide is for putting it online.
+
 This one server runs everything: the phone app (`/app/`), the staff dashboard (`/admin/`) and the backend for quote and event requests.
 It needs **Node 22.13 or newer** and no `npm install` (the database is built into Node).
 
