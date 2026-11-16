@@ -105,3 +105,28 @@ test("backups: a clean copy of the database and the photos, one folder per day, 
     assert.equal(readdirSync(path.join(dir, "backups")).length, 7);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("rewards the owner sets: cleaned, smallest first, and nothing until added", async () => {
+  const { normalizeContent } = await import("./lib/content.mjs");
+  const base = JSON.parse((await import("node:fs")).readFileSync(new URL("./public/content.default.json", import.meta.url), "utf8"));
+  assert.deepEqual(normalizeContent(base).content.rewards, [], "none until the owner adds one");
+  const good = normalizeContent({ ...base, rewards: [{ points: "200", title: "A free sandwich" }, { points: 100.9, title: "  A free drink " }, { points: 5, title: "" }] });
+  assert.deepEqual(good.content.rewards, [{ points: 100, title: "A free drink" }, { points: 200, title: "A free sandwich" }]);
+  const bad = normalizeContent({ ...base, rewards: [{ points: "lots", title: "A free drink" }] });
+  assert.ok(bad.errors.some((e) => /needs a number of points/.test(e)));
+  const site = await startSite();
+  try {
+    const owner = await site.login();
+    const content = (await owner.get("content")).json.content;
+    content.rewards = [{ points: 100, title: "A free drink" }];
+    assert.equal((await owner.put("content", { content })).status, 200);
+    assert.deepEqual((await (await fetch(site.u + "/content.json")).json()).rewards, [{ points: 100, title: "A free drink" }]);
+  } finally { site.close(); }
+});
+
+test("item labels: only New, Popular or Seasonal are kept", async () => {
+  const { normalizeMenu } = await import("./lib/menu.mjs");
+  const menu = { currency: "USD", groups: { Drinks: { Coffee: [{ name: "A", cents: 100, badge: "New" }, { name: "B", cents: 100, badge: "Best ever!!" }, { name: "C", cents: 100 }, { name: "D", cents: 100, badge: "Popular" }] } } };
+  const items = normalizeMenu(menu).menu.groups.Drinks.Coffee;
+  assert.deepEqual(items.map((i) => i.badge), ["New", undefined, undefined, "Popular"]);
+});

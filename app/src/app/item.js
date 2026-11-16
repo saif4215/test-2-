@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } fro
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Body, Button, Disclosure, H1, Small } from "../components/ui";
 import { Ionicons } from "@expo/vector-icons";
-import { BleedRow, FavoriteButton, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
+import { BleedRow, FavoriteButton, ItemBadge, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
 import { money, priceText, useOrder } from "../lib/order";
 import { describeCustom, hasOffers, missingRequired, orderChoice, unitCents } from "../lib/customize";
@@ -74,6 +74,7 @@ export default function ItemDetails() {
           <ItemPhoto item={item} size={side} always box={{ borderRadius: radius.hero, alignSelf: "center" }} />
           <View style={{ gap: 6 }}>
             <View style={{ position: "absolute", right: 0, top: 0, zIndex: 2 }}><FavoriteButton item={item} size={44} /></View>
+            <ItemBadge item={item} style={{ marginBottom: 2 }} />
             {item.cat ? <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase", color: colors.goldText }}>{item.cat}</Text> : null}
             <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 32, lineHeight: 38, color: colors.ink }}>{item.name}</Text>
             <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 22 }}>{priceText(item)}</Text>

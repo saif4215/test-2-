@@ -123,6 +123,8 @@ The dashboard's **Setup** tab shows whether alerts are on, and every request sho
 
 **Busy? Pause pickup orders.** A strip under the tabs, on every page, lets the owner or staff pause new pickup orders for 15 minutes, 30 minutes, 1 hour or 2 hours. Customers can still look at the menu and keep their items, but the order screen tells them when to come back and the server refuses new orders (so an old copy of the app cannot sneak one in). It ends by itself; "Open again now" ends it early. Who paused it is in the Setup tab's Recent changes.
 
+**Rewards and labels.** In **Site info > Points** you can add rewards for customers to work toward (for example "100 points: a free drink"). Each shows in the app as a goal with a progress bar. When a customer has enough points they tap **Use**, show their phone at the counter, and tap **Done** to take the points off. Points live on the customer's own phone, so only add a reward you are happy to give on their word. There are none until you add one. In the **Menu** tab each item has a **Label** (New, Popular or Seasonal) that shows as a small tag in the app; only use Popular if it really is.
+
 **Backups.** Every day the server saves a copy of the database (requests, menu and site edits) and the uploaded photos in `backups/<date>/` inside the data folder, and keeps the newest 7. `npm run backup` saves one right now. These copies are on the same disk as the data, so now and then copy the `backups` folder somewhere else (a USB stick, a cloud drive), or use the host's own disk snapshots. Set `BACKUPS=off` to switch the daily copy off.
 
 Sign in at `https://YOUR-ADDRESS/admin/` with username `owner` and your `ADMIN_PASSWORD`.

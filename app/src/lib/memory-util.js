@@ -102,6 +102,22 @@ export function awardPoints(state, orderId, points) {
   return { balance: Math.min(state.balance + n, 1000000), awarded: [orderId, ...state.awarded].slice(0, MAX_AWARDED) };
 }
 
+/** Take points off after a reward is used. Never below zero; a number that is not a positive whole number of points changes nothing. */
+export function spendPoints(state, points) {
+  const n = Math.floor(Number(points));
+  if (!(n >= 1) || n > state.balance) return state;
+  return { ...state, balance: state.balance - n };
+}
+
+/** Where the customer stands on the café's rewards (smallest first): the goal they are working toward, how far along, and the ones they can already use. */
+export function rewardProgress(rewards, balance) {
+  const list = (Array.isArray(rewards) ? rewards : []).filter((r) => r && r.title && r.points >= 1).sort((a, b) => a.points - b.points);
+  const have = Math.max(0, Math.floor(Number(balance) || 0));
+  const ready = list.filter((r) => r.points <= have);
+  const next = list.find((r) => r.points > have) || null;
+  return { ready, next, have, left: next ? next.points - have : 0, pct: next ? Math.min(1, have / next.points) : 1 };
+}
+
 /** The promotions to show today: those with no end date or an end date that is today or later (New York, the café's day). */
 export function activePromotions(list, now = new Date()) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);

@@ -9,7 +9,7 @@ import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
-import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
+import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -667,4 +667,31 @@ test("a choice the café has run out of cannot be picked, and one picked earlier
 test("the pause time from the server is read safely", () => {
   assert.equal(pausedMs("2026-11-16T15:45:00.000Z"), Date.parse("2026-11-16T15:45:00.000Z"));
   for (const bad of [undefined, null, "", "soon", 5, {}]) assert.equal(pausedMs(bad), 0);
+});
+
+test("rewards progress: the next goal, how far along, and what can be used already", () => {
+  const rewards = [{ points: 250, title: "A free sandwich" }, { points: 100, title: "A free drink" }];
+  assert.deepEqual(rewardProgress(rewards, 0), { ready: [], next: { points: 100, title: "A free drink" }, have: 0, left: 100, pct: 0 });
+  const mid = rewardProgress(rewards, 40);
+  assert.equal(mid.left, 60); assert.equal(mid.pct, 0.4);
+  const some = rewardProgress(rewards, 130);
+  assert.deepEqual(some.ready.map((r) => r.title), ["A free drink"]);
+  assert.equal(some.next.title, "A free sandwich"); assert.equal(some.left, 120);
+  const all = rewardProgress(rewards, 999);
+  assert.equal(all.ready.length, 2); assert.equal(all.next, null); assert.equal(all.pct, 1);
+  assert.deepEqual(rewardProgress(undefined, 50).ready, [], "no rewards set: nothing to show");
+  assert.equal(rewardProgress(rewards, -5).have, 0);
+});
+
+test("using a reward takes its points off, never below zero", () => {
+  const state = { balance: 130, awarded: ["a"] };
+  assert.deepEqual(spendPoints(state, 100), { balance: 30, awarded: ["a"] });
+  assert.equal(spendPoints(state, 200), state, "not enough points: nothing changes");
+  for (const bad of [0, -1, NaN, "x", undefined]) assert.equal(spendPoints(state, bad), state);
+});
+
+test("the café's rewards from the server are cleaned and put in order", () => {
+  const base = { business: {}, faq: [], packages: [] };
+  const merged = mergeSite({ ...base, rewards: [] }, { rewards: [{ points: 200, title: "B" }, { points: "100", title: "A" }, { points: 0, title: "Zero" }, { points: 5 }, null] });
+  assert.deepEqual(merged.rewards, [{ title: "A", points: 100 }, { title: "B", points: 200 }]);
 });

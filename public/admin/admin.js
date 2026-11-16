@@ -246,7 +246,7 @@ async function viewMenu(main) {
   main.append(
     quick,
     h("h2", { text: "Change prices and details" }),
-    h("p", { class: "hint", text: "Open a section, change a name or price (in dollars), then press Save menu. Tick “Show on Home” to feature up to 4 items on the app’s home screen. Extras like milk and syrup, and what they cost, are at the bottom under “Choices and extras”." }),
+    h("p", { class: "hint", text: "Open a section, change a name or price (in dollars), then press Save menu. Tick “Show on Home” to feature up to 4 items on the app’s home screen. “Label” puts a small New, Popular or Seasonal tag on an item: only use Popular if it really is. Extras like milk and syrup, and what they cost, are at the bottom under “Choices and extras”." }),
     h("div", { class: "row" }, h("div", { class: "grow" }, filter)),
     tree,
     me.role === "owner" && h("div", { class: "card" }, h("h3", { text: "Start over" }), h("p", { class: "hint", text: "Throws away every menu change you made and goes back to the original menu." }), h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
@@ -262,6 +262,7 @@ async function viewMenu(main) {
       ? h("div", { class: "range" }, h("input", { inputmode: "decimal", value: money(it.min), "aria-label": "Low price in dollars", "data-f": "min" }), h("input", { inputmode: "decimal", value: money(it.max), "aria-label": "High price in dollars", "data-f": "max" }))
       : h("input", { inputmode: "decimal", value: money(it.cents), "aria-label": "Price in dollars", "data-f": "cents" });
     const desc = h("input", { class: "desc", value: it.desc || "", placeholder: "Description (optional)", "aria-label": "Description", maxlength: "300", "data-f": "desc" });
+    const badge = h("label", { class: "badgepick" }, "Label", h("select", { "data-f": "badge", "aria-label": `Label for ${it.name || "this item"}` }, ...[["", "None"], ["New", "New"], ["Popular", "Popular"], ["Seasonal", "Seasonal"]].map(([v, t]) => h("option", { value: v, text: t, selected: (it.badge || "") === v }))));
     const pick = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.featured, "data-f": "featured" }), "Show on Home");
     const hide = h("label", { class: "check" }, h("input", { type: "checkbox", checked: it.hidden, "data-f": "hidden", onchange: (e) => row.classList.toggle("hiddenitem", e.target.checked) }), "Sold out / hide");
     const del = h("button", { type: "button", class: "danger", "aria-label": `Delete ${it.name}`, text: "✕", onclick: () => { if (confirm(`Delete “${name.value}”?`)) row.remove(); } });
@@ -278,7 +279,7 @@ async function viewMenu(main) {
     const groupIds = Object.keys(S.menu.optionGroups || {});
     const opts = groupIds.length ? h("details", { class: "opts" }, h("summary", { text: `Choices offered${it.options?.length ? ` (${it.options.length})` : ""}` }),
       groupIds.map((gid) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: (it.options || []).includes(gid), "data-opt": gid }), S.menu.optionGroups[gid].label))) : null;
-    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, sizes, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), opts, h("div", { class: "row" }, pick, hide));
+    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, sizes, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), opts, h("div", { class: "row" }, pick, hide, badge));
     return row;
   }
 
@@ -355,6 +356,7 @@ async function viewMenu(main) {
           if (offered.length) { const ids = offered.filter((i) => i.checked).map((i) => i.dataset.opt); if (ids.length) it.options = ids; }
           else if (row.dataset.options) it.options = row.dataset.options.split(",");
           const d = val("desc").trim(); if (d) it.desc = d;
+          if (val("badge")) it.badge = val("badge");
           if (row.dataset.image) it.image = row.dataset.image;
           if (row.querySelector("[data-f=hidden]").checked) it.hidden = true;
           else if (row.querySelector("[data-f=featured]").checked) it.featured = true;
@@ -435,8 +437,9 @@ async function viewSite(main) {
   };
 
   const faqBox = listEditor(c.faq, () => ({ q: "", a: "" }), (it) => [...bind(it, "q", "Question"), ...bind(it, "a", "Answer", { area: true, max: "1500" })], "+ Add a question", true);
-  c.promotions ||= []; c.rewardsNote ||= "";
+  c.promotions ||= []; c.rewards ||= []; c.rewardsNote ||= "";
   const promoBox = listEditor(c.promotions, () => ({ title: "", text: "", until: "" }), (it) => [...bind(it, "title", "Title", { max: "60", ph: "for example: Free cookie with any large drink" }), ...bind(it, "text", "Details (optional)", { area: true, max: "400" }), ...bind(it, "until", "Last day it is shown (optional, like 2026-12-31)", { max: "10", hint: "Leave blank to show it until you remove it." })], "+ Add a promotion", true);
+  const rewardBox = listEditor(c.rewards, () => ({ points: "", title: "" }), (it) => [...bind(it, "title", "Reward", { max: "60", ph: "for example: A free drink" }), ...bind(it, "points", "Points needed", { max: "6", ph: "for example: 100" })], "+ Add a reward", true);
   const pkgBox = listEditor(c.packages, () => ({ id: "", title: "", blurb: "", includes: [], price: "" }), (it) => {
     const inc = { v: it.includes.join("\n") };
     return [...bind(it, "title", "Name", { max: "60" }), ...bind(it, "blurb", "One-line description"),
@@ -463,6 +466,7 @@ async function viewSite(main) {
       ...bind(c, "featuredTitle", "Title", { max: "40", ph: "Try these" })),
     h("div", { class: "card" }, h("h2", { text: "Promotions" }), h("p", { class: "hint", text: "Shown on the app's Home screen. Only add a promotion you will honor. There are none until you add one." }), promoBox),
     h("div", { class: "card" }, h("h2", { text: "Points" }), h("p", { class: "hint", text: "Customers earn points for each dollar (before tax) on orders they pick up, worked out from the order in Square. Say here what points can be used for. Leave blank to say nothing about it." }),
+      h("h3", { text: "Rewards to work toward" }), h("p", { class: "hint", text: "Each one shows in the app as a goal with a progress bar. When a customer has enough points they can tap Use, show their phone at the counter, and the points come off. Points are kept on the customer's phone, so only add a reward you are happy to give on their word. There are none until you add one." }), rewardBox,
       ...bind(c, "rewardsNote", "What points can be used for", { area: true, max: "300", ph: "for example: Ask at the counter" })),
     h("div", { class: "card" }, h("h2", { text: "Event options" }), pkgBox, ...bind(c, "packagesNote", "Note under the options", { area: true, max: "500" })),
     h("div", { class: "card" }, h("h2", { text: "Questions & answers" }), faqBox),

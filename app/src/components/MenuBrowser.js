@@ -160,6 +160,12 @@ function MenuRow({ cat }) {
   );
 }
 
+/** The small label the café gave an item (New, Popular, Seasonal). Nothing is drawn when it has none. */
+export function ItemBadge({ item, style }) {
+  if (!item || !item.badge) return null;
+  return <View accessible accessibilityLabel={`Label: ${item.badge}`} style={[{ alignSelf: "flex-start", backgroundColor: colors.goldSoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }, style]}><Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", color: colors.goldText }}>{item.badge}</Text></View>;
+}
+
 /** A menu item as one compact line: small picture, name, price, and the + button. Tap the line for the details. */
 export function ItemLine({ item: it }) {
   return (
@@ -167,6 +173,7 @@ export function ItemLine({ item: it }) {
       <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: "row", gap: 12, alignItems: "center", opacity: pressed ? 0.85 : 1 })}>
         <ItemPhoto item={it} size={60} always />
         <View style={{ flex: 1, minWidth: 0 }}>
+          <ItemBadge item={it} style={{ marginBottom: 2 }} />
           <Text numberOfLines={2} style={{ fontSize: 16, lineHeight: 21, fontWeight: "700", color: colors.ink }}>{it.name}</Text>
           <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15, marginTop: 1 }}>{priceText(it)}</Text>
         </View>
@@ -256,6 +263,7 @@ export function ItemTile({ item: it, width = 160 }) {
       </Pressable>
       <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>
       <View style={{ position: "absolute", right: 8, top: 8 }}><FavoriteButton item={it} size={34} onPhoto /></View>
+      <ItemBadge item={it} style={{ position: "absolute", left: 10, top: 10 }} />
     </View>
   );
 }

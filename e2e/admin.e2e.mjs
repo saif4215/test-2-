@@ -116,6 +116,14 @@ await site.post({ type: "event", fields: goodEvent() });
   await p.getByText(/Oat milk is back on the app/).waitFor();
   ok(!("out" in (await (await fetch(site.u + "/menu.json")).json()).optionGroups.milk.choices.find((c) => c.name === "Oat milk")), "oat milk is back");
 
+  // a small label on an item, saved from the Menu tab
+  await p.getByLabel("Find a menu item").fill("Latte");
+  await p.locator(".item:not([hidden]) [data-f=badge]").first().selectOption("Popular");
+  await p.getByRole("button", { name: "Save menu" }).click();
+  await p.getByText(/Saved\. The app shows it now/).waitFor();
+  const lab = await (await fetch(site.u + "/menu.json")).json();
+  ok(lab.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").badge === "Popular", "a label chosen in the dashboard reaches the app's menu");
+
   // busy? pause pickup orders from any tab, and open again
   await p.locator("[data-pause] summary").click();
   await p.getByRole("button", { name: "30 minutes" }).click();
