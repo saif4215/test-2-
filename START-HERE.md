@@ -19,7 +19,6 @@ That is all. To stop, close the black window. To start again, double-click START
 | Change a price, hide a sold-out item | Dashboard > **Menu** |
 | Change hours, phone, or add a promotion | Dashboard > **Site info** |
 | Change a password, or add email alerts, Square, or the AI key | Run setup again: open a terminal in this folder and type `npm run setup` |
-| See the app on my phone | In a terminal in this folder type `npm run phone`, then scan the code (phone on the same Wi-Fi) |
 | Put it online so customers can use it | Follow `DEPLOY.md`. Right now the app only works on this computer, because that is where the server is. |
 
 ## If something goes wrong

@@ -5,26 +5,9 @@ Built with Expo and React Native. The same code also exports to a web app.
 
 Four tabs: **Home** · **Menu** (with an order list) · **Groups** (large orders and catering, with the group-size planner, and renting the café with its options; a switch at the top chooses which) · **Contact** (call, directions, hours, a question row and the FAQ). Two forms open as sheets: the large order quote form and the event rental form. The old Orders and Events tabs were merged into Groups; `/app/orders` and `/app/events` (and the old website addresses `/large-orders` and `/rent-the-cafe`) lead there.
 
-## Run it on your phone (no accounts needed)
+## Using it
 
-From the `maruf-cafe` folder (not `app`) on your own computer, which needs Node 22.13 or newer:
-
-```bash
-npm run phone
-```
-
-It starts the café's server on your computer (with empty throwaway data, so test orders never mix with real ones), starts Expo with that
-server's address built in, and prints a **QR code** in the terminal. Install **Expo Go** (App Store or Google Play), then on an iPhone open
-the Camera app and point it at the code; on Android open Expo Go and tap *Scan QR code*. The chat, ordering (once Square is set, see
-`../DEPLOY.md`) and the request forms all work on the phone. **The phone must be on the same Wi-Fi as the computer** (not a guest network, and
-allow Node through the computer's firewall if it asks). Press Ctrl+C to stop. Options: `npm run phone -- --tunnel` (phone on any network; needs
-access to expo.dev and ngrok.com, and the chat and ordering then need a public server in `EXPO_PUBLIC_API_URL`), `-- --no-server` (use the
-server already in `EXPO_PUBLIC_API_URL`), `-- --host 192.168.1.20` (if it guesses your computer's address wrong).
-
-**No computer: publish to Expo, then open it in Expo Go.** With an Expo account (free), put an access token (expo.dev, Account settings, Access tokens) in the environment as `EXPO_TOKEN` and allow `expo.dev` and its subdomains in the network settings, then run `npm run publish:phone` in this folder (first once: `npx eas-cli init`). It publishes the app to your Expo account; open the Expo Go app, sign in to the same account, and the project is listed under Projects. Set `EXPO_PUBLIC_API_URL` to a public server first, or the chat, ordering and forms will not work on the phone. Not tested yet: expo.dev was unreachable when this was written.
-
-The manual way, from this folder: `npm install`, then `EXPO_PUBLIC_API_URL=http://YOUR-COMPUTER-IP:8080 npx expo start`. `npx expo start --web` runs it in a browser.
-If Expo Go says the project is incompatible, the Expo Go on your phone is for a different Expo SDK than this app (it now uses SDK 58): update Expo Go, or tell me and I will build a test version you install instead.
+Customers use the app in a web browser at `/app/` on the café's server, and can add it to their home screen (iPhone Safari: Share, then Add to Home Screen; Android Chrome: menu, then Install app). Running it on a phone through Expo Go was removed on request; it is still in the git history. See `../START-HERE.md` to run the server.
 
 ## Where requests go
 
@@ -123,8 +106,7 @@ The server has its own tests: `cd .. && node --test server.test.mjs`.
   you provide serving sizes and prices.
 - **Menu photos and descriptions** are empty because none were provided. Until the café adds its own, each item shows a generic 3D-rendered picture of its kind of food (`assets/menu/`, chosen by `src/lib/menu-art-key.js`); these are not photos of the café's food.
 - **FAQ:** the first answer is the wording you gave. The others were written to be neutral and should be reviewed.
-- **Not yet run on a real phone.** It was tested as a web build in a phone-sized browser and with unit tests.
-  Try it in Expo Go before publishing.
+- **Not tested on a real phone.** It was tested as a web build in a phone-sized browser and with unit tests.
 
 
 ## 3D models (web app only)
