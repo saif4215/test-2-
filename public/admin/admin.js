@@ -7,6 +7,8 @@ let me = null, csrf = "";
 const S = { tab: "requests", status: "", type: "", q: "", page: 1, content: null, slots: [], menu: null, menuCustom: false, uploads: [] };
 
 /* ---------- small helpers ---------- */
+// An empty slot (null or false) in an append() list is skipped instead of being written on the page as the word "null".
+{ const plain = Element.prototype.append; Element.prototype.append = function (...kids) { return plain.apply(this, kids.filter((k) => k != null && k !== false)); }; }
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
@@ -217,10 +219,11 @@ async function viewMenu(main) {
     quick,
     h("h2", { text: "Change prices and details" }),
     h("p", { class: "hint", text: "Open a section, change a name or price (in dollars), then press Save menu. Tick “Show on Home” to feature up to 4 items on the app’s home screen. Extras like milk and syrup, and what they cost, are at the bottom under “Choices and extras”." }),
-    h("div", { class: "row" }, h("div", { class: "grow" }, filter), me.role === "owner" && h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
+    h("div", { class: "row" }, h("div", { class: "grow" }, filter)),
+    tree,
+    me.role === "owner" && h("div", { class: "card" }, h("h3", { text: "Start over" }), h("p", { class: "hint", text: "Throws away every menu change you made and goes back to the original menu." }), h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
       if (!confirm("Throw away all your menu edits and go back to the original menu?")) return;
-      try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })),
-    tree);
+      try { const r = await api("DELETE", "menu"); S.menu = r.menu; render(); } catch (err) { flash(main, err.message, "bad"); } } })));
 
   function itemRow(it) {
     const ranged = it.cents == null && !it.sizes;

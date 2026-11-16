@@ -28,8 +28,8 @@ label.check{display:flex;align-items:center;gap:.5rem;font-weight:500;margin:.4r
 .top h1{margin:0;font-size:1.05rem}
 .top small{color:#cfc4b2;display:block}
 .top button{min-height:40px;background:transparent;color:#fff;border-color:#6d6358}
-.tabs{display:flex;gap:.25rem;overflow-x:auto;padding:.5rem .75rem;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:57px;z-index:4}
-.tabs button{border:0;background:transparent;border-radius:999px;white-space:nowrap}
+.tabs{display:flex;gap:.1rem;overflow-x:auto;padding:.5rem .5rem;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:57px;z-index:4}
+.tabs button{border:0;background:transparent;border-radius:999px;white-space:nowrap;padding:.5rem .7rem;flex:0 0 auto}
 .tabs button[aria-current=page]{background:var(--goldbg);color:var(--ink);font-weight:700}
 main{max-width:860px;margin:0 auto;padding:1rem 1rem 6rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem;margin:.75rem 0}
@@ -90,3 +90,4 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:.5rem 0;border-t
 .quickbtn{width:100%;display:block;text-align:left;min-height:56px;padding:.6rem 1rem;border-radius:12px}
 .quickbtn b{display:block}.quickbtn span{color:var(--mute);font-size:.88rem}
 .quickbtn.off{background:var(--badbg);border-color:#E7B7B0}
+@media(max-width:480px){.tabs button{padding:.5rem .5rem;font-size:.92rem}}

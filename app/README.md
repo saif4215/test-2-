@@ -56,7 +56,7 @@ Every photo slot shows a tidy placeholder until you add a picture, so nothing lo
 
 ## Look and feel
 
-The Menu tab works like a delivery app: a search bar and category buttons stay at the top while you scroll down through one row per category. Swipe a row sideways for its items, or tap See all to open it as a grid (`MenuPage` in `src/components/MenuBrowser.js`). On computers each row also has left and right buttons.
+The Menu tab works like a delivery app: a search bar and category buttons stay at the top while you scroll down through the categories. Each category lists its items one under the other: a small picture, the name, the price and a + button, with no sideways swiping (`MenuPage` and `ItemLine` in `src/components/MenuBrowser.js`). An item with choices (hot or iced, milk...) shows a smaller picture on its own page so the choices are on screen without scrolling.
 
 Tap any item for a bigger view with its price, description and an Add button (`src/app/item.js`). My order shows each item with its picture and a counter. Pull down on a screen in the phone app, or come back to the app after a minute, and the menu and details are loaded again, so the café's edits appear without reinstalling or restarting. Contact has a Share button that sends the café's name, address, phone and order link (`src/lib/share.js`).
 
