@@ -25,6 +25,7 @@ import { draftReply, digest } from "./lib/staff-assistant.mjs";
 import { fetchCatalog, compareMenus } from "./lib/square-catalog.mjs";
 import { basicAnswer } from "./lib/answers.mjs";
 import { loadDotEnv } from "./lib/env.mjs";
+import { scheduleBackups } from "./lib/backup.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -138,6 +139,9 @@ export function createServer(env = process.env) {
   const defaultContent = normalizeContent(JSON.parse(readFileSync(path.join(PUBLIC, "content.default.json"), "utf8"))).content;
   const getMenu = () => (db && db.kvGet("menu")?.value) || defaultMenu;
   const getContent = () => mergeContent(defaultContent, db && db.kvGet("content")?.value);
+  /** "Busy? Pause pickup orders": when the pause ends (a Date), or null when orders are open. The staff set it from the dashboard; it ends by itself. */
+  const pausedUntil = () => { const u = db && db.kvGet("pause")?.value?.until; const d = u ? new Date(u) : null; return d && d.getTime() > Date.now() ? d : null; };
+  const clockNY = (d) => d.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
   const manages = (role) => role === "owner" || (role === "staff" && env.STAFF_CAN_EDIT_SITE === "1");
 
   async function square(method, route, body) {
@@ -391,6 +395,15 @@ export function createServer(env = process.env) {
 
     /* menu, content, photos (owner, or staff when STAFF_CAN_EDIT_SITE=1) */
     // Staff can edit the menu and prices (anyone signed in can). Site info, photos and resetting the menu stay with the owner.
+    if (route === "pause" && method === "GET") { const d = pausedUntil(); return out(200, { ok: true, until: d ? d.toISOString() : null, label: d ? clockNY(d) : "" }); }
+    if (route === "pause" && method === "POST") {
+      const minutes = Number((await readBody(req, 1000)).minutes);
+      if (!Number.isInteger(minutes) || minutes < 0 || minutes > 240) throw new HttpError(400, "Choose how long to pause: 15, 30, 60 or 120 minutes, or 0 to open again.");
+      if (minutes === 0) { db.kvDel("pause"); db.audit(who, "orders.resume"); return out(200, { ok: true, until: null, label: "" }); }
+      const until = new Date(Date.now() + minutes * 60000);
+      db.kvSet("pause", { until: until.toISOString() }, who); db.audit(who, "orders.pause", `${minutes} min`);
+      return out(200, { ok: true, until: until.toISOString(), label: clockNY(until) });
+    }
     if (route === "menu" && method === "GET") { return out(200, { ok: true, menu: getMenu(), custom: !!db.kvGet("menu") }); }
     if (route === "menu" && method === "PUT") {
       const { menu, errors } = normalizeMenu((await readBody(req, 600000)).menu);
@@ -479,11 +492,13 @@ export function createServer(env = process.env) {
         return res.end();
       }
       if (p === "/api/config" && req.method === "GET") {
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
       }
       if (p === "/api/order") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
         if (!enabled) throw new HttpError(503, "Ordering from the app isn't switched on yet. Please call us.");
+        const hold = pausedUntil();
+        if (hold) throw new HttpError(503, `We're pausing pickup orders for a little while. Please try again after ${clockNY(hold)}, or call us at ${getContent().business.phone}.`, { pausedUntil: hold.toISOString() });
         if (limited("order", ip, orderMax)) throw new HttpError(429, "Too many orders from this connection. Wait a minute, or call us.");
         return send(res, 200, await placeOrder(await readBody(req, 12000)), { cors: true });
       }
@@ -563,6 +578,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
     console.log(`Maruf Cafe on http://localhost:${port}`);
     console.log(`  Orders into Square: ${on ? (e.SQUARE_ENV === "production" ? "LIVE" : "sandbox") : "off (set SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID)"}`);
     console.log(`  Requests: saved in ${path.join(e.DATA_DIR || path.join(ROOT, "data"), "maruf.db")}${notify.length ? ` + ${notify.join(" + ")} notification` : " (no notification set: see RESEND_API_KEY / INQUIRY_WEBHOOK_URL)"}`);
+    if (e.BACKUPS !== "off") { scheduleBackups(e.DATA_DIR || path.join(ROOT, "data")); console.log("  Backups: a copy of your data is saved every day in the data folder, in backups/ (the newest 7 are kept)"); }
     console.log(`  Staff dashboard: ${e.ADMIN_PASSWORD && e.ADMIN_PASSWORD.length >= 10 ? "on at /admin/" : "off (set ADMIN_PASSWORD, at least 10 characters)"}`);
   });
 }

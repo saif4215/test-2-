@@ -7,7 +7,7 @@ import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems, suggestFor } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
@@ -653,4 +653,18 @@ test("a promotion shows until the end of its last day (New York), or until it is
   assert.deepEqual(names(new Date("2027-01-01T04:30:00Z")), ["Open ended", "Ends Dec 31"], "still Dec 31 evening in New York");
   assert.deepEqual(names(new Date("2027-01-01T05:30:00Z")), ["Open ended"], "Jan 1 in New York");
   assert.deepEqual(activePromotions(undefined), []);
+});
+
+test("a choice the café has run out of cannot be picked, and one picked earlier is dropped", () => {
+  const item = { id: "x", name: "Latte", cents: 450, optionSets: [{ id: "milk", label: "Milk", kind: "one", choices: [{ name: "Oat milk", cents: 100, out: true }, { name: "Almond milk", cents: 100 }] }] };
+  assert.deepEqual(resolve(item, { picks: { milk: ["Oat milk"] } }).picks, {}, "sold out earlier choices are dropped");
+  assert.deepEqual(resolve(item, { picks: { milk: ["Almond milk"] } }).picks, { milk: ["Almond milk"] });
+  const before = { picks: {} };
+  assert.equal(togglePick(item, before, "milk", "Oat milk"), before, "tapping a sold out choice does nothing");
+  assert.equal(unitCents(item, { picks: { milk: ["Oat milk"] } }), 450, "and it adds no price");
+});
+
+test("the pause time from the server is read safely", () => {
+  assert.equal(pausedMs("2026-11-16T15:45:00.000Z"), Date.parse("2026-11-16T15:45:00.000Z"));
+  for (const bad of [undefined, null, "", "soon", 5, {}]) assert.equal(pausedMs(bad), 0);
 });

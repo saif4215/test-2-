@@ -91,3 +91,10 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:.5rem 0;border-t
 .quickbtn b{display:block}.quickbtn span{color:var(--mute);font-size:.88rem}
 .quickbtn.off{background:var(--badbg);border-color:#E7B7B0}
 @media(max-width:480px){.tabs button{padding:.5rem .5rem;font-size:.92rem}}
+
+.pause{max-width:860px;margin:0 auto;padding:.5rem 1rem 0}
+.pause:empty{display:none}
+.pause>details,.pause>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.1rem .9rem}
+.pause.on>div{background:var(--warnbg);border-color:#E8CF8C;padding:.7rem .9rem}
+.pause summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
+.pause details[open]{padding-bottom:.8rem}

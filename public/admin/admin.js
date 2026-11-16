@@ -61,9 +61,30 @@ function render() {
     h("header", { class: "top" }, h("div", {}, h("h1", { text: "Maruf Cafe dashboard" }), h("small", { text: me.user === me.role ? me.user : `${me.user} (${me.role})` })),
       h("button", { type: "button", text: "Sign out", onclick: async () => { try { await api("POST", "logout", {}); } catch { /* already out */ } me = null; csrf = ""; render(); } })),
     h("nav", { class: "tabs", "aria-label": "Sections" }, tabs.map(([k, label]) => h("button", { type: "button", text: label, "aria-current": S.tab === k ? "page" : false, onclick: () => { S.tab = k; render(); } }))),
+    pauseStrip(),
     main,
   );
   ({ requests: viewRequests, menu: viewMenu, site: viewSite, photos: viewPhotos, setup: viewSetup })[S.tab](main);
+}
+
+/** "Busy? Pause pickup orders": one strip under the tabs on every page. Customers who try to order are told when to come back; it ends by itself. */
+function pauseStrip() {
+  const box = h("div", { class: "pause", "data-pause": "1" });
+  const draw = (until, label) => {
+    box.className = `pause${until ? " on" : ""}`;
+    const say = h("span", { class: "hint" });
+    const go = async (minutes) => {
+      try { const r = await api("POST", "pause", { minutes }); draw(r.until, r.label); }
+      catch (err) { say.textContent = err.message; }
+    };
+    box.replaceChildren(until
+      ? h("div", { class: "row" }, h("b", { text: `Pickup orders are paused until ${label}.` }), h("button", { type: "button", class: "primary", text: "Open again now", onclick: () => go(0) }))
+      : h("details", {}, h("summary", { text: "Busy? Pause pickup orders" }),
+        h("p", { class: "hint", text: "Customers can still look at the menu, but the app will not take new orders until the time is up. It opens again by itself." }),
+        h("div", { class: "row" }, [15, 30, 60, 120].map((m) => h("button", { type: "button", text: m < 60 ? `${m} minutes` : `${m / 60} hour${m > 60 ? "s" : ""}`, onclick: () => go(m) })), say)));
+  };
+  api("GET", "pause").then((r) => draw(r.until, r.label)).catch(() => { /* the strip just stays empty */ });
+  return box;
 }
 
 function renderLogin() {
@@ -189,29 +210,36 @@ async function viewMenu(main) {
   let dirty = false;   // true once something in the editor below was changed and not saved yet
   const quick = h("div", { class: "card", "data-quick": "1" });
   const allItems = () => Object.entries(S.menu.groups).flatMap(([g, cats]) => Object.entries(cats).flatMap(([c, items]) => items.map((it) => ({ it, cat: c }))));
-  /** "Sold out today?": one tap takes an item off the app (or puts it back) and saves it right away. */
+  const allChoices = () => Object.entries(S.menu.optionGroups || {}).flatMap(([gid, g]) => g.choices.map((c) => ({ gid, c, label: g.label })));
+  /** "Sold out today?": one tap takes an item, or an extra like oat milk, off the app (or puts it back) and saves it right away. */
   function drawQuick() {
-    const soldOut = allItems().filter(({ it }) => it.hidden);
-    const find = h("input", { type: "search", placeholder: "Type what ran out, like Latte", "aria-label": "Mark an item sold out", autocomplete: "off", oninput: matches });
+    const soldItems = allItems().filter(({ it }) => it.hidden), soldChoices = allChoices().filter(({ c }) => c.out);
+    const find = h("input", { type: "search", placeholder: "Type what ran out, like Latte or oat milk", "aria-label": "Mark an item sold out", autocomplete: "off", oninput: matches });
     const found = h("div", { class: "quick" });
     const say = h("span");
-    async function flip(it, hidden) {
+    /** target: { item } or { gid, name }. Sets or clears "sold out" on it, saves the whole menu, and redraws. */
+    async function flip(target, name, soldOut) {
       if (dirty) { say.replaceChildren(h("span", { class: "msg warn", role: "alert", text: "You have unsaved changes below. Press Save menu first, then try again." })); return; }
       const next = structuredClone(S.menu);
-      const hit = Object.values(next.groups).flatMap((cats) => Object.values(cats).flat()).find((x) => x.id === it.id);
+      const hit = target.item ? Object.values(next.groups).flatMap((cats) => Object.values(cats).flat()).find((x) => x.id === target.item.id) : next.optionGroups?.[target.gid]?.choices.find((c) => c.name === target.name);
       if (!hit) return;
-      if (hidden) hit.hidden = true; else delete hit.hidden;
-      try { const r = await api("PUT", "menu", { menu: next }); S.menu = r.menu; build(); drawQuick(); quick.prepend(h("p", { class: "msg ok flash", role: "status", text: hidden ? `${it.name} is off the app now.` : `${it.name} is back on the app.` })); }
+      const key = target.item ? "hidden" : "out";
+      if (soldOut) hit[key] = true; else delete hit[key];
+      try { const r = await api("PUT", "menu", { menu: next }); S.menu = r.menu; build(); drawQuick(); quick.prepend(h("p", { class: "msg ok flash", role: "status", text: soldOut ? `${name} is sold out on the app now.` : `${name} is back on the app.` })); }
       catch (err) { say.replaceChildren(h("span", { class: "msg bad", role: "alert", text: err.message })); }
     }
     function matches() {
       const q = find.value.trim().toLowerCase();
-      found.replaceChildren(...(q ? allItems().filter(({ it }) => !it.hidden && it.name.toLowerCase().includes(q)).slice(0, 8).map(({ it, cat }) =>
-        h("button", { type: "button", class: "quickbtn", onclick: () => flip(it, true) }, h("b", { text: it.name }), h("span", { text: `${cat} · tap to mark sold out` }))) : []));
-      if (q && !found.children.length) found.append(h("p", { class: "hint", text: "Nothing on the menu matches that." }));
+      const hits = q ? [
+        ...allItems().filter(({ it }) => !it.hidden && it.name.toLowerCase().includes(q)).map(({ it, cat }) => ({ name: it.name, note: cat, go: () => flip({ item: it }, it.name, true) })),
+        ...allChoices().filter(({ c }) => !c.out && c.name.toLowerCase().includes(q)).map(({ gid, c, label }) => ({ name: c.name, note: `extra · ${label}`, go: () => flip({ gid, name: c.name }, c.name, true) })),
+      ].slice(0, 8) : [];
+      found.replaceChildren(...hits.map((x) => h("button", { type: "button", class: "quickbtn", onclick: x.go }, h("b", { text: x.name }), h("span", { text: `${x.note} · tap to mark sold out` }))));
+      if (q && !hits.length) found.append(h("p", { class: "hint", text: "Nothing on the menu matches that." }));
     }
+    const off = [...soldItems.map(({ it }) => ({ name: it.name, go: () => flip({ item: it }, it.name, false) })), ...soldChoices.map(({ gid, c }) => ({ name: `${c.name} (extra)`, go: () => flip({ gid, name: c.name }, c.name, false) }))];
     quick.replaceChildren(h("h2", { text: "Sold out today?" }),
-      soldOut.length ? h("div", { class: "quick" }, h("p", { class: "hint", text: "Off the app right now:" }), soldOut.map(({ it }) => h("button", { type: "button", class: "quickbtn off", onclick: () => flip(it, false) }, h("b", { text: it.name }), h("span", { text: "tap to put it back on the app" })))) : h("p", { class: "hint", text: "Everything is on the app. When something runs out, type its name here and tap it." }),
+      off.length ? h("div", { class: "quick" }, h("p", { class: "hint", text: "Sold out on the app right now:" }), off.map((x) => h("button", { type: "button", class: "quickbtn off", onclick: x.go }, h("b", { text: x.name }), h("span", { text: "tap to put it back on the app" })))) : h("p", { class: "hint", text: "Everything is on the app. When something runs out, type its name here and tap it. Works for extras too, like oat milk." }),
       find, found, say);
   }
   drawQuick();
@@ -275,7 +303,7 @@ async function viewMenu(main) {
       h("p", { class: "hint", text: "Each choice adds its price to the item. Use 0 for a free choice. Hot or iced, bread, sauces and so on are choices too." }));
     for (const [gid, g] of Object.entries(S.menu.optionGroups || {})) {
       const list = h("div", { "data-gid": gid });
-      const addRow = (c) => { const r = h("div", { class: "choice" }, h("input", { value: c.name, "aria-label": `A choice for ${g.label}`, maxlength: "40", "data-c": "name" }), h("input", { inputmode: "decimal", value: money(c.cents || 0), "aria-label": "Extra cost in dollars", "data-c": "cents" }), h("button", { type: "button", class: "danger", "aria-label": `Remove ${c.name || "this choice"}`, text: "✕", onclick: () => r.remove() })); list.append(r); return r; };
+      const addRow = (c) => { const r = h("div", { class: "choice", "data-out": c.out ? "1" : "" }, h("input", { value: c.name, "aria-label": `A choice for ${g.label}`, maxlength: "40", "data-c": "name" }), h("input", { inputmode: "decimal", value: money(c.cents || 0), "aria-label": "Extra cost in dollars", "data-c": "cents" }), h("button", { type: "button", class: "danger", "aria-label": `Remove ${c.name || "this choice"}`, text: "✕", onclick: () => r.remove() })); list.append(r); return r; };
       g.choices.forEach(addRow);
       card.append(h("div", { class: "optgroup" }, h("h3", { text: g.label }), h("small", { class: "hint", text: g.kind === "many" ? "customers can pick several" : g.required ? "customers pick one (required)" : "customers can pick one" }), list,
         h("button", { type: "button", text: `+ Add a choice to ${g.label}`, onclick: () => addRow({ name: "", cents: 0 }).querySelector("input").focus() })));
@@ -301,7 +329,7 @@ async function viewMenu(main) {
         const name = r.querySelector("[data-c=name]").value.trim(); if (!name) continue;
         const cents = toCents(r.querySelector("[data-c=cents]").value.trim() || "0");
         if (Number.isNaN(cents)) problems.push(`“${name}” in ${was.label} needs a price like 0.50 (or 0).`);
-        choices.push({ name, cents });
+        choices.push(r.dataset.out ? { name, cents, out: true } : { name, cents });
       }
       if (!choices.length) problems.push(`${was.label} needs at least one choice. To stop offering it, untick it on the items instead.`);
       og[gid] = { ...was, choices };

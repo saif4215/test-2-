@@ -20,8 +20,9 @@ import { openLink } from "../lib/links";
 export default function MyOrder() {
   const order = useOrder();
   const memory = useMemory();
-  const { on: ordering, tax, minMinutes } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
+  const { on: ordering, tax, minMinutes, pausedUntil } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
+  const paused = pausedUntil > Date.now();   // the café asked for a short break from new orders (the server refuses them too)
   const canPlace = ordering === true && needsPrice.length === 0;
   const incomplete = order.incomplete;   // a must-pick choice (hot or iced ...) is still missing on these lines
   const { menu } = useSite();
@@ -164,8 +165,14 @@ export default function MyOrder() {
             {canPlace ? (
               <>
                 <ClosedNotice />
+                {paused ? (
+                  <Card accessibilityRole="alert" style={{ padding: 14, gap: 4, backgroundColor: colors.goldSoft }}>
+                    <Text style={{ fontSize: 15, fontWeight: "800", color: colors.ink }}>We're pausing new pickup orders for a little while</Text>
+                    <Small>Please try again after {pickupLabel(new Date(pausedUntil).toISOString())}, or call us at {business.phone}. You can keep your items here.</Small>
+                  </Card>
+                ) : null}
                 <SendError message={state.error} />
-                <Button title={state.busy ? "Sending…" : incomplete.length ? `Choose ${incomplete[0].missing[0].label.toLowerCase()} first` : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy || incomplete.length > 0} onPress={submit} />
+                <Button title={state.busy ? "Sending…" : paused ? `Orders paused until ${pickupLabel(new Date(pausedUntil).toISOString())}` : incomplete.length ? `Choose ${incomplete[0].missing[0].label.toLowerCase()} first` : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy || paused || incomplete.length > 0} onPress={submit} />
                 <Small style={{ textAlign: "center" }}>Placing an order sends it to Maruf Cafe. It is not confirmed until the café accepts it. You pay at the counter.</Small>
                 <Disclosure title="Other ways to order" hint="A quote for a big order, or our Square Online store">
                   <Button title="Request a quote with these items" variant="outline" size="medium" onPress={() => { sent(); router.replace({ pathname: "/quote", params: { foodItems: order.summary } }); }} />

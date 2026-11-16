@@ -85,7 +85,7 @@ await site.post({ type: "event", fields: goodEvent() });
   // sold out today: one tap, saved at once, and put back with one tap
   await p.getByLabel("Mark an item sold out").fill("Latte");
   await p.locator("[data-quick] .quickbtn").first().click();
-  await p.getByText(/is off the app now/).waitFor();
+  await p.getByText(/is sold out on the app now/).waitFor();
   const soldPub = await (await fetch(site.u + "/menu.json")).json();
   ok(!Object.values(soldPub.groups).some((c) => Object.values(c).flat().some((i) => i.id === "drinks-coffee-latte")), "a sold-out item is off the public menu");
   await p.locator("[data-quick] .quickbtn.off").first().click();
@@ -99,6 +99,35 @@ await site.post({ type: "event", fields: goodEvent() });
   await p.locator("[data-quick] .quickbtn").first().click();
   ok(/unsaved changes/.test(await p.locator("[data-quick]").textContent()), "a sold-out tap with unsaved edits asks to save first instead of losing them");
   await p.locator('.item:not([hidden]) [data-size=Small]').first().fill("5.25");
+
+  // an extra (oat milk) sold out in one tap, and back
+  await p.getByRole("button", { name: "Save menu" }).click();   // the step above left an edit unsaved on purpose
+  await p.getByText(/Saved\. The app shows it now/).waitFor();
+  await p.getByLabel("Mark an item sold out").fill("oat milk");
+  await p.locator("[data-quick] .quickbtn", { hasText: "extra" }).first().click();
+  await p.getByText(/Oat milk is sold out on the app now/).waitFor();
+  const oatPub = await (await fetch(site.u + "/menu.json")).json();
+  ok(oatPub.optionGroups.milk.choices.find((c) => c.name === "Oat milk").out === true, "oat milk is marked sold out for the app");
+  await p.locator("details.choices > summary").click();
+  await p.getByRole("button", { name: "Save menu" }).click();
+  await p.getByText(/Saved\. The app shows it now/).waitFor();
+  ok((await (await fetch(site.u + "/menu.json")).json()).optionGroups.milk.choices.find((c) => c.name === "Oat milk").out === true, "saving the menu keeps an extra sold out");
+  await p.locator("[data-quick] .quickbtn.off", { hasText: "Oat milk" }).click();
+  await p.getByText(/Oat milk is back on the app/).waitFor();
+  ok(!("out" in (await (await fetch(site.u + "/menu.json")).json()).optionGroups.milk.choices.find((c) => c.name === "Oat milk")), "oat milk is back");
+
+  // busy? pause pickup orders from any tab, and open again
+  await p.locator("[data-pause] summary").click();
+  await p.getByRole("button", { name: "30 minutes" }).click();
+  await p.getByText(/Pickup orders are paused until/).waitFor();
+  ok(!!(await a.get("pause")).json.until, "pausing from the dashboard is saved on the server");
+  await p.getByRole("button", { name: "Setup", exact: true }).click();
+  await p.getByText(/Pickup orders are paused until/).waitFor();
+  ok(true, "the pause strip shows on every tab");
+  await p.getByRole("button", { name: "Open again now" }).click();
+  await p.locator("[data-pause] summary").waitFor();
+  ok(!(await a.get("pause")).json.until, "open again with one tap");
+  await p.getByRole("button", { name: "Menu", exact: true }).click();
 
   // site info + review + photo
   await p.getByRole("button", { name: "Site info" }).click();

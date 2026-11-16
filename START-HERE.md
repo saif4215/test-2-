@@ -16,7 +16,10 @@ That is all. To stop, close the black window. To start again, double-click START
 | I want to... | Do this |
 |---|---|
 | Sign in to the dashboard | Open `http://localhost:8080/admin/`. The name is `owner` and the password is the one setup showed you. It is also saved in the file called `.env`. |
-| Change a price, hide a sold-out item | Dashboard > **Menu** |
+| Something ran out (an item, or oat milk) | Dashboard > **Menu** > **Sold out today?**: type it and tap it |
+| Too busy for new orders for a while | Dashboard: **Busy? Pause pickup orders** (under the tabs), pick how long |
+| Change a price | Dashboard > **Menu** |
+| Save a copy of my data | It saves one every day by itself. To save one now: `npm run backup`. Then copy the `data/backups` folder to a USB stick or cloud drive. |
 | Change hours, phone, or add a promotion | Dashboard > **Site info** |
 | Change a password, or add email alerts, Square, or the AI key | Run setup again: open a terminal in this folder and type `npm run setup` |
 | Put it online so customers can use it | Follow `DEPLOY.md`. Right now the app only works on this computer, because that is where the server is. |

@@ -49,6 +49,7 @@ function ChoiceSet({ item, set, picked, onPick, flat, needed }) {
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         {set.choices.map((c) => {
           const text = extraText(c.cents);
+          if (c.out) return <View key={c.name} accessible accessibilityLabel={`${c.name}, sold out today`} accessibilityState={{ disabled: true }} style={{ opacity: 0.5 }}><Chip small label={`${c.name} · sold out`} active={false} onPress={() => {}} /></View>;
           return <Chip key={c.name} small label={text ? `${c.name} ${text}` : c.name} active={picked.includes(c.name)} onPress={() => { select(); onPick(set.id, c.name); }} />;
         })}
       </View>

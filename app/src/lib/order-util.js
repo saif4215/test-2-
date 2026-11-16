@@ -73,3 +73,6 @@ export function stageInfo(status) {
 
 /** The tax shown as an estimate: the café's percentage of the subtotal, in cents. Square works out the real amount on the order. */
 export const estimateTax = (cents, percent) => (percent > 0 ? Math.round((cents * percent) / 100) : 0);
+
+/** When the café's pause on new orders ends, in milliseconds (0 when orders are open or the server said nothing usable). */
+export const pausedMs = (v) => { const t = typeof v === "string" ? Date.parse(v) : NaN; return Number.isFinite(t) ? t : 0; };

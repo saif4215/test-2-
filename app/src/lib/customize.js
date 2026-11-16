@@ -23,7 +23,7 @@ export function resolve(item, custom) {
   const picks = {};
   for (const set of (item && item.optionSets) || []) {
     const asked = Array.isArray(c.picks && c.picks[set.id]) ? c.picks[set.id] : [];
-    let names = [...new Set(asked.filter((n) => set.choices.some((x) => x.name === n)))];
+    let names = [...new Set(asked.filter((n) => set.choices.some((x) => x.name === n && !x.out)))];   // a choice the café has run out of is dropped
     names = names.slice(0, set.kind === "one" ? 1 : set.max || set.choices.length);
     if (names.length) picks[set.id] = names;
   }
@@ -80,7 +80,7 @@ export const setSize = (custom, name) => ({ ...EMPTY, ...custom, size: name });
  */
 export function togglePick(item, custom, setId, name) {
   const set = (item.optionSets || []).find((s) => s.id === setId);
-  if (!set || !set.choices.some((c) => c.name === name)) return custom;
+  if (!set || !set.choices.some((c) => c.name === name && !c.out)) return custom;
   const now = resolve(item, custom).picks[setId] || [];
   let next;
   if (set.kind === "one") next = now.includes(name) ? [] : [name];   // tapping the chosen one again clears it (a required set then asks again)

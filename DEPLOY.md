@@ -121,13 +121,17 @@ The dashboard's **Setup** tab shows whether alerts are on, and every request sho
 
 ## 3. The staff dashboard (`/admin/`)
 
+**Busy? Pause pickup orders.** A strip under the tabs, on every page, lets the owner or staff pause new pickup orders for 15 minutes, 30 minutes, 1 hour or 2 hours. Customers can still look at the menu and keep their items, but the order screen tells them when to come back and the server refuses new orders (so an old copy of the app cannot sneak one in). It ends by itself; "Open again now" ends it early. Who paused it is in the Setup tab's Recent changes.
+
+**Backups.** Every day the server saves a copy of the database (requests, menu and site edits) and the uploaded photos in `backups/<date>/` inside the data folder, and keeps the newest 7. `npm run backup` saves one right now. These copies are on the same disk as the data, so now and then copy the `backups` folder somewhere else (a USB stick, a cloud drive), or use the host's own disk snapshots. Set `BACKUPS=off` to switch the daily copy off.
+
 Sign in at `https://YOUR-ADDRESS/admin/` with username `owner` and your `ADMIN_PASSWORD`.
 Sessions last 12 hours, 5 wrong passwords lock that sign-in for 15 minutes, and every change is logged (Setup → Recent changes).
 
 | Tab | What you can do | Who |
 |---|---|---|
 | **Requests** | search, filter by status, read every answer, Call / Text / Email buttons, set status (New → Contacted → Quote sent → Accepted → Declined/Closed), private notes, download a spreadsheet | owner and staff |
-| **Menu** | **Sold out today?** at the top: type an item's name and tap it to take it off the app at once (tap it in the list to put it back). Below that, change names, prices (single price or low/high), descriptions, hide items, add or delete items, and give an item a **picture** (Add picture on its row; the picture shows beside it in the app; items without one show a generic 3D-rendered picture of that kind of food, so add real photos of your own dishes when you have them). Hidden items disappear from the app and from online checkout. | owner and staff (staff can add pictures only if you let them edit site info and photos) |
+| **Menu** | **Sold out today?** at the top: type an item's name, or an extra like "oat milk", and tap it to mark it sold out at once (tap it in the list to put it back). A sold-out extra still shows in the app, greyed out as "sold out", and the server refuses it if an old order tries to use it. Below that, change names, prices (single price or low/high), descriptions, hide items, add or delete items, and give an item a **picture** (Add picture on its row; the picture shows beside it in the app; items without one show a generic 3D-rendered picture of that kind of food, so add real photos of your own dishes when you have them). Hidden items disappear from the app and from online checkout. | owner and staff (staff can add pictures only if you let them edit site info and photos) |
 | **Menu reset** | "Reset to the original menu" (at the bottom of the Menu tab) throws away all menu edits | owner only |
 | **Site info** | phone, email, address, hours, Instagram/TikTok, event options and prices, what the space holds, rental rules, FAQ, **real** customer reviews | owner (or staff, same switch) |
 | **Photos** | upload photos from your phone (they are shrunk automatically), put them in the photo spots and the gallery with a short description | owner (or staff, same switch) |
