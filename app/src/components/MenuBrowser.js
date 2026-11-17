@@ -11,7 +11,7 @@ import { describeCustom, needsChoice, unitCents } from "../lib/customize";
 import { success } from "../lib/haptics";
 import { reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
-import { dietsPresent, featuredItems, filterByDiet, indexMenu, searchMenu } from "../lib/site-merge";
+import { dietsPresent, featuredItems, filterByDiet, indexMenu, newItems, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
 import { select, tap } from "../lib/haptics";
 import { artKey } from "../lib/menu-art-key";
@@ -78,7 +78,35 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   const refreshControl = usePullRefresh();
   return (
     <ScrollView ref={scroller} stickyHeaderIndices={[1]} onScroll={onScroll} scrollEventThrottle={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: bottomPad }}>
-      <View style={col}>{header}</View>
+      <View style={col}>
+        {header}
+          {!q ? (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Show drinks, food or everything" style={{ flex: 1 }} contentContainerStyle={{ gap: 8, alignItems: "center", paddingRight: 8 }}>
+                {groups.length > 1 ? [["all", "All"], ...groups.map((g) => [g, g])].map(([id, label]) => {
+                  const on = scope === id;
+                  return (
+                    <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label === "All" ? "Show everything" : `Show ${label.toLowerCase()} only`} onPress={() => pickScope(id)}
+                      style={{ paddingHorizontal: 16, minHeight: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.gold : colors.tint }}>
+                      <Text style={{ fontSize: 14.5, fontWeight: "800", color: colors.ink }}>{label}</Text>
+                    </Pressable>
+                  );
+                }) : null}
+                {tags.length && groups.length > 1 ? <View accessibilityElementsHidden style={{ width: 1, height: 22, backgroundColor: colors.outline }} /> : null}
+                {tags.length ? (
+                  <View accessibilityLabel="Dietary filters" style={{ flexDirection: "row", gap: 8 }}>
+                    {tags.map((t) => <Chip key={t} label={t} small active={diet === t} onPress={() => { setDiet(diet === t ? null : t); setActive(null); activeRef.current = null; }} />)}
+                  </View>
+                ) : null}
+              </ScrollView>
+              <Pressable accessibilityRole="button" accessibilityLabel={layout === "swipe" ? "Show the menu as a list" : "Show the menu as swipe cards"} onPress={() => setLayout(layout === "swipe" ? "list" : "swipe")}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 18, backgroundColor: colors.tint }}>
+                <Ionicons name={layout === "swipe" ? "list" : "swap-horizontal"} size={18} color={colors.ink} />
+                <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>{layout === "swipe" ? "List" : "Swipe"}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+      </View>
 
       <View onLayout={(e) => { pos.current.sticky = e.nativeEvent.layout.height; }} style={{ backgroundColor: colors.bg, paddingTop: 8, paddingBottom: 10, zIndex: 5, boxShadow: "0px 10px 14px -12px rgba(36,26,18,0.28)" }}>
         <View style={col}>
@@ -90,31 +118,6 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
               <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
             ) : null}
           </View>
-          {!q ? (
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 8 }}>
-            <View accessibilityRole="tablist" accessibilityLabel="Show drinks, food or everything" style={{ flexDirection: "row", gap: 8, flex: 1 }}>
-              {groups.length > 1 ? [["all", "All"], ...groups.map((g) => [g, g])].map(([id, label]) => {
-                const on = scope === id;
-                return (
-                  <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label === "All" ? "Show everything" : `Show ${label.toLowerCase()} only`} onPress={() => pickScope(id)}
-                    style={{ paddingHorizontal: 18, minHeight: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.gold : colors.tint }}>
-                    <Text style={{ fontSize: 14.5, fontWeight: "800", color: colors.ink }}>{label}</Text>
-                  </Pressable>
-                );
-              }) : null}
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel={layout === "swipe" ? "Show the menu as a list" : "Show the menu as swipe cards"} onPress={() => setLayout(layout === "swipe" ? "list" : "swipe")}
-              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 18, backgroundColor: colors.tint }}>
-              <Ionicons name={layout === "swipe" ? "list" : "swap-horizontal"} size={18} color={colors.ink} />
-              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>{layout === "swipe" ? "List" : "Swipe"}</Text>
-            </Pressable>
-            </View>
-          ) : null}
-          {tags.length && !q ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Dietary filters" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
-              {tags.map((t) => <Chip key={t} label={t} small active={diet === t} onPress={() => { setDiet(diet === t ? null : t); setActive(null); activeRef.current = null; }} />)}
-            </ScrollView>
-          ) : null}
           <ScrollView ref={chipBar} horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Menu categories" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
             {names.map((n) => (
               <View key={n} onLayout={(e) => { pos.current.chips[n] = e.nativeEvent.layout.x; }}>
@@ -181,7 +184,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
 
 /** One category as cards to scroll right through (big picture, price, name, and the + button on each). The next card peeks in from the edge so it is clear there is more. */
 function SwipeRow({ cat, width }) {
-  const gap = 14, w = Math.min(260, Math.round(width * 0.64));
+  const gap = 12, w = Math.min(200, Math.round(width * 0.46));
   const row = useRowScroll();
   return (
     <View>
@@ -388,6 +391,20 @@ export function BleedRow({ children, gap = 14, scrollRef, onScroll, snap }) {
     <ScrollView ref={scrollRef} onScroll={onScroll} scrollEventThrottle={32} horizontal showsHorizontalScrollIndicator={false} {...(snap ? { snapToInterval: snap + gap, decelerationRate: "fast", snapToAlignment: "start" } : {})} style={{ marginHorizontal: -pad }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 6, gap }}>
       {children}
     </ScrollView>
+  );
+}
+
+/** "What's new": the items the café labelled New or Seasonal, in a row you can swipe. Nothing at all until the café labels one. */
+export function WhatsNew() {
+  const { menu } = useSite();
+  const items = useMemo(() => newItems(menu), [menu]);
+  const row = useRowScroll();
+  if (!items.length) return null;
+  return (
+    <View>
+      <RowHead title="What's new" arrows={row.arrows} />
+      <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{items.map((it) => <ItemTile key={`new-${it.id}`} item={it} />)}</BleedRow>
+    </View>
   );
 }
 

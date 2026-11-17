@@ -124,6 +124,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
       placed[id] = { at: Date.now(), ref: refOf(String(order.idempotencyKey || id)), total: total };
       return reply({ ok: true, orderId: id, ref: placed[id].ref, totalCents: total, preview: true });
     }
+    if (pathname.indexOf("/api/order/preview") === 0 && method === "POST") return reply({ ok: true, ref: "" });   // I'm here: a preview, so nobody is told
     if (pathname.indexOf("/api/order/preview") === 0) {   // no backslashes here: this text sits inside a template string
       var p = placed[pathname.slice("/api/order/".length)], age = p ? Date.now() - p.at : 0;
       var st = age < 12000 ? "received" : age < 30000 ? "accepted" : age < 50000 ? "ready" : "done";   // the preview plays the café: accepted, ready, then picked up (which is when points arrive)

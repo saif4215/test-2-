@@ -258,6 +258,33 @@ export function createServer(env = process.env) {
     } finally { sweeping = false; }
   }
 
+  /* ---- "I'm here": a customer who has come for their pickup order tells the café. The dashboard shows who is waiting (and a chat message goes out if a webhook is set). ---- */
+  const arrivals = () => ((db && db.kvGet("arrivals")?.value) || []).filter((a) => Date.now() - Date.parse(a.at) < 3 * 3600000);
+  async function imHere(id) {
+    let order;
+    try { order = (await square("GET", `/v2/orders/${encodeURIComponent(id)}`)).order; }
+    catch (err) {
+      if (err instanceof SquareError && (err.status === 404 || err.status === 400)) throw new HttpError(404, "We can't find that order.");
+      throw new HttpError(502, "We can't reach the café right now. Please try again, or call us.");
+    }
+    if (!order || order.location_id !== cfg.locationId || order.source?.name !== APP_SOURCE) throw new HttpError(404, "We can't find that order.");
+    const status = orderStatus(order);
+    if (status === "done" || status === "canceled") throw new HttpError(409, status === "done" ? "That order has already been picked up." : "That order was canceled.");
+    const list = arrivals();
+    const ref = order.reference_id || "";
+    if (!list.some((a) => a.orderId === id)) {
+      const pickup = (order.fulfillments || []).find((f) => f.type === "PICKUP");
+      const name = String(pickup?.pickup_details?.recipient?.display_name || "A customer").slice(0, 60);
+      list.push({ orderId: id, ref, name, at: new Date().toISOString() });
+      if (db) db.kvSet("arrivals", list.slice(-50), "customer");
+      if (env.INQUIRY_WEBHOOK_URL) {
+        const text = `${name} is here for pickup order ${ref}.`;
+        fetch(env.INQUIRY_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(10000), body: JSON.stringify({ text, content: text, type: "arrival", ref }) }).catch(() => {});
+      }
+    }
+    return { ok: true, ref };
+  }
+
   async function orderProgress(id) {
     let order;
     try { order = (await square("GET", `/v2/orders/${encodeURIComponent(id)}`)).order; }
@@ -451,6 +478,9 @@ export function createServer(env = process.env) {
 
     /* menu, content, photos (owner, or staff when STAFF_CAN_EDIT_SITE=1) */
     // Staff can edit the menu and prices (anyone signed in can). Site info, photos and resetting the menu stay with the owner.
+    if (route === "arrivals" && method === "GET") return out(200, { ok: true, arrivals: arrivals().map(({ orderId, ref, name, at }) => ({ orderId, ref, name, at })) });
+    { const gone = /^arrivals\/([A-Za-z0-9_-]{8,64})$/.exec(route);
+      if (gone && method === "DELETE") { if (db) db.kvSet("arrivals", arrivals().filter((a) => a.orderId !== gone[1]), who); return out(200, { ok: true }); } }
     if (route === "pause" && method === "GET") { const d = pausedUntil(); return out(200, { ok: true, until: d ? d.toISOString() : null, label: d ? clockNY(d) : "" }); }
     if (route === "pause" && method === "POST") {
       const minutes = Number((await readBody(req, 1000)).minutes);
@@ -569,6 +599,13 @@ export function createServer(env = process.env) {
         if (hold) throw new HttpError(503, `We're pausing pickup orders for a little while. Please try again after ${clockNY(hold)}, or call us at ${getContent().business.phone}.`, { pausedUntil: hold.toISOString() });
         if (limited("order", ip, orderMax)) throw new HttpError(429, "Too many orders from this connection. Wait a minute, or call us.");
         return send(res, 200, await placeOrder(await readBody(req, 12000)), { cors: true });
+      }
+      const here = /^\/api\/order\/([A-Za-z0-9_-]{8,64})\/here$/.exec(p);
+      if (here) {
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
+        if (!enabled) throw new HttpError(503, "Ordering from the app isn't switched on yet.");
+        if (limited("order-here", ip, 10)) throw new HttpError(429, "Too many taps. Wait a minute and try again.");
+        return send(res, 200, await imHere(here[1]), { cors: true });
       }
       const om = /^\/api\/order\/([A-Za-z0-9_-]{8,64})$/.exec(p);
       if (om) {

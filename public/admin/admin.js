@@ -62,6 +62,7 @@ function render() {
       h("button", { type: "button", text: "Sign out", onclick: async () => { try { await api("POST", "logout", {}); } catch { /* already out */ } me = null; csrf = ""; render(); } })),
     h("nav", { class: "tabs", "aria-label": "Sections" }, tabs.map(([k, label]) => h("button", { type: "button", text: label, "aria-current": S.tab === k ? "page" : false, onclick: () => { S.tab = k; render(); } }))),
     pauseStrip(),
+    arrivalStrip(),
     main,
   );
   ({ requests: viewRequests, menu: viewMenu, site: viewSite, photos: viewPhotos, setup: viewSetup })[S.tab](main);
@@ -84,6 +85,27 @@ function pauseStrip() {
         h("div", { class: "row" }, [15, 30, 60, 120].map((m) => h("button", { type: "button", text: m < 60 ? `${m} minutes` : `${m / 60} hour${m > 60 ? "s" : ""}`, onclick: () => go(m) })), say)));
   };
   api("GET", "pause").then((r) => draw(r.until, r.label)).catch(() => { /* the strip just stays empty */ });
+  return box;
+}
+
+/** "Customers here now": people who tapped "I'm here" in the app for a pickup order. Checked every 15 seconds; a soft chime plays when someone new arrives. */
+let arrivalTimer = null, lastArrivals = -1;
+function arrivalStrip() {
+  const box = h("div", { class: "arrivals", "data-arrivals": "1" });
+  const chime = () => { try { const ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.18); } catch { /* no sound available */ } };
+  const mins = (iso) => Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  const draw = (list) => {
+    document.title = list.length ? `(${list.length}) Customer here · Maruf Cafe dashboard` : "Maruf Cafe dashboard";
+    if (lastArrivals >= 0 && list.length > lastArrivals) chime();
+    lastArrivals = list.length;
+    box.replaceChildren(...(list.length ? [h("div", { class: "card here" }, h("b", { text: list.length === 1 ? "A customer is here for pickup" : `${list.length} customers are here for pickup` }),
+      list.map((a) => h("div", { class: "row" }, h("span", { class: "grow", text: `${a.name} · order ${a.ref} · ${mins(a.at) < 1 ? "just now" : `${mins(a.at)} min ago`}` }),
+        h("button", { type: "button", text: "Got it", onclick: async () => { try { await api("DELETE", `arrivals/${encodeURIComponent(a.orderId)}`); load(); } catch { /* try again */ } } }))))] : []));
+  };
+  const load = () => api("GET", "arrivals").then((r) => draw(r.arrivals)).catch(() => { /* the strip just stays as it was */ });
+  load();
+  clearInterval(arrivalTimer);
+  arrivalTimer = setInterval(() => { if (me && !document.hidden) load(); }, 15000);
   return box;
 }
 

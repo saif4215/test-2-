@@ -100,3 +100,8 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:.5rem 0;border-t
 .pause details[open]{padding-bottom:.8rem}
 .badgepick{display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.92rem}.badgepick select{width:auto;min-height:40px}
 .dietbox{grid-column:1/-1}.dietbox>summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+
+.arrivals{max-width:860px;margin:0 auto;padding:.5rem 1rem 0}
+.arrivals:empty{display:none}
+.arrivals .here{background:var(--okbg);border-color:#A9D5B0;margin:0;display:grid;gap:.4rem}
+.arrivals .here .row{border-top:1px solid #CFE6D3;padding-top:.4rem}

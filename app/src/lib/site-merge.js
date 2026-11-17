@@ -83,6 +83,17 @@ export function filterByDiet(categories, tag) {
   return categories.map((c) => ({ ...c, items: c.items.filter((it) => Array.isArray(it.diet) && it.diet.includes(tag)) })).filter((c) => c.items.length);
 }
 
+/** Items the café labelled New or Seasonal, for the "What's new" row on Home (up to `max`, New first, menu order inside each). Hidden items never show. Nothing until the café labels one. */
+export function newItems(menu, max = 8) {
+  const fresh = [], seasonal = [];
+  for (const [group, cats] of Object.entries((menu && menu.groups) || {})) for (const [cat, items] of Object.entries(cats)) for (const it of items) {
+    if (it.hidden) continue;
+    if (it.badge === "New") fresh.push({ ...it, group, cat });
+    else if (it.badge === "Seasonal") seasonal.push({ ...it, group, cat });
+  }
+  return [...fresh, ...seasonal].slice(0, max);
+}
+
 /** The items the café picked for the home screen (up to 4), in menu order. Hidden items never appear. */
 export function featuredItems(menu, max = 4) {
   const out = [];

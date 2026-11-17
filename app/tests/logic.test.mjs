@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus, greeting, closedNotice } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
-import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet } from "../src/lib/site-merge.js";
+import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet, newItems } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS } from "../src/lib/order-util.js";
@@ -745,4 +745,12 @@ test("dietary tags: only the tags the café ticked are offered, in a fixed order
   assert.deepEqual(filterByDiet(cats, "Vegan").map((c) => [c.name, c.items.map((i) => i.id)]), [["Coffee", ["a"]], ["Tea", ["c"]]], "only vegan items, and categories without any disappear");
   assert.deepEqual(filterByDiet(cats, "Gluten-free").map((c) => c.name), ["Sandwiches"]);
   assert.deepEqual(filterByDiet(cats, "Nut-free"), []);
+});
+
+test("What's new: only items the café labelled New or Seasonal, New first, never hidden ones, nothing by default", () => {
+  const menu = { groups: { Drinks: { Coffee: [{ id: "a", name: "A", badge: "Seasonal" }, { id: "b", name: "B", badge: "New" }, { id: "c", name: "C" }, { id: "d", name: "D", badge: "New", hidden: true }, { id: "e", name: "E", badge: "Popular" }] }, Food: { Sandwiches: [{ id: "f", name: "F", badge: "New" }] } } };
+  assert.deepEqual(newItems(menu).map((i) => i.id), ["b", "f", "a"], "New first (in menu order), then Seasonal; Popular, unlabelled and hidden items are not here");
+  assert.equal(newItems(menu, 2).length, 2);
+  assert.deepEqual(newItems({ groups: { Drinks: { Coffee: [{ id: "x", name: "X" }] } } }), []);
+  assert.deepEqual(newItems(undefined), []);
 });

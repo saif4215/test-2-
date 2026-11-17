@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import Model3D, { supported } from "./Model3D";
-import { Button, Eyebrow, H2, Small } from "./ui";
+import { Button, Disclosure, Eyebrow, H2, Small } from "./ui";
 
 /** A 3D burger you can spin and take apart. Web app only. */
 export function BurgerViewer() {
@@ -34,10 +34,13 @@ export function CupViewer() {
 export function CloserLook() {
   if (!supported) return null;
   return (
-    <View style={{ marginTop: 44, gap: 28 }}>
-      <Eyebrow>A closer look</Eyebrow>
-      <BurgerViewer />
-      <CupViewer />
+    <View style={{ marginTop: 28 }}>
+      <Disclosure icon="cube-outline" title="A closer look" hint="Spin a 3D burger and take a look at our cup">
+        <View style={{ gap: 28 }}>
+          <BurgerViewer />
+          <CupViewer />
+        </View>
+      </Disclosure>
     </View>
   );
 }

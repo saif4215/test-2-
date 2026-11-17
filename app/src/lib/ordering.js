@@ -67,3 +67,12 @@ export async function lookupPoints(phone) {
     return got ? { ok: true, ...got } : fail(json.error || "We can't check your points right now.");
   } catch { return fail(OFFLINE, { network: true }); }
 }
+
+/** Tell the café the customer has arrived for this order. Resolves { ok: true } or { ok: false, error }. */
+export async function sendImHere(id) {
+  try {
+    const res = await request(`/api/order/${encodeURIComponent(id)}/here`, { method: "POST", headers: { Accept: "application/json" } }, 10000);
+    const json = await res.json().catch(() => ({}));
+    return res.ok && json.ok ? { ok: true } : fail(json.error || "We couldn't tell the café. Please tell them at the counter.");
+  } catch { return fail(OFFLINE, { network: true }); }
+}

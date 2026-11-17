@@ -4,7 +4,7 @@ import { ActionTile, Body, Button, Card, Grid, Reveal, Screen, Small, StatusPill
 import { Ionicons } from "@expo/vector-icons";
 import { MapCard } from "../../components/MapCard";
 import { ActiveOrderCard } from "../../components/ActiveOrder";
-import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, RowHead } from "../../components/MenuBrowser";
+import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, RowHead, WhatsNew } from "../../components/MenuBrowser";
 import { PromoCards, RewardsCard } from "../../components/Rewards";
 import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
@@ -82,6 +82,7 @@ export default function Home() {
 
       <View style={{ marginTop: 30, gap: 30 }}>
         <PersonalRows only="again" />
+        <WhatsNew />
         <FeaturedPicks />
       </View>
 
