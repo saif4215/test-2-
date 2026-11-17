@@ -35,8 +35,26 @@ export function buildPickup(v) {
 export function orderBody(entries, notes, fields) {
   return {
     items: entries.map((l) => ({ id: l.id, qty: l.qty, ...(l.choice || {}), ...(notes[l.id] ? { note: notes[l.id] } : {}) })),
-    name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}), ...(fields.pickupAt ? { pickupAt: fields.pickupAt } : {}), ...(fields.loyalty ? { loyalty: true } : {}),
+    name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}), ...(fields.pickupAt ? { pickupAt: fields.pickupAt } : {}), ...(fields.loyalty ? { loyalty: true } : {}), ...(fields.tipCents > 0 ? { tipCents: fields.tipCents } : {}),
   };
+}
+
+/** The tips offered at checkout, as percentages of the subtotal before tax. */
+export const TIP_PERCENTS = [15, 20, 25];
+
+/**
+ * The tip the customer plans to leave, in cents. mode is "none", one of TIP_PERCENTS, or "custom" (typed dollars like "2" or "2.50").
+ * Returns { cents, error }. A tip is only a note for the cashier: it is never added to the order's total.
+ */
+export function tipAmount(mode, custom, subtotalCents) {
+  if (mode === "none" || mode == null) return { cents: 0, error: "" };
+  if (TIP_PERCENTS.includes(mode)) return { cents: Number.isFinite(subtotalCents) && subtotalCents > 0 ? Math.round((subtotalCents * mode) / 100) : 0, error: "" };
+  const t = String(custom || "").replace(/[$,\s]/g, "");
+  if (!t) return { cents: 0, error: "" };
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return { cents: 0, error: "Type a tip like 2 or 2.50." };
+  const cents = Math.round(parseFloat(t) * 100);
+  if (cents > 20000 || (Number.isFinite(subtotalCents) && cents > Math.max(subtotalCents, 500))) return { cents: 0, error: "That tip is more than the order. Try a smaller amount." };
+  return { cents, error: "" };
 }
 
 /** A key the server uses to make sure one order is never made twice. Not a secret, only unique enough. */

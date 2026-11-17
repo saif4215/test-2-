@@ -270,6 +270,10 @@ If your Square account has **Square Loyalty** (a paid Square add-on) with a prog
 - **Square access token:** it needs permission to use Loyalty (`LOYALTY_READ` and `LOYALTY_WRITE`). `npm run square-check` says whether your Square account has an active Loyalty program. The dashboard's Setup tab shows it too.
 - **Not tested against real Square.** This was written from Square's Loyalty documentation and tried only against a stand-in. Run `npm run square-check` against your Sandbox first, then place one test order with "Earn points" ticked, mark it completed in Square, and look for the account under Square Dashboard > Loyalty.
 
+### Tips at checkout
+
+The order screen offers **Add a tip (optional)**: No tip, 15%, 20%, 25% (of the subtotal before tax), or Other (a typed amount). It is a **planned tip, not a charge**: the customer pays at the counter, so the tip goes on the Square order as a note on the pickup ("Tip planned: $2.70. Add it when the customer pays.") and the cashier adds it when taking payment. It never changes the order's price, and it is **not** recorded as a service charge, because Square would count that as sales instead of a tip. Tips are not counted for points. Set `TIPS=off` to hide the tip choices.
+
 ### Good to know
 
 - **Where staff see it:** in your Square Dashboard under Orders, and in Square Point of Sale's order list. Whether a new order also beeps or prints

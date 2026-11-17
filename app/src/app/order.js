@@ -7,7 +7,7 @@ import { FormShell, SendError } from "../components/FormShell";
 import { Adder, BleedRow, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { business } from "../config";   // only the Square Online address is used here
 import { money, priceText, useOrder } from "../lib/order";
-import { buildPickup, estimateTax, keyFor, orderBody, splitOrderable } from "../lib/order-util";
+import { buildPickup, estimateTax, keyFor, orderBody, splitOrderable, tipAmount, TIP_PERCENTS } from "../lib/order-util";
 import { sendOrder, useOrderingConfig } from "../lib/ordering";
 import { useSite } from "../lib/site";
 import { suggestFor } from "../lib/site-merge";
@@ -20,7 +20,7 @@ import { openLink } from "../lib/links";
 export default function MyOrder() {
   const order = useOrder();
   const memory = useMemory();
-  const { on: ordering, tax, minMinutes, pausedUntil, loyalty } = useOrderingConfig();
+  const { on: ordering, tax, minMinutes, pausedUntil, loyalty, tips } = useOrderingConfig();
   const [earn, setEarn] = useState(true);   // earn points in the café's Square with this phone number (shown only when the café has Square Loyalty)   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
   const paused = pausedUntil > Date.now();   // the café asked for a short break from new orders (the server refuses them too)
@@ -31,6 +31,8 @@ export default function MyOrder() {
   const more = useMemo(() => (last ? suggestFor(menu, last, Object.keys(order.lines), 6) : []), [menu, last, order.lines]);   // "Add something else"
   const [asking, setAsking] = useState(false);   // "Clear my order" asks once more before throwing the order away
   const showTax = canPlace && tax > 0 && order.exact;
+  const [tipMode, setTipMode] = useState("none"), [tipCustom, setTipCustom] = useState("");   // a tip the customer plans to leave: only a note for the cashier, never added to the total
+  const tip = canPlace && tips && order.exact ? tipAmount(tipMode, tipCustom, order.low) : { cents: 0, error: "" };
   const taxCents = estimateTax(order.low, tax);
   const sent = () => memory.rememberOrder(order.entries);   // so "Order again" can offer these items next time
 
@@ -55,10 +57,11 @@ export default function MyOrder() {
   async function submit() {
     if (incomplete.length) { setState({ busy: false, error: `Choose ${incomplete[0].missing[0].label.toLowerCase()} for ${incomplete[0].name} first.` }); return; }
     if (when === "later" && !slotOk) { setState({ busy: false, error: slots.length ? "Choose a pickup time, or as soon as possible." : "There are no more pickup times today. Choose as soon as possible." }); return; }
+    if (tip.error) { setState({ busy: false, error: tip.error }); return; }
     const built = buildPickup(v);
     setErrors(built.errors);
     if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
-    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(loyalty && earn ? { loyalty: true } : {}), ...(when === "later" ? { pickupAt: slotAt } : {}) });
+    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(loyalty && earn ? { loyalty: true } : {}), ...(tip.cents > 0 ? { tipCents: tip.cents } : {}), ...(when === "later" ? { pickupAt: slotAt } : {}) });
     key.current = keyFor(key.current, body);
     setState({ busy: true, error: "" });
     const res = await sendOrder({ ...body, idempotencyKey: key.current.key });
@@ -126,6 +129,18 @@ export default function MyOrder() {
             {!order.exact ? <Small>Some items have more than one size. Your final price depends on the sizes you choose.</Small> : null}
             <Small>{showTax ? "The café works out the exact tax when it takes your order. " : "Menu prices before tax. "}For large orders, Maruf Cafe confirms your final quote with you.</Small>
           </Card>
+          {canPlace && tips && order.exact ? (
+            <Card style={{ padding: 16, gap: 10 }}>
+              <Text accessibilityRole="header" style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>Add a tip (optional)</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <Chip label="No tip" active={tipMode === "none"} onPress={() => setTipMode("none")} />
+                {TIP_PERCENTS.map((pct) => <Chip key={pct} label={`${pct}% · ${money(tipAmount(pct, "", order.low).cents)}`} active={tipMode === pct} onPress={() => setTipMode(pct)} />)}
+                <Chip label="Other" active={tipMode === "custom"} onPress={() => setTipMode("custom")} />
+              </View>
+              {tipMode === "custom" ? <Field label="Tip in dollars" value={tipCustom} onChangeText={setTipCustom} keyboardType="decimal-pad" error={tip.error} hint="For example 2 or 2.50" /> : null}
+              <Small>{tip.cents > 0 ? `Tip planned: ${money(tip.cents)}. ` : ""}A tip is not charged now: the café sees it on your order and adds it when you pay at the counter. It is figured on the subtotal before tax.</Small>
+            </Card>
+          ) : null}
           {ordering === true && needsPrice.length ? (
             <Card style={{ padding: 16, gap: 6 }}>
               <Text style={{ fontWeight: "800", fontSize: 15, color: colors.ink }}>Some items can't be sent from the app yet</Text>

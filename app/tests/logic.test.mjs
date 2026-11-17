@@ -7,7 +7,7 @@ import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems, suggestFor } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
@@ -711,4 +711,26 @@ test("an order asks to earn points only when the customer ticked it", () => {
   assert.equal(orderBody(entries, {}, { name: "Sam", phone: "7185550123", loyalty: true }).loyalty, true);
   assert.ok(!("loyalty" in orderBody(entries, {}, { name: "Sam", phone: "7185550123" })));
   assert.ok(!("loyalty" in orderBody(entries, {}, { name: "Sam", phone: "7185550123", loyalty: false })));
+});
+
+test("tips: a percentage of the subtotal before tax, or a typed amount, never more than the order", () => {
+  assert.deepEqual(TIP_PERCENTS, [15, 20, 25]);
+  assert.deepEqual(tipAmount("none", "", 1350), { cents: 0, error: "" });
+  assert.deepEqual(tipAmount(15, "", 1350), { cents: 203, error: "" }, "15% of $13.50 is $2.025, rounded to the cent");
+  assert.equal(tipAmount(20, "", 1350).cents, 270);
+  assert.equal(tipAmount(25, "", 0).cents, 0, "nothing to tip on an empty order");
+  assert.deepEqual(tipAmount("custom", "2.50", 1350), { cents: 250, error: "" });
+  assert.deepEqual(tipAmount("custom", "$2", 1350), { cents: 200, error: "" });
+  assert.deepEqual(tipAmount("custom", "", 1350), { cents: 0, error: "" }, "Other with nothing typed is no tip");
+  assert.match(tipAmount("custom", "two", 1350).error, /like 2 or 2\.50/);
+  assert.match(tipAmount("custom", "2.555", 1350).error, /like 2 or 2\.50/);
+  assert.match(tipAmount("custom", "50", 1350).error, /more than the order/);
+  assert.equal(tipAmount("custom", "5", 100).cents, 500, "a small order can still take a $5 tip");
+});
+
+test("the tip travels with the order only when there is one", () => {
+  const entries = [{ id: "x", qty: 1, choice: {} }];
+  assert.equal(orderBody(entries, {}, { name: "Sam", phone: "7185550123", tipCents: 203 }).tipCents, 203);
+  assert.ok(!("tipCents" in orderBody(entries, {}, { name: "Sam", phone: "7185550123", tipCents: 0 })));
+  assert.ok(!("tipCents" in orderBody(entries, {}, { name: "Sam", phone: "7185550123" })));
 });

@@ -104,7 +104,11 @@ export function parseOrder(body, menu, maxCents = 30000) {
   if (typeof body.idempotencyKey !== "string" || !/^[A-Za-z0-9-]{16,36}$/.test(body.idempotencyKey)) bad("Invalid request.");
   const pickupAt = body.pickupAt == null || body.pickupAt === "" ? "" : body.pickupAt;   // a chosen pickup time, as a UTC time; whether the café can take it is checked where the hours are known
   if (pickupAt !== "" && (typeof pickupAt !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d+)?)?Z$/.test(pickupAt))) bad("That pickup time isn't valid. Choose another.");
-  return { lines, name, note, phone: normalizePhone(body.phone), key: body.idempotencyKey, pickupAt };
+  // A tip the customer plans to leave. It is only a note for the cashier (the customer pays at the counter, where Square takes the tip with the payment); it never changes the order's total.
+  const subtotal = lines.reduce((s, l) => s + l.cents * l.qty, 0);
+  const tipCents = body.tipCents == null ? 0 : body.tipCents;
+  if (!Number.isInteger(tipCents) || tipCents < 0 || tipCents > Math.min(20000, Math.max(subtotal, 500))) bad("Choose a tip amount that is not more than the order.");
+  return { lines, name, note, phone: normalizePhone(body.phone), key: body.idempotencyKey, pickupAt, tipCents };
 }
 
 export function createServer(env = process.env) {
@@ -115,6 +119,7 @@ export function createServer(env = process.env) {
     environment: production ? "production" : "sandbox", taxPercent,
   };
   const enabled = !!(cfg.token && cfg.locationId);
+  const tipsOn = env.TIPS !== "off";   // the app offers a planned tip at checkout; the cashier adds it when the customer pays
   const pickupMinMinutes = (() => { const n = Number(env.PICKUP_MIN_MINUTES); return Number.isFinite(n) && n >= 5 && n <= 240 ? Math.round(n) : 30; })();   // the café's prep time: the earliest pickup time a customer can choose
   const pointsPerDollar = (() => { const n = Number(env.POINTS_PER_DOLLAR); return Number.isFinite(n) && n > 0 && n <= 100 ? n : 1; })();   // points a customer earns for each dollar on an order they pick up
   const maxOrderCents = (() => { const n = Number(env.ORDER_MAX_DOLLARS); return Number.isFinite(n) && n >= 10 && n <= 2000 ? Math.round(n * 100) : 30000; })();
@@ -190,7 +195,9 @@ export function createServer(env = process.env) {
   }
 
   async function placeOrder(body) {
-    const { lines, name, note, phone, key, pickupAt } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
+    const { lines, name, note: customerNote, phone, key, pickupAt, tipCents } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
+    const tip = tipCents > 0 && tipsOn ? `Tip planned: $${(tipCents / 100).toFixed(2)}. Add it when the customer pays.` : "";
+    const note = [customerNote, tip].filter(Boolean).join(" | ").slice(0, 500);
     if (pickupAt) { const problem = pickupProblem(pickupAt, getContent().business.hours, new Date(), { minMinutes: pickupMinMinutes }); if (problem) throw new HttpError(400, problem); }
     const ref = orderRef(key);
     const order = {
@@ -542,7 +549,7 @@ export function createServer(env = process.env) {
       }
       if (p === "/api/config" && req.method === "GET") {
         const prog = enabled ? await loyaltyProgram() : null;
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, tips: tipsOn, ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
       }
       if (p === "/api/loyalty/lookup") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
