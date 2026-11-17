@@ -113,7 +113,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
       if (asked.length) return reply({ ok: true, mode: "ai", add: asked, reply: "(Preview: a simple word matcher stands in for the AI here.) I put these together. Please check them below. Nothing is ordered until you place it yourself." });
       return reply(Object.assign({ ok: true, mode: "ai", add: [] }, basicAnswer(CONTENT, MENU, msgs, new Date(), { ordering: true })));
     }
-    if (pathname === "/api/config") return reply({ enabled: true, environment: "sandbox", taxPercent: 0, maxOrderCents: 30000 });
+    if (pathname === "/api/config") return reply({ enabled: true, environment: "sandbox", taxPercent: 0, maxOrderCents: 30000, tips: true });
     if (pathname === "/api/order" && method === "POST") {
       var order = {}; try { order = JSON.parse(init.body); } catch (e) { /* no order */ }
       var total = 0, id = "preview" + Date.now().toString(36);
