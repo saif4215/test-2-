@@ -10,7 +10,7 @@ import { describeCustom, needsChoice, unitCents } from "../lib/customize";
 import { success } from "../lib/haptics";
 import { reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
-import { featuredItems, indexMenu, searchMenu } from "../lib/site-merge";
+import { dietsPresent, featuredItems, filterByDiet, indexMenu, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
 import { select, tap } from "../lib/haptics";
 import { artKey } from "../lib/menu-art-key";
@@ -28,12 +28,14 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   const { menu } = useSite();
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
-  const categories = useMemo(() => categoryList(menu), [menu]);
+  const [diet, setDiet] = useState(null);   // a dietary tag the customer is filtering by ("Vegan"), or null
+  const tags = useMemo(() => dietsPresent(menu), [menu]);
+  const categories = useMemo(() => filterByDiet(categoryList(menu), tags.includes(diet) ? diet : null), [menu, diet, tags]);
   const [scope, setScope] = useState("all");   // "all", or one half of the menu ("Drinks" or "Food"): fewer rows to swipe through
   const groups = useMemo(() => [...new Set(categories.map((c) => c.group))], [categories]);
   const names = useMemo(() => (scope === "all"
-    ? [...categories.map((c) => c.name), ...placeholderCategories.filter((p) => !categories.some((c) => c.name === p))]
-    : categories.filter((c) => c.group === scope).map((c) => c.name)), [categories, scope]);
+    ? [...categories.map((c) => c.name), ...(diet ? [] : placeholderCategories.filter((p) => !categories.some((c) => c.name === p)))]
+    : categories.filter((c) => c.group === scope).map((c) => c.name)), [categories, scope, diet]);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(null);
   const scroller = useRef(null), chipBar = useRef(null), activeRef = useRef(null);
@@ -96,6 +98,11 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
                 );
               })}
             </View>
+          ) : null}
+          {tags.length && !q ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Dietary filters" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
+              {tags.map((t) => <Chip key={t} label={t} small active={diet === t} onPress={() => { setDiet(diet === t ? null : t); setActive(null); activeRef.current = null; }} />)}
+            </ScrollView>
           ) : null}
           <ScrollView ref={chipBar} horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Menu categories" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
             {names.map((n) => (
@@ -176,6 +183,7 @@ export function ItemLine({ item: it }) {
           <ItemBadge item={it} style={{ marginBottom: 2 }} />
           <Text numberOfLines={2} style={{ fontSize: 16, lineHeight: 21, fontWeight: "700", color: colors.ink }}>{it.name}</Text>
           <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15, marginTop: 1 }}>{priceText(it)}</Text>
+          {it.diet && it.diet.length ? <Text accessibilityLabel={`Dietary: ${it.diet.join(", ")}`} style={{ fontSize: 12.5, color: colors.muted, marginTop: 2 }}>{it.diet.join(" · ")}</Text> : null}
         </View>
       </Pressable>
       <Adder item={it} />

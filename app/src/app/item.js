@@ -80,6 +80,14 @@ export default function ItemDetails() {
             <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 22 }}>{priceText(item)}</Text>
           </View>
           {item.desc ? <Body>{item.desc}</Body> : null}
+          {item.diet && item.diet.length ? (
+            <View style={{ gap: 6 }}>
+              <View accessible accessibilityLabel={`Dietary: ${item.diet.join(", ")}`} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {item.diet.map((d) => <View key={d} style={{ backgroundColor: colors.successSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}><Text style={{ fontSize: 13, fontWeight: "800", color: colors.success }}>{d}</Text></View>)}
+              </View>
+              <Small>Recipes and ingredients can change. If you have an allergy, please ask the café before you order.</Small>
+            </View>
+          ) : null}
           {item.cents == null ? <Small>This item comes in more than one size, so the price depends on the size you choose. Maruf Cafe confirms it with you.</Small> : null}
           <Customizer item={item} />
           {hasOffers(item) ? (() => {

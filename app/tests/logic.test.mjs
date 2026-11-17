@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus, greeting, closedNotice } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
-import { mergeSite, indexMenu, featuredItems, suggestFor } from "../src/lib/site-merge.js";
+import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS } from "../src/lib/order-util.js";
@@ -733,4 +733,16 @@ test("the tip travels with the order only when there is one", () => {
   assert.equal(orderBody(entries, {}, { name: "Sam", phone: "7185550123", tipCents: 203 }).tipCents, 203);
   assert.ok(!("tipCents" in orderBody(entries, {}, { name: "Sam", phone: "7185550123", tipCents: 0 })));
   assert.ok(!("tipCents" in orderBody(entries, {}, { name: "Sam", phone: "7185550123" })));
+});
+
+test("dietary tags: only the tags the café ticked are offered, in a fixed order, and filtering keeps just those items", () => {
+  const menu = { groups: { Drinks: { Coffee: [{ id: "a", name: "A", diet: ["Vegan", "Dairy-free"] }, { id: "b", name: "B" }, { id: "h", name: "Hidden", hidden: true, diet: ["Nut-free"] }], Tea: [{ id: "c", name: "C", diet: ["Vegan"] }] }, Food: { Sandwiches: [{ id: "d", name: "D", diet: ["Vegetarian", "Gluten-free"] }] } } };
+  assert.deepEqual(dietsPresent(menu), ["Vegetarian", "Vegan", "Gluten-free", "Dairy-free"], "a hidden item's tag is not offered");
+  assert.deepEqual(dietsPresent({ groups: { Drinks: { Coffee: [{ id: "x", name: "X" }] } } }), [], "no tags until the café ticks some");
+  assert.deepEqual(dietsPresent(undefined), []);
+  const cats = [{ name: "Coffee", group: "Drinks", items: menu.groups.Drinks.Coffee.filter((i) => !i.hidden) }, { name: "Tea", group: "Drinks", items: menu.groups.Drinks.Tea }, { name: "Sandwiches", group: "Food", items: menu.groups.Food.Sandwiches }];
+  assert.equal(filterByDiet(cats, null), cats, "no tag chosen: nothing is filtered");
+  assert.deepEqual(filterByDiet(cats, "Vegan").map((c) => [c.name, c.items.map((i) => i.id)]), [["Coffee", ["a"]], ["Tea", ["c"]]], "only vegan items, and categories without any disappear");
+  assert.deepEqual(filterByDiet(cats, "Gluten-free").map((c) => c.name), ["Sandwiches"]);
+  assert.deepEqual(filterByDiet(cats, "Nut-free"), []);
 });

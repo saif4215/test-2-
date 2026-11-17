@@ -130,3 +130,18 @@ test("item labels: only New, Popular or Seasonal are kept", async () => {
   const items = normalizeMenu(menu).menu.groups.Drinks.Coffee;
   assert.deepEqual(items.map((i) => i.badge), ["New", undefined, undefined, "Popular"]);
 });
+
+test("dietary tags: only the known ones are kept, in a fixed order, and none unless the café ticks them", async () => {
+  const { normalizeMenu } = await import("./lib/menu.mjs");
+  const menu = { currency: "USD", groups: { Food: { Sandwiches: [
+    { name: "A", cents: 100, diet: ["Vegan", "Vegetarian", "Gluten-free"] },
+    { name: "B", cents: 100, diet: ["Keto", "Nut-free", "Nut-free"] },
+    { name: "C", cents: 100, diet: [] },
+    { name: "D", cents: 100, diet: "Vegan" },
+    { name: "E", cents: 100 },
+  ] } } };
+  const items = normalizeMenu(menu).menu.groups.Food.Sandwiches;
+  assert.deepEqual(items.map((i) => i.diet), [["Vegetarian", "Vegan", "Gluten-free"], ["Nut-free"], undefined, undefined, undefined]);
+  const shipped = normalizeMenu(JSON.parse((await import("node:fs")).readFileSync(new URL("./public/menu.json", import.meta.url), "utf8"))).menu;
+  assert.ok(!Object.values(shipped.groups).flatMap((c) => Object.values(c).flat()).some((i) => i.diet), "the café's menu starts with no dietary claims: it must tick them itself");
+});

@@ -124,6 +124,17 @@ await site.post({ type: "event", fields: goodEvent() });
   const lab = await (await fetch(site.u + "/menu.json")).json();
   ok(lab.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").badge === "Popular", "a label chosen in the dashboard reaches the app's menu");
 
+  // dietary tags ticked in the dashboard reach the app's menu, in a fixed order
+  await p.getByLabel("Find a menu item").fill("Latte");
+  await p.locator(".item:not([hidden]) details.dietbox > summary").first().click();
+  await p.locator(".item:not([hidden]) [data-diet=Vegetarian]").first().check();
+  await p.locator(".item:not([hidden]) [data-diet=Gluten-free]").first().check();
+  await p.getByRole("button", { name: "Save menu" }).click();
+  await p.getByText(/Saved\. The app shows it now/).waitFor();
+  const dt = await (await fetch(site.u + "/menu.json")).json();
+  ok(dt.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-latte").diet?.join() === "Vegetarian,Gluten-free", "dietary tags ticked in the dashboard reach the app's menu");
+  ok(!dt.groups.Drinks.Coffee.find((i) => i.id === "drinks-coffee-drip").diet, "other items stay untagged");
+
   // busy? pause pickup orders from any tab, and open again
   await p.locator("[data-pause] summary").click();
   await p.getByRole("button", { name: "30 minutes" }).click();

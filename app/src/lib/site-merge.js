@@ -69,6 +69,20 @@ export function indexMenu(menu) {
   return map;
 }
 
+/** The dietary tags the café has put on at least one shown item, in the usual order (none until the café ticks some). */
+export const DIET_ORDER = ["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free"];
+export function dietsPresent(menu) {
+  const found = new Set();
+  for (const cats of Object.values((menu && menu.groups) || {})) for (const items of Object.values(cats)) for (const it of items) if (!it.hidden && Array.isArray(it.diet)) for (const d of it.diet) found.add(d);
+  return DIET_ORDER.filter((d) => found.has(d));
+}
+
+/** Keep only the items with a tag, and only the categories that still have items. categories = [{ name, group, items }]. No tag chosen: everything stays. */
+export function filterByDiet(categories, tag) {
+  if (!tag) return categories;
+  return categories.map((c) => ({ ...c, items: c.items.filter((it) => Array.isArray(it.diet) && it.diet.includes(tag)) })).filter((c) => c.items.length);
+}
+
 /** The items the café picked for the home screen (up to 4), in menu order. Hidden items never appear. */
 export function featuredItems(menu, max = 4) {
   const out = [];

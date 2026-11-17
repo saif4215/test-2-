@@ -99,3 +99,4 @@ ul.plain{list-style:none;padding:0;margin:0}ul.plain li{padding:.5rem 0;border-t
 .pause summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
 .pause details[open]{padding-bottom:.8rem}
 .badgepick{display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.92rem}.badgepick select{width:auto;min-height:40px}
+.dietbox{grid-column:1/-1}.dietbox>summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
