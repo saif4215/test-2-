@@ -5,6 +5,7 @@ import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OrderWatcher } from "../components/ActiveOrder";
+import { Splash } from "../components/Splash";
 import { LinkSheet } from "../components/LinkSheet";
 import { MemoryProvider } from "../lib/memory";
 import { OrderProvider } from "../lib/order";
@@ -21,8 +22,11 @@ export default function RootLayout() {
   useEffect(() => { const t = setTimeout(() => setGaveUp(true), 2500); return () => clearTimeout(t); }, []);
   // The shared preview page (which runs this app inside itself) uses this to jump to a screen from its own buttons.
   useEffect(() => { if (typeof window !== "undefined" && window.__MARUF_PREVIEW) window.__previewGo = (path) => router.navigate(path); }, []);
-  if (!fontsReady && !fontError && !gaveUp) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  const ready = fontsReady || fontError || gaveUp;
+  // One stable root: the opening animation sits on top and keeps playing while the fonts and then the app arrive underneath.
   return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    {ready ? (
     <SafeAreaProvider>
       <SiteProvider look={look}>
       <MemoryProvider>
@@ -47,5 +51,8 @@ export default function RootLayout() {
       </MemoryProvider>
       </SiteProvider>
     </SafeAreaProvider>
+    ) : null}
+    <Splash />
+    </View>
   );
 }

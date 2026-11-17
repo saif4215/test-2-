@@ -12,6 +12,7 @@ const b = await chromium.launch({ executablePath: "" + (process.env.CHROMIUM || 
 const fails = [], ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) fails.push(m); };
 const SHOTS = process.env.SHOTS_DIR || "/tmp";
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+await ctx.addInitScript(() => { try { localStorage.setItem("maruf:menu-layout", "list"); } catch { /* no storage */ } });   // these tests are about ordering, so they use the list layout; app-swipe.e2e.mjs covers the swipe one
 const p = await ctx.newPage();
 p.on("pageerror", (e) => fails.push("pageerror: " + e.message));
 // only what a person can see: the screens underneath a modal stay in the page

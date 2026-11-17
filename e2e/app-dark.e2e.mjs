@@ -7,7 +7,7 @@ const site = await startSite({});
 const b = await chromium.launch({ executablePath: "" + (process.env.CHROMIUM || "/opt/pw-browsers/chromium") + "" });
 const fails = [], ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) fails.push(m); };
 const SHOTS = process.env.SHOTS_DIR || "/tmp";
-const mk = async (colorScheme) => (await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme })).newPage();
+const mk = async (colorScheme) => { const c = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme }); await c.addInitScript(() => { try { localStorage.setItem("maruf:menu-layout", "list"); } catch { /* no storage */ } }); return c.newPage(); };
 const hasBg = (p, rgb) => p.evaluate((c) => [...document.querySelectorAll("div")].some((d) => getComputedStyle(d).backgroundColor === c && d.getBoundingClientRect().height > 600), rgb);
 const DARK = "rgb(20, 16, 12)", LIGHT = "rgb(251, 248, 242)";
 

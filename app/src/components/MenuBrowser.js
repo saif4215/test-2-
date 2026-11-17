@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Animated, Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +29,9 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   const { menu } = useSite();
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
+  const [layout, setLayoutState] = useState("swipe");   // "swipe": one category at a time, scroll right through its items. "list": every category one under the other. The choice is remembered.
+  useEffect(() => { AsyncStorage.getItem("maruf:menu-layout").then((v) => { if (v === "list" || v === "swipe") setLayoutState(v); }).catch(() => {}); }, []);
+  const setLayout = (next) => { setLayoutState(next); AsyncStorage.setItem("maruf:menu-layout", next).catch(() => {}); };
   const [diet, setDiet] = useState(null);   // a dietary tag the customer is filtering by ("Vegan"), or null
   const tags = useMemo(() => dietsPresent(menu), [menu]);
   const categories = useMemo(() => filterByDiet(categoryList(menu), tags.includes(diet) ? diet : null), [menu, diet, tags]);
@@ -60,7 +64,7 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
 
   // keep the highlighted category button in step with the row on screen
   const onScroll = (e) => {
-    if (q) return;
+    if (q || layout === "swipe") return;
     const y = e.nativeEvent.contentOffset.y + pos.current.sticky + 30;
     let cur = names[0];
     for (const n of names) { const ry = pos.current.rows[n]; if (ry != null && pos.current.body + ry <= y) cur = n; }
@@ -86,9 +90,10 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
               <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
             ) : null}
           </View>
-          {groups.length > 1 && !q ? (
-            <View accessibilityRole="tablist" accessibilityLabel="Show drinks, food or everything" style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
-              {[["all", "All"], ...groups.map((g) => [g, g])].map(([id, label]) => {
+          {!q ? (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 8 }}>
+            <View accessibilityRole="tablist" accessibilityLabel="Show drinks, food or everything" style={{ flexDirection: "row", gap: 8, flex: 1 }}>
+              {groups.length > 1 ? [["all", "All"], ...groups.map((g) => [g, g])].map(([id, label]) => {
                 const on = scope === id;
                 return (
                   <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label === "All" ? "Show everything" : `Show ${label.toLowerCase()} only`} onPress={() => pickScope(id)}
@@ -96,7 +101,13 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
                     <Text style={{ fontSize: 14.5, fontWeight: "800", color: colors.ink }}>{label}</Text>
                   </Pressable>
                 );
-              })}
+              }) : null}
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel={layout === "swipe" ? "Show the menu as a list" : "Show the menu as swipe cards"} onPress={() => setLayout(layout === "swipe" ? "list" : "swipe")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 18, backgroundColor: colors.tint }}>
+              <Ionicons name={layout === "swipe" ? "list" : "swap-horizontal"} size={18} color={colors.ink} />
+              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>{layout === "swipe" ? "List" : "Swipe"}</Text>
+            </Pressable>
             </View>
           ) : null}
           {tags.length && !q ? (
@@ -134,7 +145,18 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
           ) : (
             <>
             <PersonalRows only="favorites" style={{ marginTop: 22 }} />
-            {names.map((name) => {
+            {layout === "swipe" ? (
+              <View style={{ marginTop: 22 }}>
+                {categories.find((c) => c.name === current) ? <SwipeRow key={`${current}-${diet || ""}`} cat={categories.find((c) => c.name === current)} width={Math.min(width, 980) - pad * 2} /> : (
+                  <Card style={{ padding: 22, gap: 12 }}>
+                    <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 24, lineHeight: 30, color: colors.ink }}>{current}</Text>
+                    <Body>We're adding {String(current || "").toLowerCase()} options. Ask Maruf Cafe for a custom quote for your group and we'll put one together.</Body>
+                    <Button title="Request a large order" variant="gold" onPress={() => router.push({ pathname: "/quote", params: { occasion: current } })} />
+                  </Card>
+                )}
+              </View>
+            ) : null}
+            {layout === "list" ? names.map((name) => {
               const cat = categories.find((c) => c.name === name);
               return (
                 <View key={name} onLayout={(e) => { pos.current.rows[name] = e.nativeEvent.layout.y; }} style={{ marginTop: 26 }}>
@@ -147,13 +169,26 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
                   )}
                 </View>
               );
-            })}
+            }) : null}
             </>
           )}
         </View>
       </View>
       <View style={col}>{footer}</View>
     </ScrollView>
+  );
+}
+
+/** One category as cards to scroll right through (big picture, price, name, and the + button on each). The next card peeks in from the edge so it is clear there is more. */
+function SwipeRow({ cat, width }) {
+  const gap = 14, w = Math.min(260, Math.round(width * 0.64));
+  const row = useRowScroll();
+  return (
+    <View>
+      <RowHead title={cat.name} count={cat.items.length} arrows={cat.items.length > 1 ? row.arrows : null} />
+      {cat.items.length > 1 ? <Small style={{ marginTop: -6, marginBottom: 6 }}>Swipe to see more →</Small> : null}
+      <BleedRow gap={gap} snap={w} scrollRef={row.scrollRef} onScroll={row.onScroll}>{cat.items.map((it) => <ItemTile key={it.id} item={it} width={w} />)}</BleedRow>
+    </View>
   );
 }
 
@@ -267,6 +302,7 @@ export function ItemTile({ item: it, width = 160 }) {
         <View style={{ gap: 1, paddingHorizontal: 2 }}>
           <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
           <Text numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.ink }}>{it.name}</Text>
+          {it.diet && it.diet.length ? <Text numberOfLines={1} accessibilityLabel={`Dietary: ${it.diet.join(", ")}`} style={{ fontSize: 12.5, color: colors.muted }}>{it.diet.join(" · ")}</Text> : null}
         </View>
       </Pressable>
       <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>
@@ -345,11 +381,11 @@ function useRowScroll() {
 }
 
 /** A row that scrolls sideways and runs out to the screen edges, inside a padded page. */
-export function BleedRow({ children, gap = 14, scrollRef, onScroll }) {
+export function BleedRow({ children, gap = 14, scrollRef, onScroll, snap }) {
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
   return (
-    <ScrollView ref={scrollRef} onScroll={onScroll} scrollEventThrottle={32} horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -pad }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 6, gap }}>
+    <ScrollView ref={scrollRef} onScroll={onScroll} scrollEventThrottle={32} horizontal showsHorizontalScrollIndicator={false} {...(snap ? { snapToInterval: snap + gap, decelerationRate: "fast", snapToAlignment: "start" } : {})} style={{ marginHorizontal: -pad }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 6, gap }}>
       {children}
     </ScrollView>
   );
