@@ -42,6 +42,9 @@ if (!rewritten) { console.error("Found no file addresses to rewrite in the built
 const menu = publicMenu(JSON.parse(readFileSync(path.join(ROOT, "public", "menu.json"), "utf8")));
 // Demo only, so the preview can show the "New" label: the real café picks its own labels in the dashboard.
 for (const cats of Object.values(menu.groups)) for (const list of Object.values(cats)) for (const it of list) if (it.name === "Lemonade") it.badge = "New";
+// Demo only: a few example dietary tags so the preview can show the tags and the filter. They are NOT claims about the real food: the real café ticks its own in the dashboard.
+const EXAMPLE_DIETS = { Espresso: ["Vegan", "Gluten-free"], Lemonade: ["Vegan"], "Breakfast Wrap": ["Vegetarian"] };
+for (const cats of Object.values(menu.groups)) for (const list of Object.values(cats)) for (const it of list) if (EXAMPLE_DIETS[it.name]) it.diet = EXAMPLE_DIETS[it.name];
 const content = mergeContent(normalizeContent(JSON.parse(readFileSync(path.join(ROOT, "public", "content.default.json"), "utf8"))).content, undefined);
 // Demo only: example rewards so the preview can show the progress bar. The real café adds its own in the dashboard (none until it does).
 content.rewards = [{ points: 10, title: "A free cookie (example)" }, { points: 100, title: "A free drink (example)" }];
