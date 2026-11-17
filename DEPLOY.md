@@ -258,6 +258,18 @@ Chats are not stored, and the privacy page says that questions are sent to Anthr
    (Locations page, or Square Dashboard → Account & Settings → Business → Locations), put them in the host settings, set `SQUARE_ENV=production`
    and restart. Place one real order from your own phone, accept it in your point of sale, and cancel it.
 
+### Points in Square Loyalty (optional, recommended)
+
+If your Square account has **Square Loyalty** (a paid Square add-on) with a program and rewards set up, the app keeps customers' points **in Square**, tied to their phone number. Nothing else to switch on: the server notices the program by itself (turn it off with `LOYALTY=off`).
+
+- **Earning:** on the order screen a box "Earn points with this phone number" is ticked. When the order is picked up, the server tells Square to count the points for that order (Square works out how many from your program's rules, so a promotion you set up in Square applies too). The server checks every two minutes, so it does not depend on the customer keeping the app open. Purchases at the counter earn points the normal Square way when the cashier enters the customer's phone number.
+- **The customer sees:** their balance, a progress bar to your next reward, and which rewards they can use. They find them on Home. The first time, the app asks for their phone number.
+- **Using a reward:** at the counter, the customer gives their phone number and the cashier applies the reward in Square checkout, as Square Loyalty normally works. The app does not redeem anything by itself, so nobody can spend someone else's points by typing their number.
+- **Privacy:** the app only makes a Loyalty account for a customer who leaves "Earn points" ticked. Someone who types another person's phone number can see only that number's point balance.
+- **Your rewards are the ones in Square.** The "Rewards to work toward" list in the dashboard (Site info > Points) is only used when Square Loyalty is not on, and then points stay on the customer's phone.
+- **Square access token:** it needs permission to use Loyalty (`LOYALTY_READ` and `LOYALTY_WRITE`). `npm run square-check` says whether your Square account has an active Loyalty program. The dashboard's Setup tab shows it too.
+- **Not tested against real Square.** This was written from Square's Loyalty documentation and tried only against a stand-in. Run `npm run square-check` against your Sandbox first, then place one test order with "Earn points" ticked, mark it completed in Square, and look for the account under Square Dashboard > Loyalty.
+
 ### Good to know
 
 - **Where staff see it:** in your Square Dashboard under Orders, and in Square Point of Sale's order list. Whether a new order also beeps or prints

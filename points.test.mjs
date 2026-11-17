@@ -6,6 +6,7 @@ import { startSquare } from "./e2e/square-standin.mjs";
 
 async function setup(extra = {}) {
   const sq = await startSquare();
+  sq.loyalty(false);   // these tests are about points kept on the phone (no Square Loyalty); loyalty.test.mjs covers the Square ones
   const t = await startSite({ SQUARE_ACCESS_TOKEN: "tok", SQUARE_LOCATION_ID: "LOC", SQUARE_API_BASE: sq.url, TAX_PERCENT: "8.875", ORDER_RATE_LIMIT_PER_MIN: "1000", ...extra });
   const place = async (items) => (await (await fetch(t.u + "/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items, name: "Sam", phone: "7185550123", idempotencyKey: `points-test-key-${Math.random().toString(36).slice(2, 10)}` }) })).json());
   return { sq, t, place };

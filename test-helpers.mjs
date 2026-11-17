@@ -42,7 +42,7 @@ export async function startSite(extra = {}, { notify = true } = {}) {
   const u = `http://localhost:${server.address().port}`;
   const json = async (r) => ({ status: r.status, json: await r.json().catch(() => null), headers: r.headers });
   const api = {
-    u, dir, hooks: hook.hooks,
+    u, dir, hooks: hook.hooks, sweep: () => server.loyaltySweep(),
     post: (b) => fetch(u + "/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(json),
     /** Sign in; returns a client that sends the cookie and CSRF token. */
     async login(username = "owner", password = "owner-pass-12345") {

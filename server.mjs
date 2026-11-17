@@ -26,6 +26,7 @@ import { fetchCatalog, compareMenus } from "./lib/square-catalog.mjs";
 import { basicAnswer } from "./lib/answers.mjs";
 import { loadDotEnv } from "./lib/env.mjs";
 import { scheduleBackups } from "./lib/backup.mjs";
+import * as loyalty from "./lib/square-loyalty.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, "public");
@@ -178,6 +179,16 @@ export function createServer(env = process.env) {
   }
 
   /** Put the customer's order into the café's Square as an unpaid pickup order. Retrying with the same key never orders twice. */
+  /** The customer ticked "earn points": make sure they have a Loyalty account (their phone number), and remember to count this order's points once it is completed. Never fails the order. */
+  async function enrolLoyalty(orderId, phone) {
+    try {
+      const prog = await loyaltyProgram();
+      if (!prog || !db) return;
+      const account = await loyalty.joinAccount(square, prog.id, phone);
+      if (account?.id) savePendingLoyalty([...pendingLoyalty().filter((e) => e.orderId !== orderId), { orderId, accountId: account.id, at: new Date().toISOString() }]);
+    } catch (err) { console.error("Loyalty sign-up failed:", err instanceof SquareError ? `${err.status} ${err.errors[0]?.code || ""}` : err.message); }
+  }
+
   async function placeOrder(body) {
     const { lines, name, note, phone, key, pickupAt } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
     if (pickupAt) { const problem = pickupProblem(pickupAt, getContent().business.hours, new Date(), { minMinutes: pickupMinMinutes }); if (problem) throw new HttpError(400, problem); }
@@ -193,6 +204,7 @@ export function createServer(env = process.env) {
     if (cfg.taxPercent > 0) order.taxes = [{ uid: "sales-tax", name: "Sales tax", percentage: String(cfg.taxPercent), scope: "ORDER" }];
     try {
       const created = (await square("POST", "/v2/orders", { idempotency_key: key, order })).order;
+      if (body.loyalty === true) await enrolLoyalty(created.id, phone);
       const subtotal = lines.reduce((s, l) => s + l.cents * l.qty, 0);
       return { ok: true, orderId: created.id, ref, totalCents: created.total_money?.amount ?? subtotal };
     } catch (err) {
@@ -203,6 +215,42 @@ export function createServer(env = process.env) {
   }
 
   /** Where an order stands in the café, for the customer's confirmation screen. Only orders the app placed can be looked up. */
+  /* ---- Square Loyalty: points kept in the café's Square, tied to the customer's phone number ---- */
+  let loyaltyCache = { at: 0, program: null };
+  /** The café's active Loyalty program in Square, or null (not switched on, no Loyalty add-on, or LOYALTY=off). Remembered for 10 minutes (2 when there is none). */
+  async function loyaltyProgram() {
+    if (!enabled || env.LOYALTY === "off") return null;
+    const age = Date.now() - loyaltyCache.at;
+    if (loyaltyCache.at && age < (loyaltyCache.program ? 600000 : 120000)) return loyaltyCache.program;
+    try { loyaltyCache = { at: Date.now(), program: await loyalty.program(square) }; }
+    catch { loyaltyCache = { at: Date.now() - 60000, program: loyaltyCache.program }; }   // Square could not be reached: keep what we knew, ask again soon
+    return loyaltyCache.program;
+  }
+  const pendingLoyalty = () => (db && db.kvGet("loyaltyPending")?.value) || [];
+  const savePendingLoyalty = (list) => { if (db) db.kvSet("loyaltyPending", list.slice(-500), "system"); };
+  /** Count the points for one order that was placed with "earn points" ticked, once it is completed in Square. Returns true when it is finished with (counted, canceled or too old). */
+  async function settleLoyalty(entry) {
+    if (Date.now() - Date.parse(entry.at) > 3 * 86400000) return true;
+    let order;
+    try { order = (await square("GET", `/v2/orders/${encodeURIComponent(entry.orderId)}`)).order; }
+    catch (err) { return err instanceof SquareError && err.status === 404; }
+    if (!order || order.state === "CANCELED") return true;
+    if (orderStatus(order) !== "done") return false;   // picked up (or paid in full); if it is not paid yet Square says so and this is tried again
+    try { return (await loyalty.accumulate(square, entry.accountId, entry.orderId, cfg.locationId)).done; } catch { return false; }
+  }
+  let sweeping = false;
+  async function loyaltySweep() {
+    if (sweeping || !db || !(await loyaltyProgram())) return;
+    sweeping = true;
+    try {
+      const list = pendingLoyalty();
+      if (!list.length) return;
+      const keep = [];
+      for (const e of list) if (!(await settleLoyalty(e))) keep.push(e);
+      if (keep.length !== list.length) savePendingLoyalty(keep);
+    } finally { sweeping = false; }
+  }
+
   async function orderProgress(id) {
     let order;
     try { order = (await square("GET", `/v2/orders/${encodeURIComponent(id)}`)).order; }
@@ -212,9 +260,10 @@ export function createServer(env = process.env) {
     }
     if (!order || order.location_id !== cfg.locationId || order.source?.name !== APP_SOURCE) throw new HttpError(404, "We can't find that order.");
     const status = orderStatus(order), total = order.total_money?.amount ?? null;
+    if (status === "done") loyaltySweep().catch(() => {});   // points in Square: counted now rather than at the next regular check
     // Points come from Square's own order: what was really rung up, before tax, once the order is picked up. Counter changes to the order count.
     const subtotal = total == null ? null : Math.max(0, total - (order.total_tax_money?.amount ?? 0) - (order.total_tip_money?.amount ?? 0));
-    const points = status === "done" && subtotal != null ? Math.floor((subtotal / 100) * pointsPerDollar) : 0;
+    const points = status === "done" && subtotal != null && !(await loyaltyProgram()) ? Math.floor((subtotal / 100) * pointsPerDollar) : 0;   // with Square Loyalty on, Square holds the points (not the phone)
     return { ok: true, status, ref: order.reference_id || "", totalCents: total, ...(status === "done" ? { subtotalCents: subtotal, points } : {}) };
   }
 
@@ -456,7 +505,7 @@ export function createServer(env = process.env) {
       return out(200, {
         ok: true, assistant: assistantOn,
         email: !!(env.RESEND_API_KEY && env.NOTIFY_EMAIL), webhook: !!env.INQUIRY_WEBHOOK_URL, storage: true,
-        square: enabled ? cfg.environment : "off", squareMenu: await squareMenuStatus(), publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
+        square: enabled ? cfg.environment : "off", loyalty: !!(await loyaltyProgram()), squareMenu: await squareMenuStatus(), publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
         staffCanEditSite: env.STAFF_CAN_EDIT_SITE === "1", warnings: auth.warnings, counts: db.counts(),
       });
     }
@@ -480,19 +529,31 @@ export function createServer(env = process.env) {
 
   const ADMIN_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     let cors = false;
     try {
       const url = new URL(req.url, "http://localhost");
       const ip = clientIp(req);
       const p = url.pathname;
-      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/order" || p.startsWith("/api/order/") || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
+      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/loyalty/lookup" || p === "/api/order" || p.startsWith("/api/order/") || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
       if (cors && req.method === "OPTIONS") {
         res.writeHead(204, { "Access-Control-Allow-Origin": allowOrigin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" });
         return res.end();
       }
       if (p === "/api/config" && req.method === "GET") {
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+        const prog = enabled ? await loyaltyProgram() : null;
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+      }
+      if (p === "/api/loyalty/lookup") {
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
+        const prog = await loyaltyProgram();
+        if (!prog) throw new HttpError(404, "Points are not switched on.");
+        if (limited("loyalty", ip, 20)) throw new HttpError(429, "Too many checks. Wait a minute and try again.");
+        const phone = normalizePhone((await readBody(req, 1000)).phone);
+        let account;
+        try { account = await loyalty.findAccount(square, phone); }
+        catch { throw new HttpError(502, "We can't check your points right now. Please try again in a bit."); }
+        return send(res, 200, { ok: true, member: !!account, ...loyalty.balanceOf(account), tiers: loyalty.tiersOf(prog) }, { cors: true });
       }
       if (p === "/api/order") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
@@ -567,6 +628,10 @@ export function createServer(env = process.env) {
       return send(res, 500, { ok: false, error: "Something went wrong." }, { cors });
     }
   });
+  // Points in Square: every two minutes, count the points for finished orders (also done when the app checks on an order). Tests call server.loyaltySweep() themselves.
+  server.loyaltySweep = loyaltySweep;
+  if (enabled && env.LOYALTY !== "off") setInterval(() => { loyaltySweep().catch(() => {}); }, 120000).unref();
+  return server;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {

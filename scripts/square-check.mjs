@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer, SQUARE_VERSION } from "../server.mjs";
+import * as loyalty from "../lib/square-loyalty.mjs";
 import { fetchCatalog } from "../lib/square-catalog.mjs";
 import { checkoutIndex } from "../lib/menu.mjs";
 
@@ -74,6 +75,14 @@ export async function checkSquare(env, { order = false } = {}) {
   } catch (err) {
     add(false, `Could not read the item list (${err.message}). Orders still work; the chat just uses the app's own menu.`, "If you want the chat to use your Square items, check that the token can read the catalog (ITEMS_READ).");
   }
+
+  // 2b. Square Loyalty (optional): points kept in Square, tied to the phone number. Not having it is fine.
+  try {
+    const call = async (method, route) => { const r = await fetch(base + route, { method, headers: { Authorization: `Bearer ${token}`, "Square-Version": SQUARE_VERSION } }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error("Square said no"), { status: r.status, errors: j.errors || [] }); return j; };
+    const prog = await loyalty.program(call);
+    if (prog) add(true, `Points: Square Loyalty is on, with ${loyalty.tiersOf(prog).length} reward${loyalty.tiersOf(prog).length === 1 ? "" : "s"}. The app will keep customers' points in Square, tied to their phone number.`);
+    else add(true, "Points: this Square account has no active Loyalty program, so the app keeps points on each customer's phone instead. To keep them in Square, turn on Square Loyalty (a paid add-on) and make sure the token may use LOYALTY_READ and LOYALTY_WRITE.");
+  } catch (err) { add(true, `Points: could not check Square Loyalty (${err.message}). This does not affect orders.`); }
 
   // 3. optionally, one trip through the app's own server
   if (order) {

@@ -20,7 +20,8 @@ import { openLink } from "../lib/links";
 export default function MyOrder() {
   const order = useOrder();
   const memory = useMemory();
-  const { on: ordering, tax, minMinutes, pausedUntil } = useOrderingConfig();   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
+  const { on: ordering, tax, minMinutes, pausedUntil, loyalty } = useOrderingConfig();
+  const [earn, setEarn] = useState(true);   // earn points in the café's Square with this phone number (shown only when the café has Square Loyalty)   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
   const paused = pausedUntil > Date.now();   // the café asked for a short break from new orders (the server refuses them too)
   const canPlace = ordering === true && needsPrice.length === 0;
@@ -57,7 +58,7 @@ export default function MyOrder() {
     const built = buildPickup(v);
     setErrors(built.errors);
     if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
-    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(when === "later" ? { pickupAt: slotAt } : {}) });
+    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(loyalty && earn ? { loyalty: true } : {}), ...(when === "later" ? { pickupAt: slotAt } : {}) });
     key.current = keyFor(key.current, body);
     setState({ busy: true, error: "" });
     const res = await sendOrder({ ...body, idempotencyKey: key.current.key });
@@ -156,6 +157,15 @@ export default function MyOrder() {
               </View>
               <Field label="Name" required value={v.name} onChangeText={set("name")} error={errors.name} autoComplete="name" textContentType="name" maxLength={60} />
               <Field label="Phone Number" required value={v.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" hint="So the café can reach you about your order." />
+              {canPlace && loyalty ? (
+                <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: earn }} aria-checked={earn} accessibilityLabel="Earn points with this phone number" onPress={() => setEarn((e) => !e)} style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 4 }}>
+                  <Ionicons name={earn ? "checkbox" : "square-outline"} size={26} color={earn ? colors.goldText : colors.muted} />
+                  <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                    <Text style={{ fontWeight: "800", color: colors.ink, fontSize: 15 }}>Earn points with this phone number</Text>
+                    <Small>Your points are kept by Maruf Cafe in Square, so they also count when you pay at the counter. Untick this to order without joining.</Small>
+                  </View>
+                </Pressable>
+              ) : null}
               <Disclosure title="Add a note for the café" hint="Optional, for example: I will be there at 5:30" defaultOpen={!!v.note}>
                 <Field label="Anything the café should know?" multiline value={v.note} onChangeText={set("note")} maxLength={200} placeholder="Optional" />
               </Disclosure>

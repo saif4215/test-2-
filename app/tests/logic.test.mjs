@@ -7,7 +7,7 @@ import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems, suggestFor } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
@@ -694,4 +694,21 @@ test("the café's rewards from the server are cleaned and put in order", () => {
   const base = { business: {}, faq: [], packages: [] };
   const merged = mergeSite({ ...base, rewards: [] }, { rewards: [{ points: 200, title: "B" }, { points: "100", title: "A" }, { points: 0, title: "Zero" }, { points: 5 }, null] });
   assert.deepEqual(merged.rewards, [{ title: "A", points: 100 }, { title: "B", points: 200 }]);
+});
+
+test("Square Loyalty answers from the server are read safely", () => {
+  assert.equal(readTiers(undefined), null, "no Loyalty: points are not kept in Square");
+  assert.equal(readTiers({ tiers: "x" }), null);
+  assert.deepEqual(readTiers({ tiers: [{ id: "b", name: "Drink", points: 100 }, { id: "a", name: "Cookie", points: 10.7 }, { name: "", points: 5 }, { id: "z", name: "Free", points: 0 }, null] }), { tiers: [{ id: "a", name: "Cookie", points: 10 }, { id: "b", name: "Drink", points: 100 }] });
+  assert.deepEqual(readLookup({ ok: true, member: true, balance: 42.9, tiers: [{ id: "a", name: "Cookie", points: 10 }] }), { member: true, balance: 42, tiers: [{ id: "a", name: "Cookie", points: 10 }] });
+  assert.deepEqual(readLookup({ ok: true, member: false, balance: -3 }), { member: false, balance: 0, tiers: [] });
+  assert.equal(readLookup({ ok: false }), null);
+  assert.equal(readLookup(null), null);
+});
+
+test("an order asks to earn points only when the customer ticked it", () => {
+  const entries = [{ id: "x", qty: 1, choice: {} }];
+  assert.equal(orderBody(entries, {}, { name: "Sam", phone: "7185550123", loyalty: true }).loyalty, true);
+  assert.ok(!("loyalty" in orderBody(entries, {}, { name: "Sam", phone: "7185550123" })));
+  assert.ok(!("loyalty" in orderBody(entries, {}, { name: "Sam", phone: "7185550123", loyalty: false })));
 });

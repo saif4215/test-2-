@@ -75,7 +75,7 @@ ok(await p.getByRole("textbox", { name: "Name", exact: true }).isVisible() && aw
 await place.click();
 await p.waitForTimeout(300);
 ok(await seen("Enter a name for the order.") && await seen("Enter a 10-digit phone number"), "a name and a phone number are asked for");
-ok(squareCalls.length === 0, "nothing reached Square yet");
+ok(squareCalls.filter((c) => c.url.startsWith("/v2/orders")).length === 0, "nothing reached Square yet (no order was sent)");
 const name = p.getByRole("textbox", { name: "Name", exact: true }), phone = p.getByRole("textbox", { name: "Phone Number", exact: true });
 await name.fill("Sam Lee");
 await phone.fill("(718) 555-0123");

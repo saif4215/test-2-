@@ -35,7 +35,7 @@ export function buildPickup(v) {
 export function orderBody(entries, notes, fields) {
   return {
     items: entries.map((l) => ({ id: l.id, qty: l.qty, ...(l.choice || {}), ...(notes[l.id] ? { note: notes[l.id] } : {}) })),
-    name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}), ...(fields.pickupAt ? { pickupAt: fields.pickupAt } : {}),
+    name: fields.name, phone: fields.phone, ...(fields.note ? { note: fields.note } : {}), ...(fields.pickupAt ? { pickupAt: fields.pickupAt } : {}), ...(fields.loyalty ? { loyalty: true } : {}),
   };
 }
 
@@ -76,3 +76,17 @@ export const estimateTax = (cents, percent) => (percent > 0 ? Math.round((cents 
 
 /** When the café's pause on new orders ends, in milliseconds (0 when orders are open or the server said nothing usable). */
 export const pausedMs = (v) => { const t = typeof v === "string" ? Date.parse(v) : NaN; return Number.isFinite(t) ? t : 0; };
+
+/** The café's Square Loyalty rewards from the server: { tiers: [{ id, name, points }] } smallest first, or null when points are not kept in Square. */
+export function readTiers(v) {
+  if (!v || typeof v !== "object" || !Array.isArray(v.tiers)) return null;
+  const tiers = v.tiers.filter((t) => t && typeof t.name === "string" && t.name && Number(t.points) >= 1).map((t) => ({ id: String(t.id || t.name), name: t.name, points: Math.floor(Number(t.points)) })).sort((a, b) => a.points - b.points);
+  return { tiers };
+}
+
+/** A points lookup answer: { member, balance, tiers } with safe numbers, or null when it is not usable. */
+export function readLookup(v) {
+  if (!v || v.ok !== true) return null;
+  const balance = Number(v.balance);
+  return { member: v.member === true, balance: Number.isFinite(balance) && balance > 0 ? Math.min(Math.floor(balance), 10000000) : 0, tiers: (readTiers({ tiers: v.tiers }) || { tiers: [] }).tiers };
+}

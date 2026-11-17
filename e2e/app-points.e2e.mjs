@@ -5,6 +5,7 @@ import { startSite } from "../test-helpers.mjs";
 import { startSquare } from "./square-standin.mjs";
 
 const square = await startSquare();
+square.loyalty(false);   // this test is about points kept on the phone; app-loyalty.e2e.mjs covers points kept in Square
 const site = await startSite({ SQUARE_ACCESS_TOKEN: "tok", SQUARE_LOCATION_ID: "LOC", SQUARE_API_BASE: square.url, TAX_PERCENT: "8.875", ORDER_RATE_LIMIT_PER_MIN: "1000" });
 const a = await site.login(), content = (await a.get("content")).json.content;
 content.promotions = [{ title: "Free cookie with any large drink", text: "Ask for it at the counter.", until: "" }, { title: "Old summer special", text: "ended", until: "2020-08-31" }];

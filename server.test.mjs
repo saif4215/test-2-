@@ -23,7 +23,7 @@ before(async () => {
   mock = http.createServer(async (req, res) => {
     let raw = ""; for await (const c of req) raw += c;
     const json = raw ? JSON.parse(raw) : {};
-    calls.push({ method: req.method, url: req.url, auth: req.headers.authorization, version: req.headers["square-version"], json });
+    calls?.push({ method: req.method, url: req.url, auth: req.headers.authorization, version: req.headers["square-version"], json });
     res.setHeader("Content-Type", "application/json");
     if (req.method === "POST" && req.url === "/v2/orders") {
       if (mode === "fail") { res.statusCode = 400; return res.end(JSON.stringify({ errors: [{ code: "INVALID_VALUE", detail: "x" }] })); }
