@@ -572,14 +572,29 @@ export function createServer(env = process.env) {
       const url = new URL(req.url, "http://localhost");
       const ip = clientIp(req);
       const p = url.pathname;
-      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/loyalty/lookup" || p === "/api/order" || p.startsWith("/api/order/") || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
+      cors = p === "/api/inquiry" || p === "/api/config" || p === "/api/giftcard/balance" || p === "/api/loyalty/lookup" || p === "/api/order" || p.startsWith("/api/order/") || p === "/api/assistant" || p === "/menu.json" || p === "/content.json" || p.startsWith("/uploads/");
       if (cors && req.method === "OPTIONS") {
         res.writeHead(204, { "Access-Control-Allow-Origin": allowOrigin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" });
         return res.end();
       }
       if (p === "/api/config" && req.method === "GET") {
         const prog = enabled ? await loyaltyProgram() : null;
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, tips: tipsOn, ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, tips: tipsOn, giftCards: env.GIFT_CARDS !== "off", ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+      }
+      if (p === "/api/giftcard/balance") {
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
+        if (!enabled || env.GIFT_CARDS === "off") throw new HttpError(404, "Gift card balances are not switched on.");
+        if (limited("giftcard", ip, 8)) throw new HttpError(429, "Too many tries. Wait a minute and try again.");   // a tight limit: nobody can guess card numbers
+        const gan = String((await readBody(req, 1000)).gan || "").replace(/[\s-]/g, "");
+        if (!/^[A-Za-z0-9]{8,24}$/.test(gan)) throw new HttpError(400, "Enter the card number from the back of your gift card (8 to 24 letters and numbers).");
+        try {
+          const card = (await square("POST", "/v2/gift-cards/from-gan", { gan })).gift_card;
+          const state = String(card?.state || "");
+          return send(res, 200, { ok: true, state, balanceCents: state === "ACTIVE" ? Math.max(0, Math.floor(Number(card?.balance_money?.amount) || 0)) : 0 }, { cors: true });   // only the balance: never the card number back
+        } catch (err) {
+          if (err instanceof SquareError && (err.status === 404 || err.status === 400)) throw new HttpError(404, "We couldn't find that gift card. Check the number and try again.");
+          throw new HttpError(502, "We can't check gift cards right now. Please try again in a bit.");
+        }
       }
       if (p === "/api/loyalty/lookup") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");

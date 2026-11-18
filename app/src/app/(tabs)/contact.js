@@ -1,3 +1,4 @@
+import { GiftCardBalance } from "../../components/GiftCard";
 import { useState } from "react";
 import { Platform, Pressable, Share, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -66,6 +67,8 @@ export default function Contact() {
         <Button title="Call" variant="primary" icon="call-outline" accessibilityLabel={`Call Maruf Cafe at ${business.phone}`} onPress={() => openLink(`tel:${business.phoneTel}`)} style={{ flex: 1 }} />
         <MapCard compact style={{ flex: 1 }} />
       </View>
+
+      <GiftCardBalance style={{ marginTop: 18 }} />
 
       <View style={{ marginTop: 18 }}>
         <Card>

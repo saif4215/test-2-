@@ -18,6 +18,13 @@ export async function startSquare() {
       orders.set(order.id, order);
       return res.end(JSON.stringify({ order }));
     }
+    if (req.method === "POST" && req.url === "/v2/gift-cards/from-gan") {
+      calls.giftcards = (calls.giftcards || 0) + 1;
+      const cards = { "7783320001234567": { id: "gftc:1", gan: "7783320001234567", state: "ACTIVE", balance_money: { amount: 2550, currency: "USD" } }, "7783320009999999": { id: "gftc:2", gan: "7783320009999999", state: "DEACTIVATED", balance_money: { amount: 700, currency: "USD" } } };
+      const c = cards[json.gan];
+      if (!c) { res.statusCode = 404; return res.end(JSON.stringify({ errors: [{ code: "NOT_FOUND", detail: "Gift card not found" }] })); }
+      return res.end(JSON.stringify({ gift_card: c }));
+    }
     if (req.url.startsWith("/v2/loyalty/")) {
       calls.loyalty = (calls.loyalty || 0) + 1;
       if (!state.loyalty) { res.statusCode = 404; return res.end(JSON.stringify({ errors: [{ code: "NOT_FOUND", detail: "no loyalty program" }] })); }

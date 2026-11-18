@@ -108,3 +108,13 @@ export function readLookup(v) {
   const balance = Number(v.balance);
   return { member: v.member === true, balance: Number.isFinite(balance) && balance > 0 ? Math.min(Math.floor(balance), 10000000) : 0, tiers: (readTiers({ tiers: v.tiers }) || { tiers: [] }).tiers };
 }
+
+/** The title and words for an order's change of status, or null when it is not worth a notification. Pure, so it is tested without a phone. */
+export function notificationFor(prev, next, ref) {
+  if (next === prev) return null;
+  const tag = ref ? ` ${ref}` : "";
+  if (next === "ready") return { title: "Your order is ready", body: `Order${tag} is ready for pickup at Maruf Cafe.`, kind: "ready" };
+  if (next === "canceled") return { title: "Your order was canceled", body: `Order${tag} was canceled. Please call the café if you have questions.`, kind: "canceled" };
+  return null;
+}
+

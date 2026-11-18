@@ -1,3 +1,4 @@
+import { announceOrder } from "../lib/notify";
 import { useEffect } from "react";
 import { Pressable, Text, Vibration, View } from "react-native";
 import { router } from "expo-router";
@@ -16,7 +17,7 @@ const WATCH_MS = 20000, SLOWEST_MS = 120000;
  */
 export function OrderWatcher() {
   const { active, setActiveStatus, awardPoints } = useMemory();
-  const id = active?.id;
+  const id = active?.id, ref = active?.ref;
   useEffect(() => {
     if (!id) return undefined;
     let live = true, timer, failures = 0, last = null;
@@ -27,6 +28,7 @@ export function OrderWatcher() {
         failures = 0; setActiveStatus(r.status);
         if (r.status === "done" && r.points > 0) awardPoints(id, r.points);   // picked up: the points Square worked out are counted, once
         if (r.status === "ready" && last && last !== "ready") { success(); try { Vibration.vibrate([0, 300, 150, 300]); } catch { /* no vibration here */ } }   // a nudge when it turns ready while the app is open
+        announceOrder(id, ref, last, r.status);   // "Your order is ready" on this device, if the customer turned that on
         last = r.status;
         if (stageInfo(r.status).final) return;
       } else failures += 1;
@@ -34,7 +36,7 @@ export function OrderWatcher() {
     };
     check();
     return () => { live = false; clearTimeout(timer); };
-  }, [id, setActiveStatus, awardPoints]);
+  }, [id, ref, setActiveStatus, awardPoints]);
   return null;
 }
 

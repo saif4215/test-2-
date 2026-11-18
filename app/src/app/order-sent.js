@@ -7,6 +7,8 @@ import { FormShell } from "../components/FormShell";
 import { Celebrate } from "../components/Celebrate";
 import { MapCard } from "../components/MapCard";
 import { ImHere } from "../components/ImHere";
+import { NotifyToggle } from "../components/NotifyToggle";
+import { announceOrder } from "../lib/notify";
 import { success } from "../lib/haptics";
 import { money } from "../lib/order";
 import { ORDER_STAGES, stageInfo } from "../lib/order-util";
@@ -56,7 +58,7 @@ export default function OrderSent() {
     const check = async () => {
       const r = await checkOrder(String(id));
       if (!live) return;
-      if (r.ok) { setStatus(r.status); if (mine) setActiveStatus(r.status); if (r.status === "done" && r.points > 0) awardPoints(String(id), r.points); }
+      if (r.ok) { announceOrder(String(id), ref, before.current, r.status); setStatus(r.status); if (mine) setActiveStatus(r.status); if (r.status === "done" && r.points > 0) awardPoints(String(id), r.points); }
       setStale(!r.ok);
       if (!(r.ok && stageInfo(r.status).final)) timer = setTimeout(check, CHECK_EVERY_MS);
     };
@@ -101,6 +103,7 @@ export default function OrderSent() {
       ) : null}
       <Tracker step={info.step} canceled={canceled} />
       {!info.final && !canceled && !stale ? <ImHere id={String(id)} /> : null}
+      {!info.final && !canceled ? <NotifyToggle /> : null}
       <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}Pay at the counter when you pick it up.</Small>
       <Small>{pickup ? `Pickup at ${pickup} today: ` : "Pickup at "}{business.name}, {business.address.join(", ")}.</Small>
       <View style={{ gap: 12 }}>

@@ -4,10 +4,10 @@ import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus, greeting, closedNotice } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
-import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet, newItems, itemFacts } from "../src/lib/site-merge.js";
+import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet, newItems, itemFacts, pickedForYou } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS, notificationFor } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions, readSearches, addSearch } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
@@ -782,4 +782,25 @@ test("recent searches: newest first, five at most, no repeats, nothing too short
   assert.deepEqual(addSearch(["latte"], "   "), ["latte"]);
   assert.deepEqual(readSearches([" latte ", 5, null, "LATTE", "wrap"]), ["latte", "wrap"]);
   assert.deepEqual(readSearches("nope"), []);
+});
+
+test("order notifications: only when it turns ready or is canceled, and never twice for no change", () => {
+  assert.deepEqual(notificationFor("accepted", "ready", "K7QF"), { title: "Your order is ready", body: "Order K7QF is ready for pickup at Maruf Cafe.", kind: "ready" });
+  assert.equal(notificationFor("ready", "ready", "K7QF"), null, "no change, no notification");
+  assert.equal(notificationFor("received", "accepted", "K7QF"), null, "accepted is not worth waking someone for");
+  assert.equal(notificationFor("ready", "done", "K7QF"), null);
+  assert.equal(notificationFor("accepted", "canceled", "K7QF").kind, "canceled");
+  assert.match(notificationFor(null, "ready", "").body, /^Order is ready for pickup/, "no code: no stray space or placeholder");
+});
+
+test("Picked for you: untried items from the categories they order from most, nothing before a first order", () => {
+  const menu = { groups: { Drinks: { Coffee: [{ id: "c1", name: "Latte", cents: 450 }, { id: "c2", name: "Mocha", cents: 500, badge: "New" }, { id: "c3", name: "Drip", cents: 300 }, { id: "c4", name: "Hidden", cents: 300, hidden: true }], Tea: [{ id: "t1", name: "Chai", cents: 400 }, { id: "t2", name: "Green", cents: 350 }] }, Food: { Sandwiches: [{ id: "s1", name: "Wrap", cents: 900 }] } } };
+  assert.deepEqual(pickedForYou(menu, []).map((i) => i.id), [], "no orders yet: nothing is guessed");
+  assert.deepEqual(pickedForYou(menu, undefined), []);
+  const history = [{ lines: [{ id: "c1", qty: 2 }] }, { lines: [{ id: "c1", qty: 1 }, { id: "t1", qty: 1 }] }];
+  const got = pickedForYou(menu, history).map((i) => i.id);
+  assert.deepEqual(got, ["c2", "t2", "c3"], "Coffee (ordered most) first, its New item before the rest, then one from Tea, then more Coffee; tried, hidden and other-category items are left out");
+  assert.ok(!got.includes("c1") && !got.includes("t1") && !got.includes("c4") && !got.includes("s1"));
+  assert.equal(pickedForYou(menu, history, 2).length, 2);
+  assert.deepEqual(pickedForYou(menu, [{ lines: [{ id: "gone", qty: 1 }] }]), [], "an item no longer on the menu says nothing");
 });

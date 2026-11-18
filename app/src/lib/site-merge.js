@@ -86,6 +86,37 @@ export function filterByDiet(categories, tag) {
 /** The small line under an item's price: the dietary tags the café ticked. Empty when it ticked none. */
 export const itemFacts = (it) => ((it && Array.isArray(it.diet)) ? it.diet : []).filter(Boolean).join(" · ");
 
+/**
+ * "Picked for you": things this customer has not tried yet, from the categories they order from most. Worked out on their own phone from their own past orders:
+ * nothing is sent anywhere. Items the café labelled New or Seasonal, or put on Home, are tried first inside a category. Nothing until they have ordered.
+ * history = [{ lines: [{ id }] }], newest first.
+ */
+export function pickedForYou(menu, history, max = 6) {
+  const byId = indexMenu(menu || { groups: {} });
+  const tried = new Set(), perCat = new Map();
+  for (const order of Array.isArray(history) ? history : []) for (const l of (order && order.lines) || []) {
+    const it = byId.get(l.id); if (!it) continue;
+    tried.add(it.id);
+    perCat.set(`${it.group}|${it.cat}`, (perCat.get(`${it.group}|${it.cat}`) || 0) + (Number(l.qty) || 1));
+  }
+  if (!tried.size) return [];
+  const cats = [...perCat.entries()].sort((a, b) => b[1] - a[1]);   // the most ordered category first
+  const pools = [];
+  for (const [key] of cats) {
+    const [group, cat] = key.split("|");
+    const fresh = [...byId.values()].filter((it) => it.group === group && it.cat === cat && !it.hidden && !tried.has(it.id) && it.cents != null);
+    fresh.sort((a, b) => ((b.badge === "New" || b.badge === "Seasonal" ? 2 : 0) + (b.featured ? 1 : 0)) - ((a.badge === "New" || a.badge === "Seasonal" ? 2 : 0) + (a.featured ? 1 : 0)));   // stable: the rest keep the café's order
+    if (fresh.length) pools.push(fresh);
+  }
+  const out = [];
+  for (let round = 0; out.length < max; round++) {
+    let added = false;
+    for (const pool of pools) if (out.length < max && pool[round]) { out.push(pool[round]); added = true; }
+    if (!added) break;
+  }
+  return out;
+}
+
 /** Items the café labelled New or Seasonal, for the "What's new" row on Home (up to `max`, New first, menu order inside each). Hidden items never show. Nothing until the café labels one. */
 export function newItems(menu, max = 8) {
   const fresh = [], seasonal = [];

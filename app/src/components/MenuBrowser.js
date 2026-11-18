@@ -11,7 +11,7 @@ import { describeCustom, needsChoice, unitCents } from "../lib/customize";
 import { success } from "../lib/haptics";
 import { addSearch, readSearches, reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
-import { dietsPresent, featuredItems, filterByDiet, indexMenu, itemFacts, newItems, searchMenu } from "../lib/site-merge";
+import { dietsPresent, featuredItems, filterByDiet, indexMenu, itemFacts, newItems, pickedForYou, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
 import { select, tap } from "../lib/haptics";
 import { artKey } from "../lib/menu-art-key";
@@ -406,6 +406,21 @@ export function BleedRow({ children, gap = 14, scrollRef, onScroll, snap }) {
     <ScrollView ref={scrollRef} onScroll={onScroll} scrollEventThrottle={32} horizontal showsHorizontalScrollIndicator={false} {...(snap ? { snapToInterval: snap + gap, decelerationRate: "fast", snapToAlignment: "start" } : {})} style={{ marginHorizontal: -pad }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 6, gap }}>
       {children}
     </ScrollView>
+  );
+}
+
+/** "Picked for you": items this customer has not tried yet, from the categories they order from most (worked out on their own phone). Nothing until they have placed an order. */
+export function PickedForYou() {
+  const { menu } = useSite();
+  const { history } = useMemory();
+  const items = useMemo(() => pickedForYou(menu, history), [menu, history]);
+  const row = useRowScroll();
+  if (!items.length) return null;
+  return (
+    <View>
+      <RowHead title="Picked for you" arrows={row.arrows} />
+      <BleedRow scrollRef={row.scrollRef} onScroll={row.onScroll}>{items.map((it) => <ItemTile key={`for-${it.id}`} item={it} />)}</BleedRow>
+    </View>
   );
 }
 
