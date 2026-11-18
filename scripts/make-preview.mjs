@@ -49,8 +49,10 @@ const content = mergeContent(normalizeContent(JSON.parse(readFileSync(path.join(
 // Demo only: example rewards so the preview can show the progress bar. The real café adds its own in the dashboard (none until it does).
 content.rewards = [{ points: 10, title: "A free cookie (example)" }, { points: 100, title: "A free drink (example)" }];
 content.rewardsNote = "Example text: the café says here what points can be used for.";
-const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote } = content;
-const publicContent = { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote };
+// Demo only: example amenities so the preview can show the "Good to know" tags. The real café lists its own (none until it does).
+content.amenities = ["Free Wi-Fi (example)", "Outdoor seating (example)"];
+const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote, amenities } = content;
+const publicContent = { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote, amenities };
 
 const answersSrc = readFileSync(path.join(ROOT, "lib", "answers.mjs"), "utf8").replace(/^import .*$/gm, "").replace("export function basicAnswer", "function basicAnswer");
 const fmtHourSrc = /export function fmtHour[\s\S]*?\n}\n/.exec(readFileSync(path.join(ROOT, "lib", "render.mjs"), "utf8"))[0].replace("export ", "");
