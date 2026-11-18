@@ -44,7 +44,7 @@ await site.post({ type: "event", fields: goodEvent() });
   const r = (await a.get("inquiries?q=Sam")).json.rows[0];
   ok(r.status === "quote_sent" && r.notes === "Quoted $600 by phone", "status and notes saved from the browser");
 
-  for (const tab of ["Requests", "Menu", "Site info", "Photos", "Setup"]) {
+  for (const tab of ["Requests", "Menu", "Feedback", "Site info", "Photos", "Setup"]) {
     await p.getByRole("button", { name: tab, exact: true }).click(); await p.waitForTimeout(500);
     ok(!(await p.locator("body").innerText()).split("\n").some((l) => /^(null|undefined|false)$/.test(l.trim())), `the ${tab} tab shows no stray "null" text`);
   }
@@ -200,7 +200,7 @@ await site.post({ type: "event", fields: goodEvent() });
   await s.p.getByRole("button", { name: "Sign in" }).click();
   await s.p.getByRole("button", { name: /Sam Lee/ }).first().waitFor();
   const tabs = await s.p.$$eval(".tabs button", (b) => b.map((x) => x.textContent));
-  ok(tabs.join() === "Requests,Menu", "staff see Requests and Menu only: " + tabs.join());
+  ok(tabs.join() === "Requests,Menu,Feedback", "staff see Requests, Menu and Feedback only: " + tabs.join());
   await s.ctx.close();
 }
 

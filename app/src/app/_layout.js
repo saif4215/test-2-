@@ -10,12 +10,15 @@ import { LinkSheet } from "../components/LinkSheet";
 import { MemoryProvider } from "../lib/memory";
 import { OrderProvider } from "../lib/order";
 import { SiteProvider } from "../lib/site";
+import { usePrefs } from "../lib/prefs";
 import { applyScheme, colors, isDark } from "../theme";
 
 export default function RootLayout() {
   // The headings use DM Serif Display. Wait for it (briefly) so text does not jump when it arrives; if it never loads, carry on with the fallback.
   // Follow the phone's light or dark setting. The colours are switched before anything draws; when the phone changes look while the app is open, the new look rides along with the site data so every screen draws again (nothing is reloaded, so the order and the screen you are on stay).
-  applyScheme(useColorScheme());
+  const { appearance } = usePrefs();
+  const system = useColorScheme();
+  applyScheme(appearance === "auto" ? system : appearance);   // Settings can make the app always light or always dark
   const look = isDark() ? "dark" : "light";
   const [fontsReady, fontError] = useFonts({ DMSerifDisplay: require("../../assets/fonts/DMSerifDisplay-Regular.ttf") });
   const [gaveUp, setGaveUp] = useState(false);
@@ -42,6 +45,7 @@ export default function RootLayout() {
           <Stack.Screen name="order" options={{ presentation: "modal", title: "My order" }} />
           <Stack.Screen name="checkout" options={{ presentation: "modal", title: "Pickup order" }} />
           <Stack.Screen name="history" options={{ presentation: "modal", title: "Past orders" }} />
+          <Stack.Screen name="settings" options={{ presentation: "modal", title: "Settings" }} />
           <Stack.Screen name="order-sent" options={{ presentation: "modal", title: "Order sent" }} />
           <Stack.Screen name="item" options={{ presentation: "modal", title: "Details" }} />
         </Stack>

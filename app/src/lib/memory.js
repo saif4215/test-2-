@@ -1,5 +1,6 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { resetPrefs } from "./prefs";
 import { addUsual as addUsualTo, awardPoints as awardTo, spendPoints as spendFrom, readActive, readPoints, readHistory, readObject, readSaved, readUsuals, recordHistory, recordOrder, removeUsual as removeUsualFrom, toggleFavorite as toggle } from "./memory-util";
 
 // What the app remembers on this phone (the browser's own storage on the web): favorite items, the last few orders sent, and the name and phone used for pickup.
@@ -43,7 +44,13 @@ export function MemoryProvider({ children }) {
   /** The order just placed: Home shows where it stands until it is picked up or canceled and the customer closes the card. */
   const rememberActive = useCallback((o) => { const a = readActive({ ...o, at: Date.now() }); setActive(a); setActiveStatus("received"); }, []);
   const forgetActive = useCallback(() => setActive(null), []);
-  const value = useMemo(() => ({ points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, setActiveStatus }), [points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive]);
+  /** "Clear everything on this phone": favorites, usual drinks, past orders, points, searches, ratings, the saved name and phone, and the Settings choices. */
+  const resetAll = useCallback(() => {
+    setFavorites([]); setRecent([]); setUsuals([]); setHistory([]); setPoints({ balance: 0, awarded: [] }); setContact(NO_CONTACT); setActive(null);
+    AsyncStorage.multiRemove(["maruf:searches", "maruf:rated", "maruf:notify", "maruf:appearance", "maruf:menu-layout"]).catch(() => {});
+    resetPrefs();
+  }, []);
+  const value = useMemo(() => ({ points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, resetAll, setActiveStatus }), [points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, resetAll]);
   return createElement(Ctx.Provider, { value }, children);
 }
 

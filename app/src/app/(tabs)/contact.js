@@ -42,7 +42,7 @@ function Question({ q, a }) {
 }
 
 export default function Contact() {
-  const { business, faq } = useSite();
+  const { business, faq, amenities } = useSite();
   const status = openStatus(business.hours);
   const today = nyWeekday();
   const showEmail = business.email || showPlaceholders;
@@ -89,9 +89,26 @@ export default function Contact() {
         </Card>
       </View>
 
+      {amenities && amenities.length ? (
+        <View style={{ marginTop: 14 }}>
+          <Card style={{ padding: 16, gap: 10 }}>
+            <Text accessibilityRole="header" style={{ fontSize: 13, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: colors.goldText }}>Good to know</Text>
+            <View accessibilityLabel={`What we offer: ${amenities.join(", ")}`} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {amenities.map((a) => <View key={a} style={{ backgroundColor: colors.goldSoft, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }}><Text style={{ fontSize: 14.5, fontWeight: "700", color: colors.ink }}>{a}</Text></View>)}
+            </View>
+          </Card>
+        </View>
+      ) : null}
+
       <View style={{ marginTop: 14 }}>
         <Card>
           <InfoRow icon="chatbubble-ellipses-outline" title="Have a question?" label="Ask a question" onPress={() => router.push("/assistant")} last><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>Ask about the menu, hours or orders</Text></InfoRow>
+        </Card>
+      </View>
+
+      <View style={{ marginTop: 14 }}>
+        <Card>
+          <InfoRow icon="settings-outline" title="Settings" label="Open settings" onPress={() => router.push("/settings")} last><Text style={{ fontSize: 16, lineHeight: 23, color: colors.ink }}>Your details, light or dark, menu layout, clear my data</Text></InfoRow>
         </Card>
       </View>
 

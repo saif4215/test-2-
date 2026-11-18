@@ -8,6 +8,7 @@ import { Celebrate } from "../components/Celebrate";
 import { MapCard } from "../components/MapCard";
 import { ImHere } from "../components/ImHere";
 import { NotifyToggle } from "../components/NotifyToggle";
+import { RateOrder } from "../components/RateOrder";
 import { announceOrder } from "../lib/notify";
 import { success } from "../lib/haptics";
 import { money } from "../lib/order";
@@ -104,6 +105,7 @@ export default function OrderSent() {
       <Tracker step={info.step} canceled={canceled} />
       {!info.final && !canceled && !stale ? <ImHere id={String(id)} /> : null}
       {!info.final && !canceled ? <NotifyToggle /> : null}
+      {info.status === "done" && !preview ? <RateOrder id={String(id)} /> : null}
       <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}Pay at the counter when you pick it up.</Small>
       <Small>{pickup ? `Pickup at ${pickup} today: ` : "Pickup at "}{business.name}, {business.address.join(", ")}.</Small>
       <View style={{ gap: 12 }}>

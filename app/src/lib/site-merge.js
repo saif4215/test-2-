@@ -26,6 +26,7 @@ export function mergeSite(base, remote, apiUrl = "") {
   if (list(remote.packages)) out.packages = remote.packages.filter((p) => p && p.title).map((p) => ({ ...p, includes: Array.isArray(p.includes) ? p.includes : [] }));
   if (text(remote.packagesNote) !== null) out.packagesNote = remote.packagesNote;
   if (text(remote.featuredTitle)) out.featuredTitle = remote.featuredTitle;
+  if (Array.isArray(remote.amenities)) out.amenities = remote.amenities.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim().slice(0, 40)).slice(0, 12);
   if (Array.isArray(remote.promotions)) out.promotions = remote.promotions.filter((p) => p && typeof p.title === "string" && p.title).map((p) => ({ title: p.title, text: typeof p.text === "string" ? p.text : "", until: typeof p.until === "string" ? p.until : "" }));
   if (Array.isArray(remote.rewards)) out.rewards = remote.rewards.filter((r) => r && typeof r.title === "string" && r.title && Number.isFinite(Number(r.points)) && Number(r.points) >= 1).map((r) => ({ title: r.title, points: Math.floor(Number(r.points)) })).sort((a, b) => a.points - b.points);
   if (text(remote.rewardsNote) !== null) out.rewardsNote = remote.rewardsNote;

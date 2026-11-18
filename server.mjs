@@ -285,6 +285,27 @@ export function createServer(env = process.env) {
     return { ok: true, ref };
   }
 
+  /* ---- Feedback: a customer rates an order after pickup (1 to 5 stars and an optional comment). Kept on the server; the dashboard lists it. ---- */
+  const feedbackList = () => (db && db.kvGet("feedback")?.value) || [];
+  async function rateOrder(id, body) {
+    const stars = body && body.stars;
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) throw new HttpError(400, "Choose 1 to 5 stars.");
+    const comment = typeof (body && body.comment) === "string" ? body.comment.replace(/\s+/g, " ").trim().slice(0, 500) : "";
+    let order;
+    try { order = (await square("GET", `/v2/orders/${encodeURIComponent(id)}`)).order; }
+    catch (err) {
+      if (err instanceof SquareError && (err.status === 404 || err.status === 400)) throw new HttpError(404, "We can't find that order.");
+      throw new HttpError(502, "We can't reach the café right now. Please try again in a bit.");
+    }
+    if (!order || order.location_id !== cfg.locationId || order.source?.name !== APP_SOURCE) throw new HttpError(404, "We can't find that order.");
+    if (orderStatus(order) !== "done") throw new HttpError(409, "You can rate an order once it has been picked up.");
+    const pickup = (order.fulfillments || []).find((f) => f.type === "PICKUP");
+    const name = String(pickup?.pickup_details?.recipient?.display_name || "").slice(0, 60);
+    const entry = { orderId: id, ref: order.reference_id || "", name, stars, comment, at: new Date().toISOString() };
+    if (db) db.kvSet("feedback", [entry, ...feedbackList().filter((f) => f.orderId !== id)].slice(0, 500), "customer");   // one rating per order: rating again replaces it
+    return { ok: true };
+  }
+
   async function orderProgress(id) {
     let order;
     try { order = (await square("GET", `/v2/orders/${encodeURIComponent(id)}`)).order; }
@@ -478,6 +499,13 @@ export function createServer(env = process.env) {
 
     /* menu, content, photos (owner, or staff when STAFF_CAN_EDIT_SITE=1) */
     // Staff can edit the menu and prices (anyone signed in can). Site info, photos and resetting the menu stay with the owner.
+    if (route === "feedback" && method === "GET") {
+      const items = feedbackList();
+      const avg = items.length ? Math.round((items.reduce((sum, f) => sum + f.stars, 0) / items.length) * 10) / 10 : null;
+      return out(200, { ok: true, count: items.length, average: avg, items: items.slice(0, 100) });
+    }
+    { const del = /^feedback\/([A-Za-z0-9_-]{8,64})$/.exec(route);
+      if (del && method === "DELETE") { ownerOnly(); if (db) db.kvSet("feedback", feedbackList().filter((f) => f.orderId !== del[1]), who); db.audit(who, "feedback.delete"); return out(200, { ok: true }); } }
     if (route === "arrivals" && method === "GET") return out(200, { ok: true, arrivals: arrivals().map(({ orderId, ref, name, at }) => ({ orderId, ref, name, at })) });
     { const gone = /^arrivals\/([A-Za-z0-9_-]{8,64})$/.exec(route);
       if (gone && method === "DELETE") { if (db) db.kvSet("arrivals", arrivals().filter((a) => a.orderId !== gone[1]), who); return out(200, { ok: true }); } }
@@ -615,6 +643,13 @@ export function createServer(env = process.env) {
         if (limited("order", ip, orderMax)) throw new HttpError(429, "Too many orders from this connection. Wait a minute, or call us.");
         return send(res, 200, await placeOrder(await readBody(req, 12000)), { cors: true });
       }
+      const rate = /^\/api\/order\/([A-Za-z0-9_-]{8,64})\/feedback$/.exec(p);
+      if (rate) {
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
+        if (!enabled) throw new HttpError(503, "Ordering from the app isn't switched on yet.");
+        if (limited("order-feedback", ip, 10)) throw new HttpError(429, "Too many tries. Wait a minute and try again.");
+        return send(res, 200, await rateOrder(rate[1], await readBody(req, 4000)), { cors: true });
+      }
       const here = /^\/api\/order\/([A-Za-z0-9_-]{8,64})\/here$/.exec(p);
       if (here) {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
@@ -647,8 +682,8 @@ export function createServer(env = process.env) {
         const head = req.method === "HEAD";
         if (p === "/menu.json") return send(res, 200, head ? "" : publicMenu(getMenu()), { cors: true, cache: "no-cache" });
         if (p === "/content.json") {
-          const { business, venue, faq, packages, packagesNote, featuredTitle, promotions, rewards, rewardsNote, gallery, reviews, photos } = getContent();
-          return send(res, 200, head ? "" : { business, venue, faq, packages, packagesNote, featuredTitle, promotions, rewards, rewardsNote, gallery, reviews, photos }, { cors: true, cache: "no-cache" });
+          const { business, venue, faq, packages, packagesNote, featuredTitle, amenities, promotions, rewards, rewardsNote, gallery, reviews, photos } = getContent();
+          return send(res, 200, head ? "" : { business, venue, faq, packages, packagesNote, featuredTitle, amenities, promotions, rewards, rewardsNote, gallery, reviews, photos }, { cors: true, cache: "no-cache" });
         }
         if (p === "/robots.txt") return send(res, 200, robotsTxt(baseFor(req)), { type: "text/plain; charset=utf-8", cache: "no-cache" });
         if (p === "/sitemap.xml") { const base = baseFor(req); if (!base) throw new HttpError(404, "Not found."); return send(res, 200, sitemapXml(base, PAGES), { type: "application/xml; charset=utf-8", cache: "no-cache" }); }

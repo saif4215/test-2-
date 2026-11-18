@@ -162,3 +162,19 @@ test("allergen notes are kept as the café typed them (trimmed, limited), calori
   const shipped = normalizeMenu(JSON.parse((await import("node:fs")).readFileSync(new URL("./public/menu.json", import.meta.url), "utf8"))).menu;
   assert.ok(!Object.values(shipped.groups).flatMap((c) => Object.values(c).flat()).some((i) => i.allergens), "the café's menu starts with no allergen claims");
 });
+
+test("amenities: trimmed, limited to 12 of 40 characters, empty by default, and served to the app", async () => {
+  const { normalizeContent } = await import("./lib/content.mjs");
+  const base = JSON.parse((await import("node:fs")).readFileSync(new URL("./public/content.default.json", import.meta.url), "utf8"));
+  assert.deepEqual(normalizeContent(base).content.amenities, [], "none until the café adds some");
+  const got = normalizeContent({ ...base, amenities: ["  Free Wi-Fi ", "", "x".repeat(80), ...Array.from({ length: 20 }, (_, i) => `Thing ${i}`)] }).content.amenities;
+  assert.equal(got[0], "Free Wi-Fi"); assert.equal(got[1].length, 40); assert.equal(got.length, 12);
+  const site = await startSite();
+  try {
+    const owner = await site.login();
+    const content = (await owner.get("content")).json.content;
+    content.amenities = ["Free Wi-Fi"];
+    assert.equal((await owner.put("content", { content })).status, 200);
+    assert.deepEqual((await (await fetch(site.u + "/content.json")).json()).amenities, ["Free Wi-Fi"]);
+  } finally { site.close(); }
+});

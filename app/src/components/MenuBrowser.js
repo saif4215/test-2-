@@ -10,6 +10,7 @@ import { useMemory } from "../lib/memory";
 import { describeCustom, needsChoice, unitCents } from "../lib/customize";
 import { success } from "../lib/haptics";
 import { addSearch, readSearches, reorderIds } from "../lib/memory-util";
+import { setPref, usePrefs } from "../lib/prefs";
 import { useSite } from "../lib/site";
 import { dietsPresent, featuredItems, filterByDiet, indexMenu, itemFacts, newItems, pickedForYou, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
@@ -29,9 +30,8 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
   const { menu } = useSite();
   const { width } = useWindowDimensions();
   const pad = width >= 768 ? 32 : 20;
-  const [layout, setLayoutState] = useState("swipe");   // "swipe": one category at a time, scroll right through its items. "list": every category one under the other. The choice is remembered.
-  useEffect(() => { AsyncStorage.getItem("maruf:menu-layout").then((v) => { if (v === "list" || v === "swipe") setLayoutState(v); }).catch(() => {}); }, []);
-  const setLayout = (next) => { setLayoutState(next); AsyncStorage.setItem("maruf:menu-layout", next).catch(() => {}); };
+  const { menuLayout: layout } = usePrefs();   // "swipe": one category at a time, scroll right through its items. "list": every category one under the other. Chosen here or in Settings, and remembered.
+  const setLayout = (next) => setPref("menuLayout", next);
   const [diet, setDiet] = useState(null);   // a dietary tag the customer is filtering by ("Vegan"), or null
   const tags = useMemo(() => dietsPresent(menu), [menu]);
   const categories = useMemo(() => filterByDiet(categoryList(menu), tags.includes(diet) ? diet : null), [menu, diet, tags]);

@@ -8,6 +8,7 @@ import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterBy
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS, notificationFor } from "../src/lib/order-util.js";
+import { cleanPref, DEFAULTS } from "../src/lib/prefs-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions, readSearches, addSearch } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
@@ -803,4 +804,15 @@ test("Picked for you: untried items from the categories they order from most, no
   assert.ok(!got.includes("c1") && !got.includes("t1") && !got.includes("c4") && !got.includes("s1"));
   assert.equal(pickedForYou(menu, history, 2).length, 2);
   assert.deepEqual(pickedForYou(menu, [{ lines: [{ id: "gone", qty: 1 }] }]), [], "an item no longer on the menu says nothing");
+});
+
+test("Settings choices: only known values are accepted, anything else falls back to the default", () => {
+  assert.equal(cleanPref("appearance", "dark"), "dark");
+  assert.equal(cleanPref("appearance", "light"), "light");
+  assert.equal(cleanPref("appearance", "purple"), "auto");
+  assert.equal(cleanPref("appearance", undefined), "auto");
+  assert.equal(cleanPref("menuLayout", "list"), "list");
+  assert.equal(cleanPref("menuLayout", "grid"), "swipe");
+  assert.equal(cleanPref("nonsense", "x"), undefined);
+  assert.deepEqual(DEFAULTS, { appearance: "auto", menuLayout: "swipe" });
 });

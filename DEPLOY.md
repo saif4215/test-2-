@@ -139,6 +139,12 @@ The dashboard's **Setup** tab shows whether alerts are on, and every request sho
 
 **Picked for you.** After a customer's first order, Home shows a "Picked for you" row: items they have not tried yet from the categories they order from most. It is worked out on their own phone from their own past orders; nothing is sent anywhere. Nothing shows before a first order.
 
+**Ratings from customers.** After an order is picked up, its order screen asks "How was your order?" (1 to 5 stars and an optional note). Only you see them: the dashboard has a **Feedback** tab with the average, each rating, the comment, the customer's name and order code, and a Low / OK / Good tag. Staff can read ratings; only the owner can delete one. A customer rates an order once (rating again replaces it), and only after pickup. Ratings are never shown to other customers.
+
+**What the café offers.** In Site info, "What the café offers" is one line per thing ("Free Wi-Fi", "Outdoor seating"), shown as small tags under "Good to know" on the Contact tab. Nothing shows until you add some.
+
+**Settings in the app.** The Contact tab has **Settings**: the name and phone used for ordering, Appearance (same as the phone, always light, always dark), the Menu layout, and **Clear everything on this phone** (favorites, usual drinks, past orders, phone-counted points, searches, the saved name and phone, and these choices, after a confirmation). It all lives on the customer's phone; the café keeps no copy, and points kept in Square stay with their phone number there.
+
 **Backups.** Every day the server saves a copy of the database (requests, menu and site edits) and the uploaded photos in `backups/<date>/` inside the data folder, and keeps the newest 7. `npm run backup` saves one right now. These copies are on the same disk as the data, so now and then copy the `backups` folder somewhere else (a USB stick, a cloud drive), or use the host's own disk snapshots. Set `BACKUPS=off` to switch the daily copy off.
 
 Sign in at `https://YOUR-ADDRESS/admin/` with username `owner` and your `ADMIN_PASSWORD`.

@@ -86,3 +86,12 @@ export async function checkGiftCard(gan) {
     return res.ok && json.ok && Number.isFinite(cents) ? { ok: true, state: String(json.state || ""), balanceCents: Math.max(0, Math.floor(cents)) } : fail(json.error || "We can't check gift cards right now.");
   } catch { return fail(OFFLINE, { network: true }); }
 }
+
+/** Rate a picked-up order: 1 to 5 stars and an optional comment. Resolves { ok: true } or { ok: false, error }. */
+export async function sendFeedback(id, stars, comment) {
+  try {
+    const res = await request(`/api/order/${encodeURIComponent(id)}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stars, ...(comment ? { comment } : {}) }) }, 10000);
+    const json = await res.json().catch(() => ({}));
+    return res.ok && json.ok ? { ok: true } : fail(json.error || "We couldn't send your rating. Please try again.");
+  } catch { return fail(OFFLINE, { network: true }); }
+}

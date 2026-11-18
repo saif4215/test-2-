@@ -54,7 +54,7 @@ const canManage = () => !!me?.canManageSite;
 function render() {
   app.replaceChildren();
   if (!me) return renderLogin();
-  const tabs = [["requests", "Requests"], ["menu", "Menu"], ...(canManage() ? [["site", "Site info"], ["photos", "Photos"]] : []), ...(me.role === "owner" ? [["setup", "Setup"]] : [])];
+  const tabs = [["requests", "Requests"], ["menu", "Menu"], ["feedback", "Feedback"], ...(canManage() ? [["site", "Site info"], ["photos", "Photos"]] : []), ...(me.role === "owner" ? [["setup", "Setup"]] : [])];
   if (!tabs.some(([k]) => k === S.tab)) S.tab = "requests";
   const main = h("main", { id: "main" });
   app.append(
@@ -65,7 +65,7 @@ function render() {
     arrivalStrip(),
     main,
   );
-  ({ requests: viewRequests, menu: viewMenu, site: viewSite, photos: viewPhotos, setup: viewSetup })[S.tab](main);
+  ({ requests: viewRequests, menu: viewMenu, feedback: viewFeedback, site: viewSite, photos: viewPhotos, setup: viewSetup })[S.tab](main);
 }
 
 /** "Busy? Pause pickup orders": one strip under the tabs on every page. Customers who try to order are told when to come back; it ends by itself. */
@@ -468,7 +468,7 @@ async function viewSite(main) {
   };
 
   const faqBox = listEditor(c.faq, () => ({ q: "", a: "" }), (it) => [...bind(it, "q", "Question"), ...bind(it, "a", "Answer", { area: true, max: "1500" })], "+ Add a question", true);
-  c.promotions ||= []; c.rewards ||= []; c.rewardsNote ||= "";
+  c.promotions ||= []; c.amenities ||= []; c.rewards ||= []; c.rewardsNote ||= "";
   const promoBox = listEditor(c.promotions, () => ({ title: "", text: "", until: "" }), (it) => [...bind(it, "title", "Title", { max: "60", ph: "for example: Free cookie with any large drink" }), ...bind(it, "text", "Details (optional)", { area: true, max: "400" }), ...bind(it, "until", "Last day it is shown (optional, like 2026-12-31)", { max: "10", hint: "Leave blank to show it until you remove it." })], "+ Add a promotion", true);
   const rewardBox = listEditor(c.rewards, () => ({ points: "", title: "" }), (it) => [...bind(it, "title", "Reward", { max: "60", ph: "for example: A free drink" }), ...bind(it, "points", "Points needed", { max: "6", ph: "for example: 100" })], "+ Add a reward", true);
   const pkgBox = listEditor(c.packages, () => ({ id: "", title: "", blurb: "", includes: [], price: "" }), (it) => {
@@ -493,6 +493,8 @@ async function viewSite(main) {
     h("div", { class: "card" }, h("h2", { text: "Rent the café: facts" }), h("p", { class: "hint", text: "These show on the Rent the Café page only when you fill them in. Nothing is guessed." }),
       ...bind(c.venue, "capacity", "How many people the space holds", { max: "80", ph: "for example: up to 40 seated" }), ...bind(c.venue, "notes", "About the space", { area: true, max: "1000" }),
       ...bind(c.venue, "policies", "Rental rules (deposit, cancellation, food rules…)", { area: true, max: "1500", hint: "Write your real policies here before taking bookings." })),
+    h("div", { class: "card" }, h("h2", { text: "What the café offers" }), h("p", { class: "hint", text: "Shown on the app's Contact tab under “Good to know”, one small tag each. Only list what is true, for example “Free Wi-Fi” or “Outdoor seating”. Nothing shows until you add some." }),
+      h("label", { for: "amen", text: "One per line (up to 12)" }), h("textarea", { id: "amen", maxlength: "600", placeholder: "Free Wi-Fi\nOutdoor seating", oninput: (e) => { c.amenities = e.target.value.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 12); }, text: c.amenities.join("\n") })),
     h("div", { class: "card" }, h("h2", { text: "Home picks" }), h("p", { class: "hint", text: "Items ticked “Show on Home” in the Menu tab appear on the app's home screen under this title. Only call it “Most popular” if your sales show that." }),
       ...bind(c, "featuredTitle", "Title", { max: "40", ph: "Try these" })),
     h("div", { class: "card" }, h("h2", { text: "Promotions" }), h("p", { class: "hint", text: "Shown on the app's Home screen. Only add a promotion you will honor. There are none until you add one." }), promoBox),
@@ -611,6 +613,22 @@ async function viewSetup(main) {
       s.squareMenu ? squareMenuCard(s.squareMenu) : null,
       h("div", { class: "card" }, h("h2", { text: "Request counts" }), h("p", { text: Object.entries(s.counts).map(([k, n]) => `${k.replace("_", " ")}: ${n}`).join(" · ") })),
       h("div", { class: "card" }, h("h2", { text: "Recent changes" }), h("ul", { class: "plain" }, a.entries.length ? a.entries.slice(0, 40).map((e) => h("li", { text: `${when(e.at)} · ${e.user} · ${e.action}${e.detail ? " · " + e.detail : ""}` })) : h("li", { text: "Nothing yet." }))));
+  } catch (err) { main.append(h("p", { class: "msg bad", text: err.message })); }
+}
+
+/* ---------- feedback ---------- */
+const starText = (n) => "★".repeat(n) + "☆".repeat(5 - n);
+async function viewFeedback(main) {
+  try {
+    const r = await api("GET", "feedback");
+    main.append(
+      h("div", { class: "card" }, h("h2", { text: r.count ? `${r.average} out of 5, from ${r.count} ${r.count === 1 ? "rating" : "ratings"}` : "No ratings yet" }),
+        h("p", { class: "hint", text: "Customers can rate an order after they pick it up. They see no replies here: this is for you. Ratings are never shown to other customers." })),
+      ...r.items.map((f) => h("div", { class: "card" },
+        h("div", { class: "row" }, h("b", { class: "grow", text: `${starText(f.stars)}  ${f.stars} out of 5` }), h("span", { class: `badge ${f.stars <= 2 ? "bad" : f.stars >= 4 ? "ok" : ""}`, text: f.stars <= 2 ? "Low" : f.stars >= 4 ? "Good" : "OK" })),
+        f.comment ? h("p", { text: f.comment }) : h("p", { class: "hint", text: "No comment." }),
+        h("p", { class: "hint", text: `${f.name || "A customer"} · order ${f.ref || "?"} · ${when(f.at)}` }),
+        me.role === "owner" ? h("div", { class: "row end" }, h("button", { type: "button", class: "danger", text: "Delete", onclick: async () => { if (!confirm("Delete this rating?")) return; try { await api("DELETE", `feedback/${encodeURIComponent(f.orderId)}`); render(); } catch (err) { flash(main, err.message, "bad"); } } })) : null)));
   } catch (err) { main.append(h("p", { class: "msg bad", text: err.message })); }
 }
 
