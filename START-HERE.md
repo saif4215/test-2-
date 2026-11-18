@@ -22,6 +22,7 @@ That is all. To stop, close the black window. To start again, double-click START
 | Save a copy of my data | It saves one every day by itself. To save one now: `npm run backup`. Then copy the `data/backups` folder to a USB stick or cloud drive. |
 | Change hours, phone, or add a promotion | Dashboard > **Site info** |
 | Change a password, or add email alerts, Square, or the AI key | Run setup again: open a terminal in this folder and type `npm run setup` |
+| Let customers pay in the app (card, Apple Pay), so nobody pays at the counter | Run `npm run setup` and answer the Square **Application ID** question. Read "Paying in the app" in `DEPLOY.md` first, and try it in the Square Sandbox. |
 | Put it online so customers can use it | Follow `DEPLOY.md`. Right now the app only works on this computer, because that is where the server is. |
 
 ## If something goes wrong

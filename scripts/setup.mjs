@@ -86,13 +86,15 @@ export async function runSetup({ ask, say = console.log, old = {}, password = ma
     say("   From developer.squareup.com > your application > Credentials (Sandbox or Production, to match what you chose):");
     await text("SQUARE_ACCESS_TOKEN", "   Access token:");
     await text("SQUARE_LOCATION_ID", "   Location ID (Square Developer Dashboard > Locations):");
+    say("   To let customers PAY in the app (card, Apple Pay, Google Pay) so nobody pays at the counter, also paste the Application ID from the same Credentials page. Press Enter to keep paying at the counter.");
+    await text("SQUARE_APPLICATION_ID", "   Application ID (optional):");
     for (;;) {
       const a = (await ask(`   Sales tax in percent${old.TAX_PERCENT ? ` (saved: ${old.TAX_PERCENT})` : ""}. Staten Island is usually 8.875: check with your accountant. Type it, or Enter ${old.TAX_PERCENT ? "to keep" : "to leave blank"}: `)).trim();
       if (!a) { if (old.TAX_PERCENT) values.TAX_PERCENT = old.TAX_PERCENT; break; }
       if (Number.isFinite(Number(a)) && Number(a) >= 0 && Number(a) < 25) { values.TAX_PERCENT = a; break; }
       say("   Type just the number, for example 8.875.");
     }
-  } else if (hadSquare) { for (const k of ["SQUARE_ENV", "SQUARE_ACCESS_TOKEN", "SQUARE_LOCATION_ID", "TAX_PERCENT"]) values[k] = ""; say("   Square is disconnected now (the app goes back to sending requests only)."); }
+  } else if (hadSquare) { for (const k of ["SQUARE_ENV", "SQUARE_ACCESS_TOKEN", "SQUARE_LOCATION_ID", "SQUARE_APPLICATION_ID", "TAX_PERCENT"]) values[k] = ""; say("   Square is disconnected now (the app goes back to sending requests only)."); }
   say("");
 
   say("4. Smarter chat (optional)");

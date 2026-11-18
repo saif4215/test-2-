@@ -5,6 +5,8 @@ import http from "node:http";
 export async function startSquare() {
   const calls = [], orders = new Map();
   const state = { fulfillment: "PROPOSED", loyalty: true };   // loyalty: false = this Square account has no Loyalty add-on
+  const orderKeys = new Map();   // order ids by idempotency key
+  const payments = new Map();   // payments by idempotency key (Square answers a repeat of the same request with the same payment)
   const accounts = new Map(), counted = new Map();   // loyalty accounts by id; points already given for an order, by account+order
   const PROGRAM = { id: "PROGRAM1", status: "ACTIVE", reward_tiers: [{ id: "TIER_COOKIE", name: "A free cookie", points: 10 }, { id: "TIER_DRINK", name: "A free drink", points: 100 }] };
   const server = http.createServer(async (req, res) => {
@@ -13,10 +15,39 @@ export async function startSquare() {
     calls.push({ method: req.method, url: req.url, json });
     res.setHeader("Content-Type", "application/json");
     if (req.method === "POST" && req.url === "/v2/orders") {
+      if (json.idempotency_key && orderKeys.has(json.idempotency_key)) return res.end(JSON.stringify({ order: orders.get(orderKeys.get(json.idempotency_key)) }));   // Square answers a repeat of the same request with the same order
       const sub = json.order.line_items.reduce((s, l) => s + l.base_price_money.amount * Number(l.quantity), 0);
-      const order = { id: "SQORDER" + (orders.size + 1) + "ABCDEF", state: "OPEN", location_id: json.order.location_id, reference_id: json.order.reference_id, source: json.order.source, total_money: { amount: Math.round(sub * 1.08875), currency: "USD" }, total_tax_money: { amount: Math.round(sub * 1.08875) - sub, currency: "USD" }, fulfillments: [{ type: "PICKUP", state: "PROPOSED", pickup_details: json.order.fulfillments?.[0]?.pickup_details }] };
+      const order = { id: "SQORDER" + (orders.size + 1) + "ABCDEF", version: 1, state: "OPEN", location_id: json.order.location_id, reference_id: json.order.reference_id, source: json.order.source, total_money: { amount: Math.round(sub * 1.08875), currency: "USD" }, total_tax_money: { amount: Math.round(sub * 1.08875) - sub, currency: "USD" }, fulfillments: [{ type: "PICKUP", state: "PROPOSED", pickup_details: json.order.fulfillments?.[0]?.pickup_details }] };
       orders.set(order.id, order);
+      if (json.idempotency_key) orderKeys.set(json.idempotency_key, order.id);
       return res.end(JSON.stringify({ order }));
+    }
+    if (req.method === "POST" && req.url === "/v2/payments") {
+      calls.payments = (calls.payments || 0) + 1;
+      const k = json.idempotency_key;
+      const token = String(json.source_id || "");
+      if (token === "cnon:card-nonce-network") return res.destroy();   // no answer at all: the charge may or may not have happened
+      const prior = payments.get(k);
+      if (prior) {
+        if (prior.source_id !== token) { res.statusCode = 400; return res.end(JSON.stringify({ errors: [{ category: "INVALID_REQUEST_ERROR", code: "IDEMPOTENCY_KEY_REUSED", detail: "The idempotency key was already used with a different request." }] })); }
+        return res.end(JSON.stringify({ payment: prior.payment }));
+      }
+      const order = orders.get(json.order_id);
+      const bad = { "cnon:card-nonce-declined": "GENERIC_DECLINE", "cnon:card-nonce-cvv": "CVV_FAILURE", "cnon:card-nonce-funds": "INSUFFICIENT_FUNDS" }[token];
+      if (bad) { res.statusCode = 402; return res.end(JSON.stringify({ errors: [{ category: "PAYMENT_METHOD_ERROR", code: bad, detail: "Declined by the stand-in" }] })); }
+      if (!token.startsWith("cnon:card-nonce-ok") && !token.startsWith("wallet:")) { res.statusCode = 400; return res.end(JSON.stringify({ errors: [{ category: "INVALID_REQUEST_ERROR", code: "INVALID_CARD_DATA", detail: "bad token" }] })); }
+      if (!order || order.state === "CANCELED" || json.amount_money.amount !== order.total_money.amount) { res.statusCode = 400; return res.end(JSON.stringify({ errors: [{ category: "INVALID_REQUEST_ERROR", code: "VALUE_TOO_LOW", detail: "amount does not match the order" }] })); }
+      const payment = { id: "PAY" + (payments.size + 1), status: "COMPLETED", order_id: order.id, amount_money: json.amount_money, tip_money: json.tip_money, total_money: { amount: json.amount_money.amount + (json.tip_money ? json.tip_money.amount : 0), currency: "USD" }, location_id: json.location_id, reference_id: json.reference_id };
+      payments.set(k, { source_id: token, payment, request: json });
+      order.tenders = [{ id: "T" + payments.size, type: "CARD" }]; order.net_amount_due_money = { amount: 0, currency: "USD" };
+      return res.end(JSON.stringify({ payment }));
+    }
+    const putOrder = /^\/v2\/orders\/(\w+)$/.exec(req.url);
+    if (req.method === "PUT" && putOrder && orders.has(putOrder[1])) {
+      const o = orders.get(putOrder[1]);
+      if (json.order && json.order.version !== o.version) { res.statusCode = 409; return res.end(JSON.stringify({ errors: [{ code: "VERSION_MISMATCH" }] })); }
+      if (json.order && json.order.state === "CANCELED") { o.state = "CANCELED"; o.version += 1; }
+      return res.end(JSON.stringify({ order: o }));
     }
     if (req.method === "POST" && req.url === "/v2/gift-cards/from-gan") {
       calls.giftcards = (calls.giftcards || 0) + 1;
@@ -51,5 +82,5 @@ export async function startSquare() {
   });
   await new Promise((r) => server.listen(0, r));
   server.unref();
-  return { url: `http://localhost:${server.address().port}`, calls, orders, accounts, set: (f) => { state.fulfillment = f; }, loyalty: (on) => { state.loyalty = on; } };
+  return { url: `http://localhost:${server.address().port}`, calls, orders, accounts, payments, set: (f) => { state.fulfillment = f; }, loyalty: (on) => { state.loyalty = on; } };
 }

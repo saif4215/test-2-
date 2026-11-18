@@ -40,7 +40,7 @@ function Tracker({ step, canceled }) {
 
 /** Shown after the café's server says the order is in Square. It then keeps asking how the order is doing until it is picked up or canceled. */
 export default function OrderSent() {
-  const { id, ref, total, name, preview, fresh, pickup } = useLocalSearchParams();
+  const { id, ref, total, name, preview, fresh, pickup, paid } = useLocalSearchParams();
   const { business } = useSite();
   const { active, activeStatus, setActiveStatus, awardPoints } = useMemory();
   const mine = active?.id === String(id);   // the order Home is following
@@ -106,7 +106,7 @@ export default function OrderSent() {
       {!info.final && !canceled && !stale ? <ImHere id={String(id)} /> : null}
       {!info.final && !canceled ? <NotifyToggle /> : null}
       {info.status === "done" ? <RateOrder id={String(id)} /> : null}
-      <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}Pay at the counter when you pick it up.</Small>
+      <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}{paid ? "You paid in the app: there is nothing to pay at the counter." : "Pay at the counter when you pick it up."}</Small>
       <Small>{pickup ? `Pickup at ${pickup} today: ` : "Pickup at "}{business.name}, {business.address.join(", ")}.</Small>
       <View style={{ gap: 12 }}>
         <Button title="Done" variant="primary" onPress={done} />

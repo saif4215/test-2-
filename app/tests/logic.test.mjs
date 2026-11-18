@@ -7,7 +7,7 @@ import { plan, quantityFor } from "../src/lib/plan.js";
 import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet, newItems, itemFacts, pickedForYou } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
-import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS, notificationFor } from "../src/lib/order-util.js";
+import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS, notificationFor, readPayments } from "../src/lib/order-util.js";
 import { cleanPref, DEFAULTS } from "../src/lib/prefs-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
 import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions, readSearches, addSearch } from "../src/lib/memory-util.js";
@@ -815,4 +815,11 @@ test("Settings choices: only known values are accepted, anything else falls back
   assert.equal(cleanPref("menuLayout", "grid"), "swipe");
   assert.equal(cleanPref("nonsense", "x"), undefined);
   assert.deepEqual(DEFAULTS, { appearance: "auto", menuLayout: "swipe" });
+});
+
+test("how the café takes payment is read safely from the server's settings", () => {
+  assert.deepEqual(readPayments({ applicationId: "sandbox-sq0idb-ABC123", locationId: "L88917AVBK2S5", environment: "sandbox" }), { applicationId: "sandbox-sq0idb-ABC123", locationId: "L88917AVBK2S5", environment: "sandbox" });
+  assert.equal(readPayments({ applicationId: "sq0idp-XYZ789", locationId: "LOC1", environment: "production" }).environment, "production");
+  assert.equal(readPayments({ applicationId: "sq0idp-XYZ789", locationId: "LOC1", environment: "weird" }).environment, "sandbox", "an unknown environment is treated as the safe one");
+  for (const bad of [undefined, null, "x", {}, { applicationId: "abc", locationId: "LOC1" }, { applicationId: "sq0idp-XYZ789" }, { applicationId: "has spaces!!", locationId: "LOC1" }, { applicationId: "sq0idp-XYZ789", locationId: "<script>" }]) assert.equal(readPayments(bad), null, JSON.stringify(bad));
 });

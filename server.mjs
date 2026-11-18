@@ -119,6 +119,8 @@ export function createServer(env = process.env) {
     environment: production ? "production" : "sandbox", taxPercent,
   };
   const enabled = !!(cfg.token && cfg.locationId);
+  // Paying in the app (Square Web Payments SDK in the browser makes a one-time token; this server charges it). On when SQUARE_APPLICATION_ID is set, unless PAY_ONLINE=off. When it is on, an order cannot be placed without paying.
+  const payOnline = !!(env.SQUARE_ACCESS_TOKEN && env.SQUARE_LOCATION_ID && env.SQUARE_APPLICATION_ID) && env.PAY_ONLINE !== "off";
   const tipsOn = env.TIPS !== "off";   // the app offers a planned tip at checkout; the cashier adds it when the customer pays
   const pickupMinMinutes = (() => { const n = Number(env.PICKUP_MIN_MINUTES); return Number.isFinite(n) && n >= 5 && n <= 240 ? Math.round(n) : 30; })();   // the café's prep time: the earliest pickup time a customer can choose
   const pointsPerDollar = (() => { const n = Number(env.POINTS_PER_DOLLAR); return Number.isFinite(n) && n > 0 && n <= 100 ? n : 1; })();   // points a customer earns for each dollar on an order they pick up
@@ -194,9 +196,27 @@ export function createServer(env = process.env) {
     } catch (err) { console.error("Loyalty sign-up failed:", err instanceof SquareError ? `${err.status} ${err.errors[0]?.code || ""}` : err.message); }
   }
 
+  /** What to tell the customer when Square would not take the payment. Never Square's own wording or codes. */
+  function paymentMessage(err) {
+    const codes = (err instanceof SquareError ? err.errors : []).map((e) => e.code).join(" ");
+    if (/INSUFFICIENT_FUNDS/.test(codes)) return "That card doesn't have enough funds. Please try another card.";
+    if (/CVV|VERIFICATION|ADDRESS_VERIFICATION/.test(codes)) return "The card's security code or postal code didn't match. Please check it and try again.";
+    if (/EXPIRATION|EXPIRED/.test(codes)) return "That card has expired. Please try another card.";
+    if (/CARD_DECLINED|GENERIC_DECLINE|CARD_NOT_SUPPORTED|TRANSACTION_LIMIT|PAN_FAILURE|INVALID_CARD/.test(codes)) return "Your card was declined. Please try another card or Apple Pay.";
+    return "We couldn't take that payment. Please try again or use another card.";
+  }
+  /** Cancel an order that was not paid, so it never reaches the kitchen. Best effort: the customer is told the payment failed either way. */
+  async function cancelUnpaid(order) {
+    try { await square("PUT", `/v2/orders/${encodeURIComponent(order.id)}`, { order: { location_id: cfg.locationId, version: order.version, state: "CANCELED" } }); }
+    catch (err) { console.error("Could not cancel the unpaid order:", err instanceof SquareError ? `${err.status} ${err.errors[0]?.code || ""}` : err.message); }
+  }
+  const alreadyPaid = (o) => !!o && (o.net_amount_due_money?.amount === 0 || (Array.isArray(o.tenders) && o.tenders.length > 0));
+
   async function placeOrder(body) {
     const { lines, name, note: customerNote, phone, key, pickupAt, tipCents } = parseOrder(body, checkoutIndex(getMenu()), maxOrderCents);
-    const tip = tipCents > 0 && tipsOn ? `Tip planned: $${(tipCents / 100).toFixed(2)}. Add it when the customer pays.` : "";
+    const token = typeof body.paymentToken === "string" ? body.paymentToken : "";
+    if (payOnline && !/^[A-Za-z0-9:_-]{8,300}$/.test(token)) throw new HttpError(400, "Payment is required. Enter your card, or use Apple Pay or Google Pay.", { needsPayment: true });
+    const tip = !payOnline && tipCents > 0 && tipsOn ? `Tip planned: $${(tipCents / 100).toFixed(2)}. Add it when the customer pays.` : "";
     const note = [customerNote, tip].filter(Boolean).join(" | ").slice(0, 500);
     if (pickupAt) { const problem = pickupProblem(pickupAt, getContent().business.hours, new Date(), { minMinutes: pickupMinMinutes }); if (problem) throw new HttpError(400, problem); }
     const ref = orderRef(key);
@@ -211,10 +231,37 @@ export function createServer(env = process.env) {
     if (cfg.taxPercent > 0) order.taxes = [{ uid: "sales-tax", name: "Sales tax", percentage: String(cfg.taxPercent), scope: "ORDER" }];
     try {
       const created = (await square("POST", "/v2/orders", { idempotency_key: key, order })).order;
-      if (body.loyalty === true) await enrolLoyalty(created.id, phone);
       const subtotal = lines.reduce((s, l) => s + l.cents * l.qty, 0);
+      if (payOnline) {
+        const total = created.total_money?.amount;   // what Square worked out, tax included: the customer is charged this, never a number from the app
+        if (!Number.isInteger(total) || total < 1) { await cancelUnpaid(created); throw new HttpError(502, "We couldn't work out the total for your order. Please try again, or call us.", { retry: true, newKey: true }); }
+        const tipCharge = tipsOn ? tipCents : 0;
+        try {
+          await square("POST", "/v2/payments", {
+            idempotency_key: `pay-${key}`.slice(0, 45), source_id: token, autocomplete: true, location_id: cfg.locationId, order_id: created.id, reference_id: ref,
+            amount_money: { amount: total, currency: "USD" }, ...(tipCharge > 0 ? { tip_money: { amount: tipCharge, currency: "USD" } } : {}),
+          });
+        } catch (err) {
+          if (err instanceof SquareError && err.errors.some((e) => e.code === "IDEMPOTENCY_KEY_REUSED")) {   // the same order was paid on an earlier try: if it really is paid, that is a success
+            let again = null;
+            try { again = (await square("GET", `/v2/orders/${encodeURIComponent(created.id)}`)).order; } catch { /* unknown */ }
+            if (!alreadyPaid(again)) throw new HttpError(402, "We couldn't take that payment. Please try again.", { payment: "failed", newKey: true });
+          } else if (err instanceof SquareError) {
+            console.error("Square payment refused:", `${err.status} ${err.errors.map((e) => e.code).join(",")}`);   // codes only: never the token, card or customer
+            await cancelUnpaid(created);
+            throw new HttpError(402, paymentMessage(err), { payment: "failed", newKey: true });
+          } else {
+            console.error("Square payment: no answer:", err.message);   // the charge may or may not have gone through: do not cancel; trying again with the same order will not charge twice
+            throw new HttpError(502, "We couldn't confirm your payment. Please check with the café before paying again, or try again: you will not be charged twice.", { retry: true });
+          }
+        }
+        if (body.loyalty === true) await enrolLoyalty(created.id, phone);
+        return { ok: true, orderId: created.id, ref, totalCents: total + tipCharge, paid: true, ...(tipCharge > 0 ? { tipCents: tipCharge } : {}) };
+      }
+      if (body.loyalty === true) await enrolLoyalty(created.id, phone);
       return { ok: true, orderId: created.id, ref, totalCents: created.total_money?.amount ?? subtotal };
     } catch (err) {
+      if (err instanceof HttpError) throw err;
       console.error("Square order failed:", err instanceof SquareError ? `${err.status} ${err.errors[0]?.code || ""}` : err.message);   // never the customer's details
       if (err instanceof SquareError) throw new HttpError(502, "We couldn't send your order to the café. Please try again, or call us.", { retry: true });
       throw new HttpError(502, "We couldn't reach the café's order system. Please try again, or call us. Trying again will not order twice.", { retry: true });
@@ -570,7 +617,7 @@ export function createServer(env = process.env) {
       return out(200, {
         ok: true, assistant: assistantOn,
         email: !!(env.RESEND_API_KEY && env.NOTIFY_EMAIL), webhook: !!env.INQUIRY_WEBHOOK_URL, storage: true,
-        square: enabled ? cfg.environment : "off", loyalty: !!(await loyaltyProgram()), squareMenu: await squareMenuStatus(), publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
+        square: enabled ? cfg.environment : "off", loyalty: !!(await loyaltyProgram()), payOnline, squareMenu: await squareMenuStatus(), publicUrl: !!publicUrl, staffAccount: !!env.STAFF_PASSWORD && env.STAFF_PASSWORD.length >= 10,
         staffCanEditSite: env.STAFF_CAN_EDIT_SITE === "1", warnings: auth.warnings, counts: db.counts(),
       });
     }
@@ -607,7 +654,11 @@ export function createServer(env = process.env) {
       }
       if (p === "/api/config" && req.method === "GET") {
         const prog = enabled ? await loyaltyProgram() : null;
-        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, tips: tipsOn, giftCards: env.GIFT_CARDS !== "off", ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+        return send(res, 200, enabled ? { enabled, environment: cfg.environment, taxPercent: cfg.taxPercent, maxOrderCents, pickup: { minMinutes: pickupMinMinutes, step: 15 }, pointsPerDollar, tips: tipsOn, ...(payOnline ? { payments: { applicationId: env.SQUARE_APPLICATION_ID, locationId: cfg.locationId, environment: cfg.environment } } : {}), giftCards: env.GIFT_CARDS !== "off", ...(prog ? { loyalty: { tiers: loyalty.tiersOf(prog) } } : {}), ...(pausedUntil() ? { pausedUntil: pausedUntil().toISOString() } : {}) } : { enabled: false }, { cors: true });
+      }
+      if (p === "/.well-known/apple-developer-merchantid-domain-association") {   // Apple Pay on the web: the file Square gives you, kept in the data folder
+        const file = path.join(dataDir, "apple-pay-domain-association");
+        try { return send(res, 200, await readFile(file), { type: "text/plain; charset=utf-8", cache: "no-cache" }); } catch { throw new HttpError(404, "Not found."); }
       }
       if (p === "/api/giftcard/balance") {
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");

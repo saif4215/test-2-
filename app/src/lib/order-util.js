@@ -118,3 +118,11 @@ export function notificationFor(prev, next, ref) {
   return null;
 }
 
+
+/** How the café takes payment in the app, from the server's settings: { applicationId, locationId, environment }, or null when it does not (the customer then pays at the counter). */
+export function readPayments(v) {
+  if (!v || typeof v !== "object") return null;
+  const ok = (s, re) => typeof s === "string" && re.test(s);
+  if (!ok(v.applicationId, /^[A-Za-z0-9_-]{6,80}$/) || !ok(v.locationId, /^[A-Za-z0-9_-]{2,60}$/)) return null;
+  return { applicationId: v.applicationId, locationId: v.locationId, environment: v.environment === "production" ? "production" : "sandbox" };
+}

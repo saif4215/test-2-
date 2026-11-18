@@ -76,6 +76,13 @@ export async function checkSquare(env, { order = false } = {}) {
     add(false, `Could not read the item list (${err.message}). Orders still work; the chat just uses the app's own menu.`, "If you want the chat to use your Square items, check that the token can read the catalog (ITEMS_READ).");
   }
 
+  // 2a. paying in the app (optional): needs the Application ID, and the token must be allowed to take payments
+  if (env.SQUARE_APPLICATION_ID && env.PAY_ONLINE !== "off") {
+    const idOk = /^(sandbox-)?sq0idp-|^sandbox-sq0idb-|^sq0idp-/.test(env.SQUARE_APPLICATION_ID);
+    add(idOk, idOk ? `Paying in the app: switched on (${production ? "production" : "sandbox"} Application ID). Customers pay by card, Apple Pay or Google Pay and nothing is paid at the counter.` : "The Application ID does not look like one from Square (it should start with sq0idp- for production or sandbox-sq0idb- for the sandbox).", idOk ? "" : "Copy it from Square Developer Dashboard > your app > Credentials > Application ID.");
+    add(true, `Paying in the app needs your Square access token to be allowed to take payments (PAYMENTS_WRITE and ORDERS_WRITE). A ${production ? "Production" : "Sandbox"} token from the same Credentials page has them. To try it safely, use the Sandbox and Square's test card 4111 1111 1111 1111.`);
+  } else add(true, "Paying in the app: off, so customers pay at the counter. To turn it on, add SQUARE_APPLICATION_ID (npm run setup).");
+
   // 2b. Square Loyalty (optional): points kept in Square, tied to the phone number. Not having it is fine.
   try {
     const call = async (method, route) => { const r = await fetch(base + route, { method, headers: { Authorization: `Bearer ${token}`, "Square-Version": SQUARE_VERSION } }); const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error("Square said no"), { status: r.status, errors: j.errors || [] }); return j; };

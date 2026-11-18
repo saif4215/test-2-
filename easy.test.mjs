@@ -48,7 +48,7 @@ test("setup with all Enter: makes a password and turns nothing else on", async (
 });
 
 test("setup with email and Square: saves each answer, rejects a short password and a bad tax", async () => {
-  const s = script(["short", "y", "me@cafe.com", "re_key", "y", "n", "SQTOKEN", "LOC1", "abc", "8.875", "n"]);
+  const s = script(["short", "y", "me@cafe.com", "re_key", "y", "n", "SQTOKEN", "LOC1", "sandbox-sq0idb-APP1", "abc", "8.875", "n"]);
   const logs = [];
   const v = await runSetup({ ask: s.ask, say: (t) => logs.push(t), password: () => "GeneratedPass2" });
   assert.equal(v.ADMIN_PASSWORD, "GeneratedPass2", "a too-short password is replaced by a made one");
@@ -57,14 +57,15 @@ test("setup with email and Square: saves each answer, rejects a short password a
   assert.equal(v.SQUARE_ENV, "sandbox", "test orders unless the owner says real");
   assert.equal(v.SQUARE_ACCESS_TOKEN, "SQTOKEN");
   assert.equal(v.SQUARE_LOCATION_ID, "LOC1");
+  assert.equal(v.SQUARE_APPLICATION_ID, "sandbox-sq0idb-APP1", "the Application ID switches on paying in the app");
   assert.equal(v.TAX_PERCENT, "8.875");
   assert.ok(logs.some((l) => /Type just the number/.test(l)), "a bad tax is explained, then asked again");
   assert.equal(s.left(), 0);
 });
 
 test("running setup again keeps what is saved, and turning a thing off removes it", async () => {
-  const old = { ADMIN_PASSWORD: "oldpassword123", NOTIFY_EMAIL: "me@cafe.com", RESEND_API_KEY: "k", SQUARE_ENV: "production", SQUARE_ACCESS_TOKEN: "T", SQUARE_LOCATION_ID: "L", TAX_PERCENT: "8.875", CUSTOM: "kept" };
-  const keepAll = script(["", "", "", "", "", "", "", "", "", ""]);
+  const old = { ADMIN_PASSWORD: "oldpassword123", NOTIFY_EMAIL: "me@cafe.com", RESEND_API_KEY: "k", SQUARE_ENV: "production", SQUARE_ACCESS_TOKEN: "T", SQUARE_LOCATION_ID: "L", SQUARE_APPLICATION_ID: "sandbox-sq0idb-APP1", TAX_PERCENT: "8.875", CUSTOM: "kept" };
+  const keepAll = script(["", "", "", "", "", "", "", "", "", "", ""]);
   const kept = await runSetup({ ask: keepAll.ask, say: () => {}, old });
   const text = renderEnv(kept, old);
   assert.deepEqual(parseEnv(text), old, "pressing Enter all the way changes nothing, and unknown settings survive");
@@ -73,6 +74,7 @@ test("running setup again keeps what is saved, and turning a thing off removes i
   const back = parseEnv(renderEnv(gone, old));
   assert.equal(back.NOTIFY_EMAIL, undefined);
   assert.equal(back.SQUARE_ACCESS_TOKEN, undefined);
+  assert.equal(back.SQUARE_APPLICATION_ID, undefined, "turning Square off also turns off paying in the app");
   assert.equal(back.ADMIN_PASSWORD, "oldpassword123");
   assert.equal(back.CUSTOM, "kept");
 });

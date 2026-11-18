@@ -118,7 +118,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
       if (asked.length) return reply({ ok: true, mode: "ai", add: asked, reply: "(Preview: a simple word matcher stands in for the AI here.) I put these together. Please check them below. Nothing is ordered until you place it yourself." });
       return reply(Object.assign({ ok: true, mode: "ai", add: [] }, basicAnswer(CONTENT, MENU, msgs, new Date(), { ordering: true })));
     }
-    if (pathname === "/api/config") return reply({ enabled: true, environment: "sandbox", taxPercent: 0, maxOrderCents: 30000, tips: true, giftCards: true });
+    if (pathname === "/api/config") return reply({ enabled: true, environment: "sandbox", taxPercent: 0, maxOrderCents: 30000, tips: true, giftCards: true, payments: { applicationId: "preview-app-id", locationId: "PREVIEWLOC", environment: "sandbox" } });   // the preview shows a labelled stand-in payment box
     if (pathname === "/api/giftcard/balance" && method === "POST") {   // a made-up example card for the preview: the real app asks Square
       var gb = {}; try { gb = JSON.parse(init.body); } catch (e) { /* no body */ }
       var num = String(gb.gan || "").split(" ").join("").split("-").join("");
@@ -130,7 +130,7 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
       var total = 0, id = "preview" + Date.now().toString(36);
       (order.items || []).forEach(function (it) { if (ITEM[it.id]) total += unitFor(ITEM[it.id], it) * (it.qty || 0); });
       placed[id] = { at: Date.now(), ref: refOf(String(order.idempotencyKey || id)), total: total };
-      return reply({ ok: true, orderId: id, ref: placed[id].ref, totalCents: total, preview: true });
+      return reply({ ok: true, orderId: id, ref: placed[id].ref, totalCents: total + (order.tipCents || 0), preview: true, paid: !!order.paymentToken });
     }
     if (pathname.indexOf("/api/order/preview") === 0 && method === "POST") return reply({ ok: true, ref: "" });   // I'm here: a preview, so nobody is told
     if (pathname.indexOf("/api/order/preview") === 0) {   // no backslashes here: this text sits inside a template string

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { PayForm } from "../components/PayForm";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Chip, ClosedNotice, Disclosure, Field, FormGroup, H1, Small } from "../components/ui";
@@ -20,11 +21,12 @@ import { openLink } from "../lib/links";
 export default function MyOrder() {
   const order = useOrder();
   const memory = useMemory();
-  const { on: ordering, tax, minMinutes, pausedUntil, loyalty, tips } = useOrderingConfig();
+  const { on: ordering, tax, minMinutes, pausedUntil, loyalty, tips, payments } = useOrderingConfig();
   const [earn, setEarn] = useState(true);   // earn points in the café's Square with this phone number (shown only when the café has Square Loyalty)   // ordering: true when the café's server can put an order into its Square; tax: the percentage it adds
   const { needsPrice } = splitOrderable(order.entries);
   const paused = pausedUntil > Date.now();   // the café asked for a short break from new orders (the server refuses them too)
   const canPlace = ordering === true && needsPrice.length === 0;
+  const payOn = canPlace && !!payments;   // the café takes payment in the app: no paying at the counter
   const incomplete = order.incomplete;   // a must-pick choice (hot or iced ...) is still missing on these lines
   const { menu } = useSite();
   const last = order.entries[order.entries.length - 1];
@@ -34,6 +36,7 @@ export default function MyOrder() {
   const [tipMode, setTipMode] = useState("none"), [tipCustom, setTipCustom] = useState("");   // a tip the customer plans to leave: only a note for the cashier, never added to the total
   const tip = canPlace && tips && order.exact ? tipAmount(tipMode, tipCustom, order.low) : { cents: 0, error: "" };
   const taxCents = estimateTax(order.low, tax);
+  const payTotal = order.low + taxCents + tip.cents;   // what the pay buttons show (the café's server charges the exact total Square works out)
   const sent = () => memory.rememberOrder(order.entries);   // so "Order again" can offer these items next time
 
   // Who is picking it up: on this same screen, so placing an order is one screen and one button.
@@ -54,7 +57,7 @@ export default function MyOrder() {
     if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
     setState((st) => (st.error && !st.busy ? { ...st, error: "" } : st));   // the message was about what they have now changed
   };
-  async function submit() {
+  async function submit(tokenize) {
     if (incomplete.length) { setState({ busy: false, error: `Choose ${incomplete[0].missing[0].label.toLowerCase()} for ${incomplete[0].name} first.` }); return; }
     if (when === "later" && !slotOk) { setState({ busy: false, error: slots.length ? "Choose a pickup time, or as soon as possible." : "There are no more pickup times today. Choose as soon as possible." }); return; }
     if (tip.error) { setState({ busy: false, error: tip.error }); return; }
@@ -64,12 +67,18 @@ export default function MyOrder() {
     const body = orderBody(order.entries, order.notes, { ...built.fields, ...(loyalty && earn ? { loyalty: true } : {}), ...(tip.cents > 0 ? { tipCents: tip.cents } : {}), ...(when === "later" ? { pickupAt: slotAt } : {}) });
     key.current = keyFor(key.current, body);
     setState({ busy: true, error: "" });
-    const res = await sendOrder({ ...body, idempotencyKey: key.current.key });
-    if (!res.ok) { warn(); setState({ busy: false, error: res.error }); return; }
+    let paymentToken = "";
+    if (payOn) {   // the card (or Apple Pay / Google Pay) becomes a one-time token that only Square can read
+      const t = tokenize ? await tokenize() : { ok: false, error: "Please enter your card details." };
+      if (!t.ok) { warn(); setState({ busy: false, error: t.error }); return; }
+      paymentToken = t.token;
+    }
+    const res = await sendOrder({ ...body, ...(paymentToken ? { paymentToken } : {}), idempotencyKey: key.current.key });
+    if (!res.ok) { warn(); if (res.newKey) key.current = null; setState({ busy: false, error: res.error }); return; }   // after a failed payment the next try is a new order
     memory.rememberContact(built.fields.name, v.phone.trim());   // as typed, so it looks the same next time
     memory.rememberOrder(order.entries, { at: Date.now(), subtotal: order.low });
     memory.rememberActive({ id: res.orderId, ref: res.ref, total: res.totalCents, name: built.fields.name, preview: res.preview });   // Home shows where it stands
-    router.replace({ pathname: "/order-sent", params: { id: res.orderId, ref: res.ref, total: res.totalCents == null ? "" : String(res.totalCents), name: built.fields.name, fresh: "1", ...(when === "later" ? { pickup: pickupLabel(slotAt) } : {}), ...(res.preview ? { preview: "1" } : {}) } });
+    router.replace({ pathname: "/order-sent", params: { id: res.orderId, ref: res.ref, total: res.totalCents == null ? "" : String(res.totalCents), name: built.fields.name, fresh: "1", ...(res.paid ? { paid: "1" } : {}), ...(when === "later" ? { pickup: pickupLabel(slotAt) } : {}), ...(res.preview ? { preview: "1" } : {}) } });
     order.clear();
   }
   return (
@@ -119,10 +128,16 @@ export default function MyOrder() {
                   <Text style={{ fontSize: 15, color: colors.muted }}>Estimated tax ({tax}%)</Text>
                   <Text style={{ fontSize: 15, color: colors.muted }}>{money(taxCents)}</Text>
                 </View>
+                {payOn && tip.cents > 0 ? (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontSize: 15, color: colors.muted }}>Tip</Text>
+                    <Text style={{ fontSize: 15, color: colors.muted }}>{money(tip.cents)}</Text>
+                  </View>
+                ) : null}
                 <View style={{ height: 1, backgroundColor: colors.line }} />
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>Estimated total</Text>
-                  <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{money(order.low + taxCents)}</Text>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>{payOn ? "Total to pay" : "Estimated total"}</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{money(payOn ? payTotal : order.low + taxCents)}</Text>
                 </View>
               </>
             ) : null}
@@ -138,7 +153,7 @@ export default function MyOrder() {
                 <Chip label="Other" active={tipMode === "custom"} onPress={() => setTipMode("custom")} />
               </View>
               {tipMode === "custom" ? <Field label="Tip in dollars" value={tipCustom} onChangeText={setTipCustom} keyboardType="decimal-pad" error={tip.error} hint="For example 2 or 2.50" /> : null}
-              <Small>{tip.cents > 0 ? `Tip planned: ${money(tip.cents)}. ` : ""}A tip is not charged now: the café sees it on your order and adds it when you pay at the counter. It is figured on the subtotal before tax.</Small>
+              <Small>{payOn ? `${tip.cents > 0 ? `Tip: ${money(tip.cents)}. ` : ""}Your tip is added to your payment. It is figured on the subtotal before tax.` : `${tip.cents > 0 ? `Tip planned: ${money(tip.cents)}. ` : ""}A tip is not charged now: the café sees it on your order and adds it when you pay at the counter. It is figured on the subtotal before tax.`}</Small>
             </Card>
           ) : null}
           {ordering === true && needsPrice.length ? (
@@ -154,7 +169,7 @@ export default function MyOrder() {
                 <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
                   <Text style={{ fontWeight: "800", color: colors.ink }}>Pick up at {shop.name}</Text>
                   <Small>{shop.address.join(", ")}</Small>
-                  <Small>You pay at the counter when you pick it up.</Small>
+                  <Small>{payOn ? "You pay now, here in the app. There is nothing to pay at the counter." : "You pay at the counter when you pick it up."}</Small>
                 </View>
               </Card>
               <View style={{ gap: 10 }}>
@@ -197,8 +212,14 @@ export default function MyOrder() {
                   </Card>
                 ) : null}
                 <SendError message={state.error} />
-                <Button title={state.busy ? "Sending…" : paused ? `Orders paused until ${pickupLabel(new Date(pausedUntil).toISOString())}` : incomplete.length ? `Choose ${incomplete[0].missing[0].label.toLowerCase()} first` : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy || paused || incomplete.length > 0} onPress={submit} />
-                <Small style={{ textAlign: "center" }}>Placing an order sends it to Maruf Cafe. It is not confirmed until the café accepts it. You pay at the counter.</Small>
+                {payOn ? (
+                  paused || incomplete.length ? (
+                    <Button title={paused ? `Orders paused until ${pickupLabel(new Date(pausedUntil).toISOString())}` : `Choose ${incomplete[0].missing[0].label.toLowerCase()} first`} variant="gold" icon="bag-check-outline" disabled onPress={() => {}} />
+                  ) : <PayForm payments={payments} totalCents={payTotal} busy={state.busy} disabled={state.busy} onSubmit={submit} />
+                ) : (
+                  <Button title={state.busy ? "Sending…" : paused ? `Orders paused until ${pickupLabel(new Date(pausedUntil).toISOString())}` : incomplete.length ? `Choose ${incomplete[0].missing[0].label.toLowerCase()} first` : "Place order for pickup"} variant="gold" icon="bag-check-outline" disabled={state.busy || paused || incomplete.length > 0} onPress={() => submit()} />
+                )}
+                <Small style={{ textAlign: "center" }}>{payOn ? "Your order goes to Maruf Cafe as soon as your payment goes through. It is not confirmed until the café accepts it." : "Placing an order sends it to Maruf Cafe. It is not confirmed until the café accepts it. You pay at the counter."}</Small>
                 <Disclosure title="Other ways to order" hint="A quote for a big order, or our Square Online store">
                   <Button title="Request a quote with these items" variant="outline" size="medium" onPress={() => { sent(); router.replace({ pathname: "/quote", params: { foodItems: order.summary } }); }} />
                   <Button title="Order pickup on Square Online" variant="outline" size="medium" icon="open-outline" href={business.orderUrl} onPress={sent} />
