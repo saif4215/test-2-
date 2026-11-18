@@ -9,9 +9,9 @@ import { money, priceText, useOrder } from "../lib/order";
 import { useMemory } from "../lib/memory";
 import { describeCustom, needsChoice, unitCents } from "../lib/customize";
 import { success } from "../lib/haptics";
-import { reorderIds } from "../lib/memory-util";
+import { addSearch, readSearches, reorderIds } from "../lib/memory-util";
 import { useSite } from "../lib/site";
-import { dietsPresent, featuredItems, filterByDiet, indexMenu, newItems, searchMenu } from "../lib/site-merge";
+import { dietsPresent, featuredItems, filterByDiet, indexMenu, itemFacts, newItems, searchMenu } from "../lib/site-merge";
 import { ART } from "../lib/menu-art";
 import { select, tap } from "../lib/haptics";
 import { artKey } from "../lib/menu-art-key";
@@ -41,6 +41,11 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
     ? [...categories.map((c) => c.name), ...(diet ? [] : placeholderCategories.filter((p) => !categories.some((c) => c.name === p)))]
     : categories.filter((c) => c.group === scope).map((c) => c.name)), [categories, scope, diet]);
   const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+  const blurTimer = useRef(null);
+  const [recent, setRecent] = useState([]);   // the last few things the customer searched for
+  useEffect(() => { AsyncStorage.getItem("maruf:searches").then((v) => { try { setRecent(readSearches(JSON.parse(v))); } catch { /* none saved */ } }).catch(() => {}); }, []);
+  const remember = (text) => setRecent((cur) => { const next = addSearch(cur, text); AsyncStorage.setItem("maruf:searches", JSON.stringify(next)).catch(() => {}); return next; });
   const [active, setActive] = useState(null);
   const scroller = useRef(null), chipBar = useRef(null), activeRef = useRef(null);
   const pos = useRef({ body: 0, sticky: 120, rows: {}, chips: {} });
@@ -112,12 +117,22 @@ export function MenuPage({ header, footer, bottomPad = 120 }) {
         <View style={col}>
           <View style={[{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.surface, borderColor: "rgba(36,26,18,0.06)", borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, minHeight: 50 }, shadow]}>
             <Ionicons name="search" size={20} color={colors.muted} />
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor={colors.placeholder} accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoCapitalize="none" maxLength={60}
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor={colors.placeholder} accessibilityLabel="Search the menu" returnKeyType="search" autoCorrect={false} autoCapitalize="none" maxLength={60} onFocus={() => { clearTimeout(blurTimer.current); setFocused(true); }} onBlur={() => { clearTimeout(blurTimer.current); blurTimer.current = setTimeout(() => setFocused(false), 250); remember(query); }} onSubmitEditing={() => remember(query)}
               style={{ flex: 1, minHeight: 48, fontSize: 16, color: colors.ink, outlineStyle: "none" }} />
             {query ? (
               <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery("")}><Ionicons name="close-circle" size={22} color={colors.muted} /></Pressable>
             ) : null}
           </View>
+          {focused && !query && recent.length ? (
+            <View accessibilityLabel="Recent searches" style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 10 }}>
+              <Small style={{ fontWeight: "800" }}>Recent</Small>
+              {recent.map((r) => (
+                <Pressable key={r} accessibilityRole="button" accessibilityLabel={`Search for ${r}`} onPress={() => setQuery(r)} style={{ paddingHorizontal: 14, minHeight: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: colors.tint }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>{r}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <ScrollView ref={chipBar} horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Menu categories" style={{ marginHorizontal: -pad, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: pad, gap: 8 }}>
             {names.map((n) => (
               <View key={n} onLayout={(e) => { pos.current.chips[n] = e.nativeEvent.layout.x; }}>
@@ -221,7 +236,7 @@ export function ItemLine({ item: it }) {
           <ItemBadge item={it} style={{ marginBottom: 2 }} />
           <Text numberOfLines={2} style={{ fontSize: 16, lineHeight: 21, fontWeight: "700", color: colors.ink }}>{it.name}</Text>
           <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15, marginTop: 1 }}>{priceText(it)}</Text>
-          {it.diet && it.diet.length ? <Text accessibilityLabel={`Dietary: ${it.diet.join(", ")}`} style={{ fontSize: 12.5, color: colors.muted, marginTop: 2 }}>{it.diet.join(" · ")}</Text> : null}
+          {itemFacts(it) ? <Text accessibilityLabel={`Details: ${itemFacts(it)}`} style={{ fontSize: 12.5, color: colors.muted, marginTop: 2 }}>{itemFacts(it)}</Text> : null}
         </View>
       </Pressable>
       <Adder item={it} />
@@ -305,7 +320,7 @@ export function ItemTile({ item: it, width = 160 }) {
         <View style={{ gap: 1, paddingHorizontal: 2 }}>
           <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 15 }}>{priceText(it)}</Text>
           <Text numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, fontWeight: "600", color: colors.ink }}>{it.name}</Text>
-          {it.diet && it.diet.length ? <Text numberOfLines={1} accessibilityLabel={`Dietary: ${it.diet.join(", ")}`} style={{ fontSize: 12.5, color: colors.muted }}>{it.diet.join(" · ")}</Text> : null}
+          {itemFacts(it) ? <Text numberOfLines={1} accessibilityLabel={`Details: ${itemFacts(it)}`} style={{ fontSize: 12.5, color: colors.muted }}>{itemFacts(it)}</Text> : null}
         </View>
       </Pressable>
       <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>

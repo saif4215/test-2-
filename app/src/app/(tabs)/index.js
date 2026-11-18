@@ -8,6 +8,7 @@ import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, RowHead, WhatsNew
 import { PromoCards, RewardsCard } from "../../components/Rewards";
 import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
+import { useMemory } from "../../lib/memory";
 import { useOrder } from "../../lib/order";
 import { useSite } from "../../lib/site";
 import { greeting, openStatus } from "../../lib/dates";
@@ -36,6 +37,7 @@ function FoodCollage({ w, side }) {
 export default function Home() {
   const { business, reviews, gallery, photos: remotePhotos } = useSite();
   const order = useOrder();
+  const { contact } = useMemory();
   const status = openStatus(business.hours);
   const { width } = useWindowDimensions();
   const inner = Math.min(width, 980) - (width >= 768 ? 64 : 40);
@@ -45,7 +47,7 @@ export default function Home() {
     <View style={{ flex: 1 }}>
     <Screen bottomPad={order.count ? 150 : 120}>
       <Reveal style={{ marginTop: 6, marginBottom: 12 }}>
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.ink }}>{greeting()}</Text>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.ink }}>{greeting(new Date(), contact.name)}</Text>
       </Reveal>
       <ActiveOrderCard style={{ marginBottom: 14 }} />
       <PromoCards style={{ marginBottom: 14 }} />

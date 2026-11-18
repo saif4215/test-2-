@@ -83,6 +83,9 @@ export function filterByDiet(categories, tag) {
   return categories.map((c) => ({ ...c, items: c.items.filter((it) => Array.isArray(it.diet) && it.diet.includes(tag)) })).filter((c) => c.items.length);
 }
 
+/** The small line under an item's price: the dietary tags the café ticked. Empty when it ticked none. */
+export const itemFacts = (it) => ((it && Array.isArray(it.diet)) ? it.diet : []).filter(Boolean).join(" · ");
+
 /** Items the café labelled New or Seasonal, for the "What's new" row on Home (up to `max`, New first, menu order inside each). Hidden items never show. Nothing until the café labels one. */
 export function newItems(menu, max = 8) {
   const fresh = [], seasonal = [];

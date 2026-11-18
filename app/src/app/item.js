@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { Body, Button, Disclosure, H1, Small } from "../components/ui";
+import { Body, Button, Card, Disclosure, H1, Small } from "../components/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { BleedRow, FavoriteButton, ItemBadge, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
@@ -80,6 +80,13 @@ export default function ItemDetails() {
             <Text style={{ fontWeight: "800", color: colors.goldText, fontSize: 22 }}>{priceText(item)}</Text>
           </View>
           {item.desc ? <Body>{item.desc}</Body> : null}
+          {item.allergens ? (
+            <Card style={{ padding: 14, gap: 4 }}>
+              <Text accessibilityRole="header" style={{ fontSize: 13, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: colors.goldText }}>Allergens</Text>
+              {item.allergens ? <Text style={{ fontSize: 16, color: colors.ink }}><Text style={{ fontWeight: "800" }}>Allergens: </Text>{item.allergens}</Text> : null}
+              <Small>As told to us by Maruf Cafe. Recipes can change, so if you have an allergy please ask the café before you order.</Small>
+            </Card>
+          ) : null}
           {item.diet && item.diet.length ? (
             <View style={{ gap: 6 }}>
               <View accessible accessibilityLabel={`Dietary: ${item.diet.join(", ")}`} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

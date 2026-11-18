@@ -4,12 +4,12 @@ import assert from "node:assert/strict";
 import { parseDate, parseTime, isPast, openStatus, greeting, closedNotice } from "../src/lib/dates.js";
 import { buildQuote, buildEvent, QUOTE_THANKS, EVENT_THANKS, QUOTE_OPTIONAL, EVENT_OPTIONAL, hasHiddenError } from "../src/lib/forms.js";
 import { plan, quantityFor } from "../src/lib/plan.js";
-import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet, newItems } from "../src/lib/site-merge.js";
+import { mergeSite, indexMenu, featuredItems, suggestFor, dietsPresent, filterByDiet, newItems, itemFacts } from "../src/lib/site-merge.js";
 import { trimHistory, readProposal, proposalTotal, mergeNote } from "../src/lib/assistant-util.js";
 import { shareText } from "../src/lib/share.js";
 import { orderSummary, cleanNote, splitOrderable, buildPickup, orderBody, newKey, keyFor, stageInfo, ORDER_STAGES, estimateTax, pausedMs, readTiers, readLookup, tipAmount, TIP_PERCENTS } from "../src/lib/order-util.js";
 import { canPlaceCalls, parseContactLink, prettyPhone } from "../src/lib/links-util.js";
-import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions } from "../src/lib/memory-util.js";
+import { toggleFavorite, rewardProgress, spendPoints, recordOrder, lastOrder, reorderIds, readSaved, readObject, readCart, cartToSave, readCustom, readActive, MAX_QTY, ACTIVE_HOURS, addUsual, removeUsual, readUsuals, recordHistory, readHistory, MAX_USUALS, MAX_HISTORY, readPoints, awardPoints, activePromotions, readSearches, addSearch } from "../src/lib/memory-util.js";
 import { hasOffers, resolve, unitCents, extrasCents, togglePick, setSize, describeCustom, orderChoice, missingRequired, needsChoice } from "../src/lib/customize.js";
 
 const NOW = new Date(2026, 9, 8, 12, 0);   // Thu Oct 8 2026, noon
@@ -753,4 +753,33 @@ test("What's new: only items the café labelled New or Seasonal, New first, neve
   assert.equal(newItems(menu, 2).length, 2);
   assert.deepEqual(newItems({ groups: { Drinks: { Coffee: [{ id: "x", name: "X" }] } } }), []);
   assert.deepEqual(newItems(undefined), []);
+});
+
+test("the greeting uses the first name the customer gave, and nothing odd", () => {
+  const noon = new Date("2026-10-08T12:00:00Z");   // 8 AM in New York
+  assert.equal(greeting(noon, "Sam Lee"), "Good morning, Sam");
+  assert.equal(greeting(noon, "  maria-jose  "), "Good morning, maria-jose");
+  assert.equal(greeting(noon, ""), "Good morning");
+  assert.equal(greeting(noon, undefined), "Good morning");
+  assert.equal(greeting(noon, "<b>Sam"), "Good morning, bSam", "markup characters are dropped");
+  assert.equal(greeting(noon, "1234"), "Good morning", "nothing left of the name: no comma");
+  assert.equal(greeting(new Date("2026-10-08T23:00:00Z"), "Sam"), "Good evening, Sam");
+});
+
+test("the small line under a price shows only the dietary tags the café ticked", () => {
+  assert.equal(itemFacts({ diet: ["Vegan", "Gluten-free"] }), "Vegan · Gluten-free");
+  assert.equal(itemFacts({ cal: "190", diet: ["Vegan"] }), "Vegan", "calories are never shown, even if old data has them");
+  assert.equal(itemFacts({ cal: "80" }), "");
+  assert.equal(itemFacts({ name: "x" }), "", "nothing ticked: nothing shown");
+  assert.equal(itemFacts(undefined), "");
+});
+
+test("recent searches: newest first, five at most, no repeats, nothing too short", () => {
+  assert.deepEqual(addSearch([], "latte"), ["latte"]);
+  assert.deepEqual(addSearch(["latte", "wrap"], "Wrap"), ["Wrap", "latte"], "a repeat moves to the front (any capitals)");
+  assert.deepEqual(addSearch(["a1", "b2", "c3", "d4", "e5"], "f6"), ["f6", "a1", "b2", "c3", "d4"]);
+  assert.deepEqual(addSearch(["latte"], "x"), ["latte"], "one letter is not remembered");
+  assert.deepEqual(addSearch(["latte"], "   "), ["latte"]);
+  assert.deepEqual(readSearches([" latte ", 5, null, "LATTE", "wrap"]), ["latte", "wrap"]);
+  assert.deepEqual(readSearches("nope"), []);
 });

@@ -64,7 +64,9 @@ export function closedNotice(hours, now = new Date()) {
 }
 
 /** "Good morning", "Good afternoon" or "Good evening", by the hour in New York (where the café is). */
-export function greeting(now = new Date()) {
+export function greeting(now = new Date(), name = "") {
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
-  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const hello = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const first = typeof name === "string" ? name.trim().split(/\s+/)[0].replace(/[^\p{L}'’-]/gu, "").slice(0, 20) : "";   // the first name the customer gave when ordering, if any
+  return first ? `${hello}, ${first}` : hello;
 }

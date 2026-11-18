@@ -145,3 +145,20 @@ test("dietary tags: only the known ones are kept, in a fixed order, and none unl
   const shipped = normalizeMenu(JSON.parse((await import("node:fs")).readFileSync(new URL("./public/menu.json", import.meta.url), "utf8"))).menu;
   assert.ok(!Object.values(shipped.groups).flatMap((c) => Object.values(c).flat()).some((i) => i.diet), "the café's menu starts with no dietary claims: it must tick them itself");
 });
+
+test("allergen notes are kept as the café typed them (trimmed, limited), calories are never kept, and both are empty by default", async () => {
+  const { normalizeMenu } = await import("./lib/menu.mjs");
+  const menu = { currency: "USD", groups: { Drinks: { Coffee: [
+    { name: "A", cents: 100, cal: "190", allergens: "  Contains   milk\n and wheat " },
+    { name: "B", cents: 100, allergens: "y".repeat(300) },
+    { name: "C", cents: 100, allergens: 5 },
+    { name: "D", cents: 100 },
+  ] } } };
+  const items = normalizeMenu(menu).menu.groups.Drinks.Coffee;
+  assert.equal(items[0].allergens, "Contains milk and wheat");
+  assert.ok(items.every((i) => !("cal" in i)), "calories are dropped: the app does not show them");
+  assert.equal(items[1].allergens.length, 120);
+  assert.deepEqual([items[2].allergens, items[3].allergens], [undefined, undefined], "only text counts; nothing is invented");
+  const shipped = normalizeMenu(JSON.parse((await import("node:fs")).readFileSync(new URL("./public/menu.json", import.meta.url), "utf8"))).menu;
+  assert.ok(!Object.values(shipped.groups).flatMap((c) => Object.values(c).flat()).some((i) => i.allergens), "the café's menu starts with no allergen claims");
+});

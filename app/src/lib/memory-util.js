@@ -172,3 +172,22 @@ export function readActive(v, now = Date.now()) {
   if (!Number.isFinite(at) || at > now + 3600000 || now - at > ACTIVE_HOURS * 3600000) return null;
   return { id: v.id, ref: str(v.ref, 8), name: str(v.name, 60), total: Number.isFinite(Number(v.total)) && v.total !== "" && v.total !== null ? Number(v.total) : null, at, preview: v.preview === true };
 }
+
+// ── recent searches on the Menu ─────────────────────────────────────────────────────────────────────────────────────────────────
+export const MAX_SEARCHES = 5;
+
+/** Parse the saved recent searches: up to 5 short, different words or phrases, newest first. */
+export function readSearches(v) {
+  const out = [];
+  for (const x of Array.isArray(v) ? v : []) {
+    const t = typeof x === "string" ? x.trim().replace(/\s+/g, " ").slice(0, 60) : "";
+    if (t.length >= 2 && !out.some((o) => o.toLowerCase() === t.toLowerCase())) out.push(t);
+  }
+  return out.slice(0, MAX_SEARCHES);
+}
+
+/** Remember a search (newest first, no repeats, nothing shorter than two letters). */
+export function addSearch(list, q) {
+  const t = typeof q === "string" ? q.trim().replace(/\s+/g, " ").slice(0, 60) : "";
+  return t.length < 2 ? readSearches(list) : readSearches([t, ...readSearches(list)]);
+}

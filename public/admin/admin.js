@@ -268,7 +268,7 @@ async function viewMenu(main) {
   main.append(
     quick,
     h("h2", { text: "Change prices and details" }),
-    h("p", { class: "hint", text: "Open a section, change a name or price (in dollars), then press Save menu. Tick “Show on Home” to feature up to 4 items on the app’s home screen. “Label” puts a small New, Popular or Seasonal tag on an item: only use Popular if it really is. “Dietary tags” (Vegetarian, Vegan, Gluten-free, Dairy-free, Nut-free) show in the app and let customers filter the menu: tick one only if you are sure it is true for that item as you make it. Customers are told to ask about allergies either way. Extras like milk and syrup, and what they cost, are at the bottom under “Choices and extras”." }),
+    h("p", { class: "hint", text: "Open a section, change a name or price (in dollars), then press Save menu. Tick “Show on Home” to feature up to 4 items on the app’s home screen. “Label” puts a small New, Popular or Seasonal tag on an item: only use Popular if it really is. “Dietary tags” (Vegetarian, Vegan, Gluten-free, Dairy-free, Nut-free) show in the app and let customers filter the menu: tick one only if you are sure it is true for that item as you make it. “Allergen note” shows exactly what you type (never worked out for you). Customers are told to ask about allergies either way. Extras like milk and syrup, and what they cost, are at the bottom under “Choices and extras”." }),
     h("div", { class: "row" }, h("div", { class: "grow" }, filter)),
     tree,
     me.role === "owner" && h("div", { class: "card" }, h("h3", { text: "Start over" }), h("p", { class: "hint", text: "Throws away every menu change you made and goes back to the original menu." }), h("button", { type: "button", text: "Reset to the original menu", class: "danger", onclick: async () => {
@@ -304,7 +304,10 @@ async function viewMenu(main) {
     // dietary tags: ticked only for what is true of this item (the app shows them and lets customers filter by them)
     const diets = h("details", { class: "dietbox" }, h("summary", { text: `Dietary tags${it.diet?.length ? ` (${it.diet.length})` : ""}` }),
       ["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free"].map((d) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: (it.diet || []).includes(d), "data-diet": d }), d)));
-    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, sizes, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), opts, diets, h("div", { class: "row" }, pick, hide, badge));
+    // allergen notes: only what the café types, shown in the app as written
+    const facts = h("details", { class: "dietbox" }, h("summary", { text: `Allergen note${it.allergens ? " (filled in)" : ""}` }),
+      h("label", { text: "Allergens (optional, in your own words)" }, h("input", { value: it.allergens || "", maxlength: "120", "data-f": "allergens", placeholder: "for example: Contains milk and wheat", "aria-label": `Allergens for ${it.name || "this item"}` })));
+    const row = h("div", { class: `item${it.hidden ? " hiddenitem" : ""}`, "data-id": it.id, "data-image": it.image || "" }, name, price, del, sizes, desc, h("div", { class: "itemphoto" }, thumb, photoBtn, rm, file), opts, diets, facts, h("div", { class: "row" }, pick, hide, badge));
     return row;
   }
 
@@ -382,6 +385,7 @@ async function viewMenu(main) {
           else if (row.dataset.options) it.options = row.dataset.options.split(",");
           const d = val("desc").trim(); if (d) it.desc = d;
           if (val("badge")) it.badge = val("badge");
+          if (val("allergens").trim()) it.allergens = val("allergens").trim();
           const diet = [...row.querySelectorAll("[data-diet]")].filter((i) => i.checked).map((i) => i.dataset.diet);
           if (diet.length) it.diet = diet;
           if (row.dataset.image) it.image = row.dataset.image;
