@@ -1,5 +1,5 @@
-// Starbucks-style extras with motion: the cup that fills as the order moves along, the live drink cup in "Make it your way", the weekly streak,
-// the birthday treat, and counting points. Also: nothing moves (and nothing breaks) for people who asked for less motion.
+// Starbucks-style extras with motion: the cup that fills as the order moves along, the live drink cup in "Make it your way", the weekly streak
+// and counting points. Also: nothing moves (and nothing breaks) for people who asked for less motion.
 // Needs a built app (npm run build) and Chromium. Run:  node e2e/app-motion.e2e.mjs
 import { chromium } from "playwright-core";
 import { startSite } from "../test-helpers.mjs";
@@ -9,16 +9,15 @@ const square = await startSquare();
 square.loyalty(false);
 const site = await startSite({ SQUARE_ACCESS_TOKEN: "tok", SQUARE_LOCATION_ID: "LOC", SQUARE_API_BASE: square.url, TAX_PERCENT: "8.875", ORDER_RATE_LIMIT_PER_MIN: "1000" });
 const a = await site.login(), content = (await a.get("content")).json.content;
-content.birthdayTreat = "a free cookie with any drink";
 content.rewards = [{ points: 100, title: "A free drink" }, { points: 50, title: "A free cookie" }];
 await a.put("content", { content });
 const b = await chromium.launch({ executablePath: "" + (process.env.CHROMIUM || "/opt/pw-browsers/chromium") + "" });
 const fails = [], ok = (c, m) => { console.log(c ? "PASS" : "FAIL", m); if (!c) fails.push(m); };
 const SHOTS = process.env.SHOTS_DIR || "/tmp";
 
-// What the phone remembers: orders in each of the last 3 weeks (a streak of 3), 60 points, a name, and a birthday that is today.
+// What the phone remembers: orders in each of the last 3 weeks (a streak of 3), 60 points and a name.
 const seed = () => {
-  const now = new Date(), today = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const now = new Date();
   const ago = (days) => now.getTime() - days * 86400000;
   const entry = (at) => ({ at, subtotal: 450, lines: [{ id: "x", qty: 1 }] });
   try {
@@ -26,7 +25,6 @@ const seed = () => {
     localStorage.setItem("maruf:history", JSON.stringify([entry(ago(0.2)), entry(ago(7)), entry(ago(14))]));
     localStorage.setItem("maruf:points", JSON.stringify({ balance: 60, awarded: [] }));
     localStorage.setItem("maruf:contact", JSON.stringify({ name: "Sam Lee", phone: "7185550123" }));
-    localStorage.setItem("maruf:birthday", today);
   } catch { /* no storage */ }
 };
 const open = async (opts = {}) => {
@@ -45,7 +43,7 @@ const cup = (p) => ({
 });
 const level = async (p) => Number(await cup(p).attr("level"));
 
-// ── Home: the streak, the birthday, the points count ─────────────────────────────────────────────────
+// ── Home: the streak and the points count ─────────────────────────────────────────────────
 {
   const { ctx, p } = await open();
   const seen = seenIn(p);
@@ -53,7 +51,6 @@ const level = async (p) => Number(await cup(p).attr("level"));
   await p.getByText("weeks in a row", { exact: false }).first().waitFor({ timeout: 8000 });
   ok(await seen("3 weeks in a row"), "Home shows a 3-week streak from the orders on the phone");
   ok((await p.getByLabel(/ordered|you ordered/).count()) >= 1 || (await p.locator("[aria-label*='you ordered']").count()) >= 1, "this week's day with an order is marked");
-  ok(await seen("Happy birthday, Sam!") && await seen("Your treat: a free cookie with any drink"), "in the birthday week Home wishes the customer happy birthday and shows the café's treat");
   await p.waitForTimeout(1200);
   ok(await seen("60 points") && await seen("40 more points until A free drink"), "the points count up to 60 and the next goal shows");
   ok(await p.getByRole("button", { name: "Use A free cookie for 50 points" }).filter({ visible: true }).first().isVisible(), "a reward the customer can already use is offered (with a glow)");
@@ -61,27 +58,7 @@ const level = async (p) => Number(await cup(p).attr("level"));
   await ctx.close();
 }
 
-// ── a customer who has not given a birthday is only invited; the settings take it, and forget it ──────
-{
-  const { ctx, p } = await open();
-  await p.addInitScript(() => { try { localStorage.removeItem("maruf:birthday"); } catch { /* none */ } });
-  const seen = seenIn(p);
-  await p.goto(site.u + "/app/settings", { waitUntil: "load" });
-  await p.getByText("Your birthday", { exact: true }).first().waitFor({ timeout: 8000 });
-  ok(await seen("Maruf Cafe has a birthday treat for you: a free cookie with any drink"), "Settings offers the birthday field when the café has a treat");
-  await p.getByRole("textbox", { name: "Birthday (month and day)" }).fill("13/45");
-  await p.getByRole("button", { name: "Save birthday", exact: true }).click();
-  ok(await seen("Type a month and day like 3/14."), "an impossible birthday is explained");
-  await p.getByRole("textbox", { name: "Birthday (month and day)" }).fill("3/14");
-  await p.getByRole("button", { name: "Save birthday", exact: true }).click();
-  ok((await p.getByRole("textbox", { name: "Birthday (month and day)" }).inputValue()) === "March 14", "a real birthday is saved and shown as month and day");
-  ok((await p.evaluate(() => localStorage.getItem("maruf:birthday"))) === "03-14", "only the month and day are kept");
-  await p.getByRole("button", { name: "Forget it", exact: true }).click();
-  ok((await p.evaluate(() => localStorage.getItem("maruf:birthday"))) === "", "it can be forgotten");
-  await ctx.close();
-}
-
-// ── the order: the birthday treat joins the order note; the cup fills as the order moves ──────────────
+// ── the drink cup, and the order cup fills as the order moves ──────────────
 {
   const { ctx, p } = await open();
   const seen = seenIn(p);
@@ -100,15 +77,11 @@ const level = async (p) => Number(await cup(p).attr("level"));
   await p.getByRole("button", { name: /^View my order \(/ }).filter({ visible: true }).first().waitFor({ timeout: 8000 });
   await p.getByRole("button", { name: /^View my order \(/ }).filter({ visible: true }).first().click();
   await p.getByRole("button", { name: "Place order for pickup" }).first().waitFor();
-  ok(await seen("Happy birthday! Add my treat: a free cookie with any drink"), "the order screen offers the birthday treat in the birthday week");
   await p.getByRole("textbox", { name: "Name", exact: true }).fill("Sam Lee");
   await p.getByRole("textbox", { name: "Phone Number", exact: true }).fill("7185550123");
   await p.getByRole("textbox", { name: "Anything the café should know?" }).fill("no ice please").catch(() => {});
   await button("Place order for pickup").click();
   await p.getByText("Order code", { exact: false }).first().waitFor({ timeout: 10000 });
-  const placed = [...square.orders.values()].pop();
-  const note = JSON.stringify(placed.fulfillments?.[0]?.pickup_details?.note || "");
-  ok(/Birthday treat: a free cookie with any drink\./.test(note), `Square got the birthday treat in the order note (${note})`);
   ok(await cup(p).isVisible() && (await level(p)) < 0.3, "the order screen shows a nearly empty cup while the order is only sent");
   ok((await cup(p).attr("steam")) === "0", "no steam yet");
   await p.screenshot({ path: `${SHOTS}/motion-3-sent.png` });

@@ -468,7 +468,7 @@ async function viewSite(main) {
   };
 
   const faqBox = listEditor(c.faq, () => ({ q: "", a: "" }), (it) => [...bind(it, "q", "Question"), ...bind(it, "a", "Answer", { area: true, max: "1500" })], "+ Add a question", true);
-  c.promotions ||= []; c.amenities ||= []; c.rewards ||= []; c.rewardsNote ||= ""; c.birthdayTreat ||= "";
+  c.promotions ||= []; c.amenities ||= []; c.rewards ||= []; c.rewardsNote ||= "";
   const promoBox = listEditor(c.promotions, () => ({ title: "", text: "", until: "" }), (it) => [...bind(it, "title", "Title", { max: "60", ph: "for example: Free cookie with any large drink" }), ...bind(it, "text", "Details (optional)", { area: true, max: "400" }), ...bind(it, "until", "Last day it is shown (optional, like 2026-12-31)", { max: "10", hint: "Leave blank to show it until you remove it." })], "+ Add a promotion", true);
   const rewardBox = listEditor(c.rewards, () => ({ points: "", title: "" }), (it) => [...bind(it, "title", "Reward", { max: "60", ph: "for example: A free drink" }), ...bind(it, "points", "Points needed", { max: "6", ph: "for example: 100" })], "+ Add a reward", true);
   const pkgBox = listEditor(c.packages, () => ({ id: "", title: "", blurb: "", includes: [], price: "" }), (it) => {
@@ -501,8 +501,6 @@ async function viewSite(main) {
     h("div", { class: "card" }, h("h2", { text: "Points" }), h("p", { class: "hint", text: "If your Square account has Square Loyalty on, points are kept in Square with the customer's phone number and these settings are not used (see the Setup tab). Otherwise customers earn points for each dollar (before tax) on orders they pick up, worked out from the order in Square, and they are kept on the customer's phone. Say here what points can be used for. Leave blank to say nothing about it." }),
       h("h3", { text: "Rewards to work toward" }), h("p", { class: "hint", text: "Each one shows in the app as a goal with a progress bar. When a customer has enough points they can tap Use, show their phone at the counter, and the points come off. Points are kept on the customer's phone, so only add a reward you are happy to give on their word. There are none until you add one." }), rewardBox,
       ...bind(c, "rewardsNote", "What points can be used for", { area: true, max: "300", ph: "for example: Ask at the counter" })),
-    h("div", { class: "card" }, h("h2", { text: "Birthday treat" }), h("p", { class: "hint", text: "Customers can add their birthday (month and day only) in the app's Settings. In their birthday week the app wishes them a happy birthday and adds a line to their order, so you can hand them the treat at pickup. Only offer what you will give: a free item, not a price change. Leave empty to offer none." }),
-      ...bind(c, "birthdayTreat", "The treat", { max: "100", ph: "for example: a free cookie with any drink" })),
     h("div", { class: "card" }, h("h2", { text: "Event options" }), pkgBox, ...bind(c, "packagesNote", "Note under the options", { area: true, max: "500" })),
     h("div", { class: "card" }, h("h2", { text: "Questions & answers" }), faqBox),
     h("div", { class: "card" }, h("h2", { text: "Customer reviews" }), h("p", { class: "msg warn", text: "Only add reviews that real customers actually wrote, and use their real words. Never write or change a review yourself. Reviews show in the app only when you add them here." }), revBox),

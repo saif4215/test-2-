@@ -826,7 +826,7 @@ test("how the café takes payment is read safely from the server's settings", ()
 
 // ── motion: the numbers behind the animations ───────────────────────────────────────────────────────
 import { countAt, cupLevel, cupMood, cupScale, drinkLook, easeOutCubic, isDrink } from "../src/lib/motion-util.js";
-import { weekStreak, streakLine, parseBirthday, birthdayText, birthdayOpen, birthdayNote, weekStart, STREAK_GOALS } from "../src/lib/perks-util.js";
+import { weekStreak, streakLine, weekStart, STREAK_GOALS } from "../src/lib/perks-util.js";
 
 test("a counting number starts where it was, ends exactly on the new value, and never goes outside", () => {
   assert.equal(countAt(0, 120, 0), 0);
@@ -892,34 +892,6 @@ test("the weekly streak counts weeks in a row, keeps a streak alive until the we
   // a week with the clocks going back an hour is still one week
   assert.equal(weekStreak(h(D(2026, 11, 2), D(2026, 10, 26), D(2026, 10, 19)), D(2026, 11, 4)).weeks, 3);
   assert.match(streakLine(weekStreak(h(D(2026, 11, 17)), now)), /Order again next week/);
-});
-
-test("a birthday is month and day only, and the treat is open for the birthday week", () => {
-  assert.equal(parseBirthday("3/14"), "03-14");
-  assert.equal(parseBirthday("03-14"), "03-14");
-  assert.equal(parseBirthday("March 14"), "03-14");
-  assert.equal(parseBirthday("mar. 4"), "03-04");
-  assert.equal(parseBirthday("2/29"), "02-29");
-  assert.equal(parseBirthday("2/30"), "");
-  assert.equal(parseBirthday("13/1"), "");
-  assert.equal(parseBirthday("hello"), "");
-  assert.equal(parseBirthday("3/14/1990"), "");   // no year is ever kept
-  assert.equal(birthdayText("03-14"), "March 14");
-  assert.equal(birthdayText("nope"), "");
-  const at = (m, d) => new Date(2026, m - 1, d, 9);
-  assert.equal(birthdayOpen("11-18", at(11, 18)), true);    // the day itself
-  assert.equal(birthdayOpen("11-18", at(11, 24)), true);    // the 7th day
-  assert.equal(birthdayOpen("11-18", at(11, 25)), false);   // the 8th day: over
-  assert.equal(birthdayOpen("11-18", at(11, 17)), false);   // the day before: not yet
-  assert.equal(birthdayOpen("12-30", at(1, 3)), true);      // a birthday just before New Year, still in its week
-  assert.equal(birthdayOpen("02-29", at(2, 28)), true);     // a leap-day birthday is celebrated on Feb 28 in other years
-  assert.equal(birthdayOpen("", at(11, 18)), false);
-  assert.equal(birthdayOpen("garbage", at(11, 18)), false);
-  assert.equal(birthdayNote("a free cookie with any drink"), "Birthday treat: a free cookie with any drink.");
-  assert.equal(birthdayNote("a free cookie.", "no onions"), "Birthday treat: a free cookie. no onions");
-  assert.equal(birthdayNote("", "no onions"), "no onions");
-  assert.equal(birthdayNote("x".repeat(500), "").length, 200);   // never longer than the order note allows
-  assert.equal(birthdayNote("a cookie", "y".repeat(300)).length, 200);
 });
 
 test("an order paid in the app never tells the customer to pay at the counter", () => {

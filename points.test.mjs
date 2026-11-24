@@ -64,21 +64,3 @@ test("promotions: none to start with; what the owner adds is cleaned and served 
     assert.match(JSON.stringify(bad.json), /end date for \\"Bad date\\"/);
   } finally { t.close(); }
 });
-
-test("birthday treat: none to start with; the owner's words are cleaned and served; the dashboard keeps them", async () => {
-  const t = await startSite({});
-  try {
-    assert.equal((await (await fetch(t.u + "/content.json")).json()).birthdayTreat, "");
-    const a = await t.login(), content = (await a.get("content")).json.content;
-    assert.equal(content.birthdayTreat, "");
-    content.birthdayTreat = "  A free   cookie with any drink  ";
-    assert.equal((await a.put("content", { content })).status, 200);
-    assert.equal((await (await fetch(t.u + "/content.json")).json()).birthdayTreat, "A free cookie with any drink");
-    content.birthdayTreat = "x".repeat(300);
-    assert.equal((await a.put("content", { content })).status, 200);
-    assert.equal((await (await fetch(t.u + "/content.json")).json()).birthdayTreat.length, 100);   // cut to fit the order note
-    content.birthdayTreat = "";
-    assert.equal((await a.put("content", { content })).status, 200);
-    assert.equal((await (await fetch(t.u + "/content.json")).json()).birthdayTreat, "");
-  } finally { t.close(); }
-});

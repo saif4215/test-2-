@@ -6,7 +6,6 @@ import { MapCard } from "../../components/MapCard";
 import { ActiveOrderCard } from "../../components/ActiveOrder";
 import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, PickedForYou, RowHead, WhatsNew } from "../../components/MenuBrowser";
 import { PromoCards, RewardsCard } from "../../components/Rewards";
-import { BirthdayCard } from "../../components/Birthday";
 import { StreakCard } from "../../components/Streak";
 import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
@@ -52,7 +51,6 @@ export default function Home() {
         <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.ink }}>{greeting(new Date(), contact.name)}</Text>
       </Reveal>
       <ActiveOrderCard style={{ marginBottom: 14 }} />
-      <BirthdayCard style={{ marginBottom: 14 }} />
       <PromoCards style={{ marginBottom: 14 }} />
       <Reveal>
         <View style={[{ borderRadius: radius.hero, overflow: "hidden", padding: 22, paddingBottom: 0 }, gradient(colors.espresso, "linear-gradient(165deg, #3E2C1C 0%, #271B12 55%, #1A1109 100%)"), shadowStrong]}>

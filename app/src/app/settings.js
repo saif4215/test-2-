@@ -4,8 +4,6 @@ import { Body, Button, Card, Chip, Field, H1, H3, Small } from "../components/ui
 import { FormShell } from "../components/FormShell";
 import { NotifyToggle } from "../components/NotifyToggle";
 import { useMemory } from "../lib/memory";
-import { useSite } from "../lib/site";
-import { birthdayText, parseBirthday } from "../lib/perks-util";
 import { setPref, usePrefs } from "../lib/prefs";
 import { success } from "../lib/haptics";
 import { colors } from "../theme";
@@ -15,9 +13,7 @@ const LAYOUT = [["swipe", "Swipe cards"], ["list", "List"]];
 
 /** Settings: the name and phone used for pickup, light or dark, how the Menu is laid out, and a way to clear everything the app remembers. All of it lives on this phone only. */
 export default function Settings() {
-  const { contact, rememberContact, resetAll, birthday, setBirthday } = useMemory();
-  const { birthdayTreat } = useSite();
-  const [bd, setBd] = useState(birthday ? birthdayText(birthday) : ""), [bdError, setBdError] = useState(""), [bdSaved, setBdSaved] = useState(false);
+  const { contact, rememberContact, resetAll } = useMemory();
   const { appearance, menuLayout } = usePrefs();
   const [name, setName] = useState(contact.name), [phone, setPhone] = useState(contact.phone);
   const [saved, setSaved] = useState(false), [sure, setSure] = useState(false), [cleared, setCleared] = useState(false);
@@ -33,18 +29,6 @@ export default function Settings() {
         <Field label="Phone number" value={phone} onChangeText={(t) => { setPhone(t); setSaved(false); }} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
         <Button title={saved ? "Saved" : "Save"} variant="gold" size="medium" icon={saved ? "checkmark" : undefined} disabled={!changed && !saved} onPress={() => { rememberContact(name.trim(), phone.trim()); setSaved(true); success(); }} />
       </Card>
-
-      {birthdayTreat || birthday ? (
-        <Card style={{ padding: 16, gap: 12 }}>
-          <H3>Your birthday</H3>
-          <Small>{birthdayTreat ? `Maruf Cafe has a birthday treat for you: ${birthdayTreat}. ` : ""}Only the month and the day, like 3/14. Saved on this phone only; the café never gets it.</Small>
-          <Field label="Birthday (month and day)" value={bd} onChangeText={(t) => { setBd(t); setBdError(""); setBdSaved(false); }} placeholder="3/14" error={bdError} />
-          <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-            <Button title={bdSaved ? "Saved" : "Save birthday"} variant="gold" size="medium" icon={bdSaved ? "checkmark" : undefined} disabled={!bd.trim()} onPress={() => { const b = parseBirthday(bd); if (!b) { setBdError("Type a month and day like 3/14."); return; } setBirthday(b); setBd(birthdayText(b)); setBdSaved(true); success(); }} />
-            {birthday ? <Button title="Forget it" variant="outline" size="medium" onPress={() => { setBirthday(""); setBd(""); setBdSaved(false); }} /> : null}
-          </View>
-        </Card>
-      ) : null}
 
       <Card style={{ padding: 16, gap: 12 }}>
         <H3>Appearance</H3>
@@ -73,7 +57,7 @@ export default function Settings() {
         {cleared ? <Text accessibilityRole="alert" style={{ fontSize: 16, fontWeight: "800", color: colors.success }}>Cleared. This phone has forgotten everything above.</Text> : sure ? (
           <View style={{ gap: 10 }}>
             <Text accessibilityRole="alert" style={{ fontSize: 16, fontWeight: "800", color: colors.danger }}>This cannot be undone. Clear everything the app remembers on this phone?</Text>
-            <Button title="Yes, clear it all" variant="primary" size="medium" onPress={() => { resetAll(); setName(""); setPhone(""); setBd(""); setSure(false); setCleared(true); }} />
+            <Button title="Yes, clear it all" variant="primary" size="medium" onPress={() => { resetAll(); setName(""); setPhone(""); setSure(false); setCleared(true); }} />
             <Button title="No, keep it" variant="outline" size="medium" onPress={() => setSure(false)} />
           </View>
         ) : <Button title="Clear everything on this phone" variant="outline" size="medium" icon="trash-outline" onPress={() => setSure(true)} />}
