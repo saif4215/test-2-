@@ -5,6 +5,7 @@ import { Body, Button, Card, Disclosure, H1, Small } from "../components/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { BleedRow, FavoriteButton, ItemBadge, ItemPhoto, ItemTile, RowHead } from "../components/MenuBrowser";
 import { Customizer } from "../components/Customizer";
+import { Burst } from "../components/Motion";
 import { money, priceText, useOrder } from "../lib/order";
 import { describeCustom, hasOffers, missingRequired, orderChoice, unitCents } from "../lib/customize";
 import { useMemory } from "../lib/memory";
@@ -64,7 +65,7 @@ export default function ItemDetails() {
     if (qty === 0) { order.resetCustom(item.id); order.setNote(item.id, ""); }   // taken out: its choices are forgotten
     success();
     setAdded(true);
-    setTimeout(leave, 350);   // a moment to see it was added, then back to the menu
+    setTimeout(leave, 650);   // a moment to see it was added (the check pops and sparkles fly), then back to the menu
   };
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -133,6 +134,7 @@ export default function ItemDetails() {
               disabled={missing.length > 0 && qty > 0 && !added}
               accessibilityLabel={added ? "Added to your order" : missing.length && qty > 0 ? `Choose ${missing[0].label.toLowerCase()} first` : !inOrder ? `Add ${item.name} to order` : undefined}
               onPress={added ? undefined : apply} />
+            {added ? <Burst play={1} count={10} radius={64} size={7} /> : null}
           </View>
         </View>
       </View>

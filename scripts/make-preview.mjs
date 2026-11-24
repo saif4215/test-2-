@@ -51,8 +51,10 @@ content.rewards = [{ points: 10, title: "A free cookie (example)" }, { points: 1
 content.rewardsNote = "Example text: the café says here what points can be used for.";
 // Demo only: example amenities so the preview can show the "Good to know" tags. The real café lists its own (none until it does).
 content.amenities = ["Free Wi-Fi (example)", "Outdoor seating (example)"];
-const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote, amenities } = content;
-const publicContent = { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote, amenities };
+// Demo only: an example birthday treat so the preview can show the birthday card. The real café writes its own (none until it does).
+content.birthdayTreat = "a free cookie with any drink (example)";
+const { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote, amenities, birthdayTreat } = content;
+const publicContent = { business, venue, faq, packages, packagesNote, featuredTitle, gallery, reviews, photos, rewards, rewardsNote, amenities, birthdayTreat };
 
 const answersSrc = readFileSync(path.join(ROOT, "lib", "answers.mjs"), "utf8").replace(/^import .*$/gm, "").replace("export function basicAnswer", "function basicAnswer");
 const fmtHourSrc = /export function fmtHour[\s\S]*?\n}\n/.exec(readFileSync(path.join(ROOT, "lib", "render.mjs"), "utf8"))[0].replace("export ", "");
@@ -66,6 +68,18 @@ const shim = `// Stand-in for the café's server, for a preview that has no serv
   ${answersSrc}
   var ITEM = {};
   Object.keys(MENU.groups).forEach(function (g) { Object.keys(MENU.groups[g]).forEach(function (c) { MENU.groups[g][c].forEach(function (it) { if (typeof it.cents === "number") ITEM[it.id] = it; }); }); });
+  // Demo only, once per browser: three weeks of example orders (so the streak shows), 60 example points, and a birthday that is today (so the birthday card shows).
+  // Everything can be changed or cleared in Settings. A real phone starts with none of this.
+  try {
+    if (!localStorage.getItem("maruf:preview-demo")) {
+      var ids = Object.keys(ITEM).slice(0, 2), now = Date.now(), d = new Date(now);
+      var entry = function (days) { return { at: now - days * 86400000, subtotal: 450, lines: ids.map(function (id) { return { id: id, qty: 1 }; }) }; };
+      localStorage.setItem("maruf:history", JSON.stringify([entry(0.1), entry(7), entry(14)]));
+      localStorage.setItem("maruf:points", JSON.stringify({ balance: 60, awarded: [] }));
+      localStorage.setItem("maruf:birthday", ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2));
+      localStorage.setItem("maruf:preview-demo", "1");
+    }
+  } catch (e) { /* no storage: the demo simply starts empty */ }
   // the price of one with its size and choices, the way the café's server works it out
   function unitFor(it, o) {
     var cents = it.cents, sizes = it.sizes || [];

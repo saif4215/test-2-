@@ -30,6 +30,7 @@ export function mergeSite(base, remote, apiUrl = "") {
   if (Array.isArray(remote.promotions)) out.promotions = remote.promotions.filter((p) => p && typeof p.title === "string" && p.title).map((p) => ({ title: p.title, text: typeof p.text === "string" ? p.text : "", until: typeof p.until === "string" ? p.until : "" }));
   if (Array.isArray(remote.rewards)) out.rewards = remote.rewards.filter((r) => r && typeof r.title === "string" && r.title && Number.isFinite(Number(r.points)) && Number(r.points) >= 1).map((r) => ({ title: r.title, points: Math.floor(Number(r.points)) })).sort((a, b) => a.points - b.points);
   if (text(remote.rewardsNote) !== null) out.rewardsNote = remote.rewardsNote;
+  if (typeof remote.birthdayTreat === "string") out.birthdayTreat = remote.birthdayTreat.trim().slice(0, 100);
   if (remote.venue && typeof remote.venue === "object") out.venue = { ...BLANK_VENUE, ...Object.fromEntries(Object.entries(remote.venue).filter(([, v]) => typeof v === "string")) };
   if (Array.isArray(remote.gallery)) out.gallery = remote.gallery.filter((g) => g && g.url && g.alt).map((g) => ({ url: absolute(g.url, apiUrl), alt: g.alt, caption: g.caption || "" }));
   if (Array.isArray(remote.reviews)) out.reviews = remote.reviews.filter((r) => r && r.name && r.text);

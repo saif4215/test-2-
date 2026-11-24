@@ -5,7 +5,7 @@ import bundledMenu from "../data/menu.json";
 import { BLANK_VENUE, mergeSite, withImageUrls } from "./site-merge";
 
 /** What the app ships with. Always usable offline and before the server answers. */
-export const BUNDLED = { business, faq, packages, packagesNote, featuredTitle: "Try these", amenities: [], promotions: [], rewards: [], rewardsNote: "", venue: BLANK_VENUE, gallery: [], reviews: [], photos: {}, menu: withImageUrls(bundledMenu, "") };
+export const BUNDLED = { business, faq, packages, packagesNote, featuredTitle: "Try these", amenities: [], promotions: [], rewards: [], rewardsNote: "", birthdayTreat: "", venue: BLANK_VENUE, gallery: [], reviews: [], photos: {}, menu: withImageUrls(bundledMenu, "") };
 
 const Ctx = createContext(BUNDLED);
 

@@ -7,6 +7,7 @@ import { showPlaceholders } from "../config";
 import { useSite } from "../lib/site";
 import { openLink, webLinkProps } from "../lib/links";
 import { closedNotice } from "../lib/dates";
+import { springy } from "./Motion";
 
 /** Pull down on a phone to load the café's latest menu and details. (The web app loads them each time it opens.) */
 export function usePullRefresh() {
@@ -61,8 +62,8 @@ export function Button({ title, onPress, href, variant = "primary", size = "larg
         backgroundColor: v.bg, borderColor: v.border, borderWidth: 1, borderRadius: big ? radius.button : 14,
         paddingVertical: big ? 16 : 10, paddingHorizontal: big ? 24 : 16, minHeight: big ? 56 : 44,
         flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
-        opacity: disabled ? 0.5 : pressed ? 0.88 : hovered ? 0.94 : 1, transform: [{ scale: pressed ? 0.98 : 1 }],
-      }, v.lift && !disabled ? { boxShadow: variant === "gold" ? "0px 6px 16px rgba(185,130,31,0.30)" : "0px 6px 16px rgba(27,21,17,0.20)" } : null, style]}
+        opacity: disabled ? 0.5 : pressed ? 0.88 : hovered ? 0.94 : 1, transform: [{ scale: pressed ? 0.96 : hovered && !disabled ? 1.01 : 1 }],
+      }, springy, v.lift && !disabled ? { boxShadow: variant === "gold" ? "0px 6px 16px rgba(185,130,31,0.30)" : "0px 6px 16px rgba(27,21,17,0.20)" } : null, style]}
     >
       {icon ? <Ionicons name={icon} size={big ? 20 : 17} color={v.fg} /> : null}
       <Text style={{ color: v.fg, fontSize: big ? 17 : 15, fontWeight: "700", textAlign: "center", flexShrink: 1, letterSpacing: 0.1 }}>{title}</Text>
@@ -73,14 +74,14 @@ export function Button({ title, onPress, href, variant = "primary", size = "larg
 export function Card({ children, style, onPress, label }) {
   const base = [{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: "rgba(36,26,18,0.06)", overflow: "hidden" }, shadow, style];
   if (!onPress) return <View style={base}>{children}</View>;
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}>{children}</Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }, springy]}>{children}</Pressable>;
 }
 
 /** A filter pill. Give it a picture (a menu art image) to show a small round thumbnail before the label. */
 export function Chip({ label, active, onPress, thumb, small }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: !!active }} onPress={onPress}
-      style={({ pressed }) => [{ paddingVertical: 6, paddingLeft: thumb ? 6 : 16, paddingRight: 16, borderRadius: radius.chip, borderWidth: 1.5, borderColor: active ? colors.ink : colors.line, backgroundColor: active ? colors.ink : colors.surface, minHeight: small ? 42 : 46, flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.85 : 1 }, active ? { boxShadow: "0px 6px 14px rgba(27,21,17,0.20)" } : null]}>
+      style={({ pressed }) => [{ paddingVertical: 6, paddingLeft: thumb ? 6 : 16, paddingRight: 16, borderRadius: radius.chip, borderWidth: 1.5, borderColor: active ? colors.ink : colors.line, backgroundColor: active ? colors.ink : colors.surface, minHeight: small ? 42 : 46, flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }, springy, active ? { boxShadow: "0px 6px 14px rgba(27,21,17,0.20)" } : null]}>
       {thumb ? <Image source={thumb} accessible={false} style={{ width: small ? 28 : 32, height: small ? 28 : 32, borderRadius: 16, backgroundColor: colors.tint }} /> : null}
       <Text style={{ color: active ? colors.cream : colors.ink, fontWeight: "700", fontSize: 15 }}>{label}</Text>
     </Pressable>
@@ -90,13 +91,13 @@ export function Chip({ label, active, onPress, thumb, small }) {
 /** Fades a block in and lifts it a little when it first appears. Does nothing for people who asked for less motion. */
 let reduceMotion = false;
 AccessibilityInfo.isReduceMotionEnabled?.().then((r) => { reduceMotion = !!r; }).catch(() => {});
-export function Reveal({ children, delay = 0, style }) {
+export function Reveal({ children, delay = 0, style, distance = 16, duration = 560 }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (reduceMotion) { v.setValue(1); return; }
-    Animated.timing(v, { toValue: 1, duration: 560, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-  }, [v, delay]);
-  return <Animated.View style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }]}>{children}</Animated.View>;
+    Animated.timing(v, { toValue: 1, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [v, delay, duration]);
+  return <Animated.View style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }] }]}>{children}</Animated.View>;
 }
 
 /** A heading with an optional action on the right ("See all"). */
@@ -132,7 +133,7 @@ export function StatusPill({ open, children, dark, compact }) {
 export function ActionTile({ icon, title, sub, onPress, label, style }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label || `${title}${sub ? `: ${sub}` : ""}`} onPress={onPress}
-      style={({ pressed }) => [{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: "rgba(36,26,18,0.06)", padding: 14, gap: 10, minHeight: 112, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, shadow, style]}>
+      style={({ pressed }) => [{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: "rgba(36,26,18,0.06)", padding: 14, gap: 10, minHeight: 112, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] }, springy, shadow, style]}>
       <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name={icon} size={21} color={colors.goldText} /></View>
       <View style={{ gap: 1 }}>
         <Text style={{ fontSize: 15, fontWeight: "800", color: colors.ink }}>{title}</Text>

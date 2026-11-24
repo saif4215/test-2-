@@ -309,6 +309,20 @@ If your Square account has **Square Loyalty** (a paid Square add-on) with a prog
 
 The order screen offers **Add a tip (optional)**: No tip, 15%, 20%, 25% (of the subtotal before tax), or Other (a typed amount). It is a **planned tip, not a charge**: the customer pays at the counter, so the tip goes on the Square order as a note on the pickup ("Tip planned: $2.70. Add it when the customer pays.") and the cashier adds it when taking payment. It never changes the order's price, and it is **not** recorded as a service charge, because Square would count that as sales instead of a tip. Tips are not counted for points. Set `TIPS=off` to hide the tip choices.
 
+### Birthday treat (optional)
+
+In the dashboard, **Site info → Birthday treat**, write what you give in a customer's birthday week, for example "a free cookie with any drink". Leave it empty to offer none, and nothing about birthdays shows in the app.
+
+- A customer adds their birthday (month and day only, no year) in the app's **Settings**. It is saved on their phone and never sent to you. Until they do, Home shows a one-line invitation.
+- On their birthday and the six days after, Home wishes them a happy birthday (with confetti and a glowing card), and My order offers a ticked box "Add my treat". When it stays ticked, **"Birthday treat: a free cookie with any drink."** is put at the start of the order's note, so you see it in Square and can hand it over at pickup.
+- It is a **free extra you hand over, not a discount**: the app never changes the price. Anyone can type any birthday, so only offer something small. The server cannot check a birthday.
+
+### Streak, the cup, and the little animations
+
+- **Streak.** Home shows "3 weeks in a row" (Monday to Sunday) and which days this week had an order, counted from the orders on the customer's phone. It promises no prize. A week with no order is allowed to pass until Sunday; after that the streak starts again.
+- **The cup.** After an order is placed, a cup on the order screen fills as you move the order in Square: nearly empty when sent, half full and bubbling when accepted, full and steaming when ready. In "Make it your way", a small cup follows the size, hot or iced, and milk the customer picks (only a picture: it never changes the order or price).
+- **Counting points, a glowing reward, confetti** when a customer has just earned enough for a reward, hearts that sparkle, springy buttons on the web. Everything stops moving for anyone whose phone or browser is set to "reduce motion".
+
 ### Good to know
 
 - **Where staff see it:** in your Square Dashboard under Orders, and in Square Point of Sale's order list. Whether a new order also beeps or prints
@@ -345,8 +359,7 @@ The order screen offers **Add a tip (optional)**: No tip, 15%, 20%, 25% (of the 
   been run against Square itself, and the request format (Square's Orders API, a pickup fulfillment, version `2024-10-17` in `server.mjs`) could not
   be checked against Square's current documentation when it was written. That is why step 4 matters: if Square refuses an order, the customer is told
   to try again or call, and the server log shows Square's error code (never the customer's details), which says what to fix.
-- **Paying in the app** (a card form or a Square-hosted payment page) is a different feature. It is not built, because customers pay at the counter. It can be added on
-  top of this later without changing how orders reach Square.
+- **Paying in the app** is described above ("Paying in the app (card, Apple Pay, Google Pay)"). It switches on when you add your Square Application ID.
 
 ---
 

@@ -6,6 +6,8 @@ import { MapCard } from "../../components/MapCard";
 import { ActiveOrderCard } from "../../components/ActiveOrder";
 import { CategoryStrip, FeaturedPicks, OrderBar, PersonalRows, PickedForYou, RowHead, WhatsNew } from "../../components/MenuBrowser";
 import { PromoCards, RewardsCard } from "../../components/Rewards";
+import { BirthdayCard } from "../../components/Birthday";
+import { StreakCard } from "../../components/Streak";
 import { homeTagline } from "../../config";
 import { photos as bundledPhotos } from "../../photos";
 import { useMemory } from "../../lib/memory";
@@ -50,6 +52,7 @@ export default function Home() {
         <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.ink }}>{greeting(new Date(), contact.name)}</Text>
       </Reveal>
       <ActiveOrderCard style={{ marginBottom: 14 }} />
+      <BirthdayCard style={{ marginBottom: 14 }} />
       <PromoCards style={{ marginBottom: 14 }} />
       <Reveal>
         <View style={[{ borderRadius: radius.hero, overflow: "hidden", padding: 22, paddingBottom: 0 }, gradient(colors.espresso, "linear-gradient(165deg, #3E2C1C 0%, #271B12 55%, #1A1109 100%)"), shadowStrong]}>
@@ -76,18 +79,19 @@ export default function Home() {
         </View>
       </Reveal>
 
-      <RewardsCard style={{ marginTop: 18 }} />
+      <Reveal delay={90}><RewardsCard style={{ marginTop: 18 }} /></Reveal>
+      <Reveal delay={150}><StreakCard style={{ marginTop: 14 }} /></Reveal>
 
       <Reveal delay={120} style={{ marginTop: 26 }}>
         <CategoryStrip />
       </Reveal>
 
-      <View style={{ marginTop: 30, gap: 30 }}>
+      <Reveal delay={200} style={{ marginTop: 30, gap: 30 }}>
         <PersonalRows only="again" />
         <PickedForYou />
         <WhatsNew />
         <FeaturedPicks />
-      </View>
+      </Reveal>
 
       <Reveal delay={120} style={{ marginTop: 34 }}>
         <View style={{ flexDirection: "row", gap: 12 }}>

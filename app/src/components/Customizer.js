@@ -4,6 +4,8 @@ import { Chip, Disclosure, Small } from "./ui";
 import { describeCustom, extraText, extrasCents, hasOffers, missingRequired, resolve } from "../lib/customize";
 import { money, useOrder } from "../lib/order";
 import { select } from "../lib/haptics";
+import { Cup } from "./Cup";
+import { drinkLook, isDrink } from "../lib/motion-util";
 import { colors, fonts, shadow } from "../theme";
 
 const label = () => ({ fontSize: 15, fontWeight: "800", color: colors.ink });
@@ -73,12 +75,14 @@ export function Customizer({ item }) {
   const touched = !!(custom && (custom.size || Object.values(custom.picks || {}).some((p) => p && p.length)));
   const missing = missingRequired(item, custom);
   const renderSet = (set, flat) => <ChoiceSet key={set.id} item={item} set={set} flat={flat} needed={missing.some((m) => m.id === set.id)} picked={r.picks[set.id] || []} onPick={(id, name) => order.choose(item, id, name)} />;
+  const drink = isDrink(item), look = drinkLook(item, r);   // a little cup that follows the size, hot or iced, and milk chosen
   const restSummary = rest.flatMap((s) => r.picks[s.id] || []).join(", ");
 
   return (
     <View style={{ gap: 14 }}>
-      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink }}>Make it your way</Text>
+      <View style={{ flexDirection: "row", alignItems: drink ? "center" : "flex-end", justifyContent: "space-between", marginTop: drink ? -8 : 0 }}>
+        {drink ? <View accessible={false} style={{ marginRight: 14 }}><Cup size={76} level={0.82} scale={look.scale} tint={look.tint} iced={look.iced} bounceKey={`${r.size}|${JSON.stringify(r.picks)}`} /></View> : null}
+        <Text accessibilityRole="header" style={{ flex: 1, minWidth: 0, fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.ink }}>Make it your way</Text>
         {touched ? <Pressable accessibilityRole="button" accessibilityLabel="Clear my choices" onPress={() => order.resetCustom(item.id)} hitSlop={8}><Text style={{ color: colors.goldText, fontWeight: "800", fontSize: 15 }}>Clear</Text></Pressable> : null}
       </View>
       {(item.sizes && item.sizes.length > 1) || upFront.length ? (

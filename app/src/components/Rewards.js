@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, Card, Field, Small } from "./ui";
+import { Celebrate } from "./Celebrate";
+import { AnimatedFill, CountUp, Glow } from "./Motion";
+import { success } from "../lib/haptics";
 import { useMemory } from "../lib/memory";
 import { activePromotions, rewardProgress } from "../lib/memory-util";
 import { lookupPoints, useOrderingConfig } from "../lib/ordering";
@@ -32,29 +35,47 @@ export function PromoCards({ style }) {
   );
 }
 
+
+/**
+ * Plays the confetti once each time the number of rewards the customer can use goes UP while the screen is open. Never for what was already there
+ * when the app opened: the saved points load a moment after the screen shows, so changes in the first moment are only remembered (null means "not known yet").
+ */
+function useUnlockParty(count) {
+  const [party, setParty] = useState(0), before = useRef(null), settled = useRef(false);
+  useEffect(() => { const t = setTimeout(() => { settled.current = true; }, 1500); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (count == null) return;
+    if (settled.current && before.current !== null && count > before.current) { setParty((n) => n + 1); success(); }
+    before.current = count;
+  }, [count]);
+  return party;
+}
+
 /** The customer's points, on Home (only where the café takes orders in the app, since that is where points come from), and the rewards the café has set up to work toward. */
 export function RewardsCard({ style }) {
   const { points, spendPoints, contact } = useMemory();
   const { rewards, rewardsNote } = useSite();
   const { on, perDollar, loyalty } = useOrderingConfig();
   const [using, setUsing] = useState(null);   // a reward the customer is about to show at the counter
+  const party = useUnlockParty(on === true && !loyalty ? rewardProgress(rewards, points.balance).ready.length : null);
   if (on !== true) return null;
   if (loyalty) return <SquarePoints style={style} phone={contact.phone} fallbackTiers={loyalty.tiers} note={rewardsNote} />;
   const rate = perDollar === 1 ? "1 point for every $1" : `${perDollar} points for every $1`;
   const prog = rewardProgress(rewards, points.balance);
   return (
     <Card style={[{ padding: 16, gap: 14 }, style]}>
+      <Celebrate play={party} />
       <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
         <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name="sparkles" size={24} color={colors.goldText} /></View>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text accessibilityLabel={`${points.balance} points`} style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{points.balance} {points.balance === 1 ? "point" : "points"}</Text>
+          <Text accessibilityLabel={`${points.balance} points`} style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}><CountUp value={points.balance} /> {points.balance === 1 ? "point" : "points"}</Text>
           <Small>Earn {rate} on orders you pick up, counted from the café's own order. Your points are kept on this phone.</Small>
           {rewardsNote ? <Small style={{ color: colors.ink, fontWeight: "700" }}>{rewardsNote}</Small> : null}
         </View>
       </View>
       {prog.next ? (
         <View style={{ gap: 6 }} accessible accessibilityLabel={`${prog.left} more ${prog.left === 1 ? "point" : "points"} until ${prog.next.title}`}>
-          <View style={{ height: 10, borderRadius: 5, backgroundColor: colors.line, overflow: "hidden" }}><View style={{ height: 10, width: `${Math.max(3, Math.round(prog.pct * 100))}%`, backgroundColor: colors.gold, borderRadius: 5 }} /></View>
+          <AnimatedFill pct={Math.max(0.03, prog.pct)} color={colors.gold} height={10} />
           <Text style={{ fontSize: 15, color: colors.ink }}><Text style={{ fontWeight: "800" }}>{prog.left} more {prog.left === 1 ? "point" : "points"}</Text> until {prog.next.title} ({prog.next.points} points)</Text>
         </View>
       ) : null}
@@ -67,7 +88,7 @@ export function RewardsCard({ style }) {
           <Button title="Not now" variant="outline" size="medium" onPress={() => setUsing(null)} />
         </View>
       ) : prog.ready.map((r) => (
-        <Button key={`${r.points}-${r.title}`} title={`Use: ${r.title} (${r.points} points)`} variant="gold" size="medium" icon="gift-outline" accessibilityLabel={`Use ${r.title} for ${r.points} points`} onPress={() => setUsing(r)} />
+        <Glow key={`${r.points}-${r.title}`} radius={14}><Button title={`Use: ${r.title} (${r.points} points)`} variant="gold" size="medium" icon="gift-outline" accessibilityLabel={`Use ${r.title} for ${r.points} points`} onPress={() => setUsing(r)} /></Glow>
       ))}
     </Card>
   );
@@ -92,12 +113,14 @@ function SquarePoints({ style, phone: savedPhone, fallbackTiers, note }) {
   useEffect(() => { if (ready) check(savedPhone); }, [savedPhone]);   // eslint-disable-line react-hooks/exhaustive-deps
   const tiers = (info?.tiers?.length ? info.tiers : fallbackTiers || []).map((t) => ({ title: t.name, points: t.points }));
   const prog = rewardProgress(tiers, info?.balance || 0);
+  const party = useUnlockParty(info ? prog.ready.length : null);
   return (
     <Card style={[{ padding: 16, gap: 14 }, style]}>
+      <Celebrate play={party} />
       <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
         <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.goldSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name="sparkles" size={24} color={colors.goldText} /></View>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          {info ? <Text accessibilityLabel={`${info.balance} points`} style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}>{info.balance} {info.balance === 1 ? "point" : "points"}</Text> : <Text style={{ fontSize: 20, fontWeight: "800", color: colors.ink }}>Maruf Cafe points</Text>}
+          {info ? <Text accessibilityLabel={`${info.balance} points`} style={{ fontSize: 22, fontWeight: "800", color: colors.ink }}><CountUp value={info.balance} /> {info.balance === 1 ? "point" : "points"}</Text> : <Text style={{ fontSize: 20, fontWeight: "800", color: colors.ink }}>Maruf Cafe points</Text>}
           <Small>Points are kept by Maruf Cafe in Square, with your phone number. You earn them on orders you pick up and when you pay at the counter.</Small>
           {note ? <Small style={{ color: colors.ink, fontWeight: "700" }}>{note}</Small> : null}
         </View>
@@ -112,16 +135,16 @@ function SquarePoints({ style, phone: savedPhone, fallbackTiers, note }) {
       {info && !info.member ? <Small>No points yet for this number. Tick “Earn points” when you order, or ask at the counter to join.</Small> : null}
       {info && prog.next ? (
         <View style={{ gap: 6 }} accessible accessibilityLabel={`${prog.left} more ${prog.left === 1 ? "point" : "points"} until ${prog.next.title}`}>
-          <View style={{ height: 10, borderRadius: 5, backgroundColor: colors.line, overflow: "hidden" }}><View style={{ height: 10, width: `${Math.max(3, Math.round(prog.pct * 100))}%`, backgroundColor: colors.gold, borderRadius: 5 }} /></View>
+          <AnimatedFill pct={Math.max(0.03, prog.pct)} color={colors.gold} height={10} />
           <Text style={{ fontSize: 15, color: colors.ink }}><Text style={{ fontWeight: "800" }}>{prog.left} more {prog.left === 1 ? "point" : "points"}</Text> until {prog.next.title} ({prog.next.points} points)</Text>
         </View>
       ) : null}
       {info && prog.ready.length ? (
-        <View accessibilityRole="alert" style={{ gap: 6, padding: 14, borderRadius: 16, backgroundColor: colors.goldSoft }}>
+        <Glow radius={16}><View accessibilityRole="alert" style={{ gap: 6, padding: 14, borderRadius: 16, backgroundColor: colors.goldSoft }}>
           <Text style={{ fontSize: 13, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: colors.goldText }}>You can use</Text>
           {prog.ready.map((r) => <Text key={`${r.points}-${r.title}`} style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: colors.ink }}>{r.title}</Text>)}
           <Small>At the counter, give your phone number. The cashier applies it in Square checkout.</Small>
-        </View>
+        </View></Glow>
       ) : null}
     </Card>
   );

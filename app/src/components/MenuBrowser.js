@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Animated, Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Image, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Body, Button, Card, Chip, Grid, H3, Small, usePullRefresh } from "./ui";
+import { Body, Button, Card, Chip, Grid, H3, Reveal, Small, usePullRefresh } from "./ui";
 import { placeholderCategories, showPlaceholders } from "../config";
 import { money, priceText, useOrder } from "../lib/order";
 import { useMemory } from "../lib/memory";
@@ -16,6 +16,7 @@ import { dietsPresent, featuredItems, filterByDiet, indexMenu, itemFacts, newIte
 import { ART } from "../lib/menu-art";
 import { select, tap } from "../lib/haptics";
 import { artKey } from "../lib/menu-art-key";
+import { Burst, Pop, springy } from "./Motion";
 import { colors, fonts, gradient, radius, shadow } from "../theme";
 
 export const categoryList = (menu) => Object.entries(menu.groups).flatMap(([group, cats]) => Object.entries(cats).map(([name, items]) => ({ name, group, items: items.filter((i) => !i.hidden) }))).filter((c) => c.items.length);
@@ -205,7 +206,7 @@ function SwipeRow({ cat, width }) {
     <View>
       <RowHead title={cat.name} count={cat.items.length} arrows={cat.items.length > 1 ? row.arrows : null} />
       {cat.items.length > 1 ? <Small style={{ marginTop: -6, marginBottom: 6 }}>Swipe to see more →</Small> : null}
-      <BleedRow gap={gap} snap={w} scrollRef={row.scrollRef} onScroll={row.onScroll}>{cat.items.map((it) => <ItemTile key={it.id} item={it} width={w} />)}</BleedRow>
+      <BleedRow gap={gap} snap={w} scrollRef={row.scrollRef} onScroll={row.onScroll}>{cat.items.map((it, i) => <ItemTile key={it.id} item={it} width={w} index={i} />)}</BleedRow>
     </View>
   );
 }
@@ -275,7 +276,7 @@ export function Adder({ item: it, size = 46 }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.ink, borderRadius: 24, padding: 3 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Remove one ${it.name}`} onPress={() => { select(); order.change(it.id, -1); if (qty === 1) { order.resetCustom(it.id); order.setNote(it.id, ""); } }} hitSlop={4} style={{ width: 38, height: 40, borderRadius: 19, alignItems: "center", justifyContent: "center" }}><Ionicons name="remove" size={19} color={colors.cream} /></Pressable>
-      <Text style={{ minWidth: 18, textAlign: "center", fontWeight: "800", fontSize: 16, color: colors.cream }}>{qty}</Text>
+      <Pop trigger={qty}><Text style={{ minWidth: 18, textAlign: "center", fontWeight: "800", fontSize: 16, color: colors.cream }}>{qty}</Text></Pop>
       <Pressable accessibilityRole="button" accessibilityLabel={`Add one more ${it.name}`} onPress={() => { tap(); order.change(it.id, +1); }} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.gold, alignItems: "center", justifyContent: "center" }}><Ionicons name="add" size={20} color={colors.onGold} /></Pressable>
     </View>
   );
@@ -285,10 +286,12 @@ export function Adder({ item: it, size = 46 }) {
 export function FavoriteButton({ item: it, size = 34, onPhoto }) {
   const { favorites, toggleFavorite } = useMemory();
   const on = favorites.includes(it.id);
+  const [burst, setBurst] = useState(0);   // sparkles fly out when a heart is turned on
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={on ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`} onPress={() => { tap(); toggleFavorite(it.id); }} hitSlop={6}
-      style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: onPhoto ? "rgba(255,255,255,0.92)" : colors.surface, borderWidth: onPhoto ? 0 : 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] })}>
-      <Ionicons name={on ? "heart" : "heart-outline"} size={Math.round(size * 0.58)} color={on ? colors.danger : onPhoto ? colors.onGold : colors.ink} />
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={on ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`} onPress={() => { tap(); if (!on) setBurst((n) => n + 1); toggleFavorite(it.id); }} hitSlop={6}
+      style={({ pressed }) => ({ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: onPhoto ? "rgba(255,255,255,0.92)" : colors.surface, borderWidth: onPhoto ? 0 : 1, borderColor: colors.line, opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.92 : 1 }], ...springy })}>
+      <Pop trigger={on} size={1.45}><Ionicons name={on ? "heart" : "heart-outline"} size={Math.round(size * 0.58)} color={on ? colors.danger : onPhoto ? colors.onGold : colors.ink} /></Pop>
+      <Burst play={burst} count={7} radius={Math.round(size * 0.75)} size={5} colorList={[colors.danger, colors.gold, "#F28B82"]} />
     </Pressable>
   );
 }
@@ -312,9 +315,9 @@ export function ItemCard({ item: it }) {
 }
 
 /** A menu item as a tile for a swipeable row: picture with the add button on it, then price and name. */
-export function ItemTile({ item: it, width = 160 }) {
+export function ItemTile({ item: it, width = 160, index = 0 }) {
   return (
-    <View style={{ width }}>
+    <Reveal distance={14} duration={420} delay={Math.min(index, 6) * 55} style={{ width }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${it.name}, ${priceText(it)}. Details`} onPress={() => openItem(it)} style={({ pressed }) => ({ gap: 9, opacity: pressed ? 0.9 : 1 })}>
         <ItemPhoto item={it} size={width} always box={{ borderRadius: 20 }} />
         <View style={{ gap: 1, paddingHorizontal: 2 }}>
@@ -326,7 +329,7 @@ export function ItemTile({ item: it, width = 160 }) {
       <View style={{ position: "absolute", right: 8, top: width - 48 }}><Adder item={it} size={40} /></View>
       <View style={{ position: "absolute", right: 8, top: 8 }}><FavoriteButton item={it} size={34} onPhoto /></View>
       <ItemBadge item={it} style={{ position: "absolute", left: 10, top: 10 }} />
-    </View>
+    </Reveal>
   );
 }
 

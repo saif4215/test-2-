@@ -83,10 +83,10 @@ const STAGE_TEXT = {
   canceled: ["This order was canceled", "Please call the café if you have questions."],
 };
 export const FINAL_STATUSES = ["done", "canceled"];
-export function stageInfo(status) {
+export function stageInfo(status, paid = false) {
   const known = status in STAGE_TEXT ? status : "received";
   const [title, text] = STAGE_TEXT[known];
-  return { status: known, title, text, step: known === "received" ? 0 : known === "accepted" ? 1 : known === "canceled" ? -1 : 2, final: FINAL_STATUSES.includes(known) };
+  return { status: known, title, text: paid && known === "ready" ? "Come to the counter to pick it up. You already paid in the app." : text, step: known === "received" ? 0 : known === "accepted" ? 1 : known === "canceled" ? -1 : 2, final: FINAL_STATUSES.includes(known) };
 }
 
 /** The tax shown as an estimate: the café's percentage of the subtotal, in cents. Square works out the real amount on the order. */

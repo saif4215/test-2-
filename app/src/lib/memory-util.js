@@ -170,7 +170,7 @@ export function readActive(v, now = Date.now()) {
   const at = Number(v.at);
   if (typeof v.id !== "string" || !/^[A-Za-z0-9_-]{4,80}$/.test(v.id)) return null;
   if (!Number.isFinite(at) || at > now + 3600000 || now - at > ACTIVE_HOURS * 3600000) return null;
-  return { id: v.id, ref: str(v.ref, 8), name: str(v.name, 60), total: Number.isFinite(Number(v.total)) && v.total !== "" && v.total !== null ? Number(v.total) : null, at, preview: v.preview === true };
+  return { id: v.id, ref: str(v.ref, 8), name: str(v.name, 60), total: Number.isFinite(Number(v.total)) && v.total !== "" && v.total !== null ? Number(v.total) : null, at, preview: v.preview === true, ...(v.paid === true ? { paid: true } : {}) };
 }
 
 // ── recent searches on the Menu ─────────────────────────────────────────────────────────────────────────────────────────────────

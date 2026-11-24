@@ -823,3 +823,112 @@ test("how the café takes payment is read safely from the server's settings", ()
   assert.equal(readPayments({ applicationId: "sq0idp-XYZ789", locationId: "LOC1", environment: "weird" }).environment, "sandbox", "an unknown environment is treated as the safe one");
   for (const bad of [undefined, null, "x", {}, { applicationId: "abc", locationId: "LOC1" }, { applicationId: "sq0idp-XYZ789" }, { applicationId: "has spaces!!", locationId: "LOC1" }, { applicationId: "sq0idp-XYZ789", locationId: "<script>" }]) assert.equal(readPayments(bad), null, JSON.stringify(bad));
 });
+
+// ── motion: the numbers behind the animations ───────────────────────────────────────────────────────
+import { countAt, cupLevel, cupMood, cupScale, drinkLook, easeOutCubic, isDrink } from "../src/lib/motion-util.js";
+import { weekStreak, streakLine, parseBirthday, birthdayText, birthdayOpen, birthdayNote, weekStart, STREAK_GOALS } from "../src/lib/perks-util.js";
+
+test("a counting number starts where it was, ends exactly on the new value, and never goes outside", () => {
+  assert.equal(countAt(0, 120, 0), 0);
+  assert.equal(countAt(0, 120, 1), 120);
+  assert.equal(countAt(0, 120, 2), 120);          // past the end: the end
+  assert.ok(countAt(0, 120, 0.5) > 60 && countAt(0, 120, 0.5) < 120);   // eased: past halfway at half time
+  assert.equal(countAt(50, 20, 1), 20);           // counting down works too
+  assert.equal(countAt(NaN, 10, 0.5) <= 10, true);
+  assert.equal(easeOutCubic(-1), 0);
+  assert.equal(easeOutCubic(5), 1);
+});
+
+test("the cup fills as the order moves along, and is empty when canceled", () => {
+  assert.ok(cupLevel("received") < cupLevel("accepted") && cupLevel("accepted") < cupLevel("ready"));
+  assert.equal(cupLevel("ready"), 1);
+  assert.equal(cupLevel("done"), 1);
+  assert.equal(cupLevel("canceled"), 0);
+  assert.equal(cupLevel("something new"), cupLevel("received"));   // an unknown status is treated as just sent
+  assert.deepEqual(cupMood("ready"), { steam: true, bubbles: false, dim: false });
+  assert.deepEqual(cupMood("accepted"), { steam: false, bubbles: true, dim: false });
+  assert.deepEqual(cupMood("canceled"), { steam: false, bubbles: false, dim: true });
+});
+
+test("the drink cup follows size, hot or iced, and what the drink is", () => {
+  const sizes = [{ name: "Small", cents: 300 }, { name: "Medium", cents: 400 }, { name: "Large", cents: 500 }];
+  assert.ok(cupScale(sizes, "Small") < cupScale(sizes, "Medium") && cupScale(sizes, "Medium") < cupScale(sizes, "Large"));
+  assert.equal(cupScale([{ name: "One", cents: 1 }], "One"), 1);
+  assert.equal(cupScale(undefined, ""), 1);
+  const latte = { name: "Latte", cat: "Coffee", sizes };
+  assert.equal(drinkLook(latte, { size: "Large", picks: { temp: ["Iced"] } }).iced, true);
+  assert.equal(drinkLook(latte, { size: "Large", picks: { temp: ["Hot"] } }).iced, false);
+  assert.notEqual(drinkLook(latte, { size: "Small", picks: { milk: ["Oat milk"] } }).tint, drinkLook(latte, { size: "Small", picks: {} }).tint);   // oat milk looks lighter than plain coffee
+  assert.notEqual(drinkLook({ name: "Matcha Latte", cat: "Tea" }, { size: "", picks: {} }).tint, drinkLook(latte, { size: "Small", picks: {} }).tint);
+  assert.equal(isDrink(latte), true);
+  assert.equal(isDrink({ name: "Chicken Wrap", cat: "Wraps", optionSets: [] }), false);
+  assert.equal(isDrink({ name: "Mystery", cat: "Specials", optionSets: [{ id: "temp", label: "Hot or iced", choices: [] }] }), true);
+  assert.equal(isDrink(null), false);
+});
+
+test("the weekly streak counts weeks in a row, keeps a streak alive until the week ends, and breaks after a missed week", () => {
+  const D = (y, m, d, h = 12) => new Date(y, m - 1, d, h).getTime();
+  const now = D(2026, 11, 18);   // a Wednesday
+  const h = (...ms) => ms.map((at) => ({ at }));
+  assert.equal(weekStreak([], now).alive, false);
+  assert.equal(weekStreak(undefined, now).weeks, 0);
+  const one = weekStreak(h(D(2026, 11, 16)), now);   // Monday this week
+  assert.deepEqual([one.weeks, one.thisWeek, one.alive], [1, true, true]);
+  assert.deepEqual(one.days, [true, false, false, false, false, false, false]);
+  assert.equal(one.daysLeft, 5);   // Wed, Thu, Fri, Sat, Sun
+  const three = weekStreak(h(D(2026, 11, 17), D(2026, 11, 10), D(2026, 11, 3)), now);
+  assert.equal(three.weeks, 3);
+  assert.equal(three.next, 4);
+  const lapsed = weekStreak(h(D(2026, 11, 10), D(2026, 11, 3)), now);   // nothing yet this week: still alive until Sunday
+  assert.deepEqual([lapsed.weeks, lapsed.thisWeek, lapsed.alive], [2, false, true]);
+  assert.match(streakLine(lapsed), /keep your streak/);
+  const broken = weekStreak(h(D(2026, 11, 3), D(2026, 10, 27)), now);   // last order two weeks ago: gone
+  assert.equal(broken.alive, false);
+  assert.equal(weekStreak(h(D(2026, 11, 17), D(2026, 11, 17, 18)), now).days.filter(Boolean).length, 1);   // two orders the same day is one day
+  assert.equal(weekStreak(h(D(2026, 11, 17), D(2026, 11, 3)), now).weeks, 1);   // a missing middle week breaks it
+  assert.equal(weekStreak([{ at: "nope" }, null, {}], now).alive, false);
+  assert.equal(weekStart(D(2026, 11, 22)), weekStart(D(2026, 11, 16)));   // Sunday belongs to the week that started Monday
+  assert.deepEqual(STREAK_GOALS, [...STREAK_GOALS].sort((a, b) => a - b));
+  // a week with the clocks going back an hour is still one week
+  assert.equal(weekStreak(h(D(2026, 11, 2), D(2026, 10, 26), D(2026, 10, 19)), D(2026, 11, 4)).weeks, 3);
+  assert.match(streakLine(weekStreak(h(D(2026, 11, 17)), now)), /Order again next week/);
+});
+
+test("a birthday is month and day only, and the treat is open for the birthday week", () => {
+  assert.equal(parseBirthday("3/14"), "03-14");
+  assert.equal(parseBirthday("03-14"), "03-14");
+  assert.equal(parseBirthday("March 14"), "03-14");
+  assert.equal(parseBirthday("mar. 4"), "03-04");
+  assert.equal(parseBirthday("2/29"), "02-29");
+  assert.equal(parseBirthday("2/30"), "");
+  assert.equal(parseBirthday("13/1"), "");
+  assert.equal(parseBirthday("hello"), "");
+  assert.equal(parseBirthday("3/14/1990"), "");   // no year is ever kept
+  assert.equal(birthdayText("03-14"), "March 14");
+  assert.equal(birthdayText("nope"), "");
+  const at = (m, d) => new Date(2026, m - 1, d, 9);
+  assert.equal(birthdayOpen("11-18", at(11, 18)), true);    // the day itself
+  assert.equal(birthdayOpen("11-18", at(11, 24)), true);    // the 7th day
+  assert.equal(birthdayOpen("11-18", at(11, 25)), false);   // the 8th day: over
+  assert.equal(birthdayOpen("11-18", at(11, 17)), false);   // the day before: not yet
+  assert.equal(birthdayOpen("12-30", at(1, 3)), true);      // a birthday just before New Year, still in its week
+  assert.equal(birthdayOpen("02-29", at(2, 28)), true);     // a leap-day birthday is celebrated on Feb 28 in other years
+  assert.equal(birthdayOpen("", at(11, 18)), false);
+  assert.equal(birthdayOpen("garbage", at(11, 18)), false);
+  assert.equal(birthdayNote("a free cookie with any drink"), "Birthday treat: a free cookie with any drink.");
+  assert.equal(birthdayNote("a free cookie.", "no onions"), "Birthday treat: a free cookie. no onions");
+  assert.equal(birthdayNote("", "no onions"), "no onions");
+  assert.equal(birthdayNote("x".repeat(500), "").length, 200);   // never longer than the order note allows
+  assert.equal(birthdayNote("a cookie", "y".repeat(300)).length, 200);
+});
+
+test("an order paid in the app never tells the customer to pay at the counter", () => {
+  assert.match(stageInfo("ready").text, /pay there/);
+  assert.doesNotMatch(stageInfo("ready", true).text, /pay there/);
+  assert.match(stageInfo("ready", true).text, /already paid in the app/);
+  assert.equal(stageInfo("accepted", true).text, stageInfo("accepted").text);   // only the ready message changes
+  const now = Date.now();
+  assert.equal(readActive({ id: "ABCD1234", at: now, paid: true }, now).paid, true);
+  assert.equal("paid" in readActive({ id: "ABCD1234", at: now }, now), false);
+  assert.equal("paid" in readActive({ id: "ABCD1234", at: now, paid: "yes" }, now), false);   // only a real true counts
+});

@@ -5,21 +5,21 @@ import { addUsual as addUsualTo, awardPoints as awardTo, spendPoints as spendFro
 
 // What the app remembers on this phone (the browser's own storage on the web): favorite items, the last few orders sent, and the name and phone used for pickup.
 // Nothing here leaves the phone, and if the phone will not store it the app simply forgets it when it closes.
-const KEYS = { favorites: "maruf:favorites", recent: "maruf:recent-orders", contact: "maruf:contact", active: "maruf:active-order", usuals: "maruf:usuals", history: "maruf:history", points: "maruf:points" };
+const KEYS = { favorites: "maruf:favorites", recent: "maruf:recent-orders", contact: "maruf:contact", active: "maruf:active-order", usuals: "maruf:usuals", history: "maruf:history", points: "maruf:points", birthday: "maruf:birthday" };
 const NO_CONTACT = { name: "", phone: "" };
-const Ctx = createContext({ favorites: [], recent: [], usuals: [], history: [], points: { balance: 0, awarded: [] }, awardPoints() {}, spendPoints() {}, addUsual() {}, removeUsual() {}, contact: NO_CONTACT, active: null, activeStatus: "received", toggleFavorite() {}, rememberOrder() {}, rememberContact() {}, rememberActive() {}, forgetActive() {}, setActiveStatus() {} });
+const Ctx = createContext({ birthday: "", setBirthday() {}, favorites: [], recent: [], usuals: [], history: [], points: { balance: 0, awarded: [] }, awardPoints() {}, spendPoints() {}, addUsual() {}, removeUsual() {}, contact: NO_CONTACT, active: null, activeStatus: "received", toggleFavorite() {}, rememberOrder() {}, rememberContact() {}, rememberActive() {}, forgetActive() {}, setActiveStatus() {} });
 
 const isOrder = (o) => Array.isArray(o) && o.every((l) => l && typeof l.id === "string" && Number.isFinite(l.qty));
 const readContact = (c) => (c && typeof c.name === "string" && typeof c.phone === "string" ? { name: c.name.slice(0, 60), phone: c.phone.slice(0, 20) } : NO_CONTACT);
 
 export function MemoryProvider({ children }) {
-  const [favorites, setFavorites] = useState([]), [recent, setRecent] = useState([]), [contact, setContact] = useState(NO_CONTACT), [active, setActive] = useState(null), [usuals, setUsuals] = useState([]), [points, setPoints] = useState({ balance: 0, awarded: [] }), [history, setHistory] = useState([]), [activeStatus, setActiveStatus] = useState("received"), [ready, setReady] = useState(false);
+  const [favorites, setFavorites] = useState([]), [recent, setRecent] = useState([]), [contact, setContact] = useState(NO_CONTACT), [active, setActive] = useState(null), [usuals, setUsuals] = useState([]), [points, setPoints] = useState({ balance: 0, awarded: [] }), [history, setHistory] = useState([]), [birthday, setBirthdayState] = useState(""), [activeStatus, setActiveStatus] = useState("received"), [ready, setReady] = useState(false);
   useEffect(() => {
     let live = true;
     (async () => {
       try {
-        const [f, r, c, a, u, hi, pt] = await Promise.all([AsyncStorage.getItem(KEYS.favorites), AsyncStorage.getItem(KEYS.recent), AsyncStorage.getItem(KEYS.contact), AsyncStorage.getItem(KEYS.active), AsyncStorage.getItem(KEYS.usuals), AsyncStorage.getItem(KEYS.history), AsyncStorage.getItem(KEYS.points)]);
-        if (live) { setUsuals(readUsuals(readSaved(u, []))); setHistory(readHistory(readSaved(hi, []))); setPoints((cur) => (cur.balance ? cur : readPoints(readObject(pt, null)))); setFavorites(readSaved(f, []).filter((x) => typeof x === "string")); setRecent(readSaved(r, []).filter(isOrder)); setContact(readContact(readObject(c, null))); setActive((cur) => cur || readActive(readObject(a, null))); }
+        const [f, r, c, a, u, hi, pt, bd] = await Promise.all([AsyncStorage.getItem(KEYS.favorites), AsyncStorage.getItem(KEYS.recent), AsyncStorage.getItem(KEYS.contact), AsyncStorage.getItem(KEYS.active), AsyncStorage.getItem(KEYS.usuals), AsyncStorage.getItem(KEYS.history), AsyncStorage.getItem(KEYS.points), AsyncStorage.getItem(KEYS.birthday)]);
+        if (live) { setBirthdayState(/^\d\d-\d\d$/.test(bd || "") ? bd : ""); setUsuals(readUsuals(readSaved(u, []))); setHistory(readHistory(readSaved(hi, []))); setPoints((cur) => (cur.balance ? cur : readPoints(readObject(pt, null)))); setFavorites(readSaved(f, []).filter((x) => typeof x === "string")); setRecent(readSaved(r, []).filter(isOrder)); setContact(readContact(readObject(c, null))); setActive((cur) => cur || readActive(readObject(a, null))); }
       } catch { /* storage is not available: start empty */ }
       if (live) setReady(true);
     })();
@@ -30,6 +30,7 @@ export function MemoryProvider({ children }) {
   useEffect(() => { if (ready) AsyncStorage.setItem(KEYS.usuals, JSON.stringify(usuals)).catch(() => {}); }, [usuals, ready]);
   useEffect(() => { if (ready) AsyncStorage.setItem(KEYS.points, JSON.stringify(points)).catch(() => {}); }, [points, ready]);
   useEffect(() => { if (ready) AsyncStorage.setItem(KEYS.history, JSON.stringify(history)).catch(() => {}); }, [history, ready]);
+  useEffect(() => { if (ready) AsyncStorage.setItem(KEYS.birthday, birthday).catch(() => {}); }, [birthday, ready]);
   useEffect(() => { if (ready) AsyncStorage.setItem(KEYS.contact, JSON.stringify(contact)).catch(() => {}); }, [contact, ready]);
   useEffect(() => { if (ready) AsyncStorage.setItem(KEYS.active, JSON.stringify(active)).catch(() => {}); }, [active, ready]);
   const toggleFavorite = useCallback((id) => setFavorites((cur) => toggle(cur, id)), []);
@@ -43,14 +44,16 @@ export function MemoryProvider({ children }) {
   const rememberContact = useCallback((name, phone) => setContact(readContact({ name, phone })), []);
   /** The order just placed: Home shows where it stands until it is picked up or canceled and the customer closes the card. */
   const rememberActive = useCallback((o) => { const a = readActive({ ...o, at: Date.now() }); setActive(a); setActiveStatus("received"); }, []);
+  /** The birthday as "MM-DD" (month and day only), or "" to forget it. */
+  const setBirthday = useCallback((b) => setBirthdayState(/^\d\d-\d\d$/.test(b || "") ? b : ""), []);
   const forgetActive = useCallback(() => setActive(null), []);
   /** "Clear everything on this phone": favorites, usual drinks, past orders, points, searches, ratings, the saved name and phone, and the Settings choices. */
   const resetAll = useCallback(() => {
-    setFavorites([]); setRecent([]); setUsuals([]); setHistory([]); setPoints({ balance: 0, awarded: [] }); setContact(NO_CONTACT); setActive(null);
+    setFavorites([]); setRecent([]); setUsuals([]); setHistory([]); setPoints({ balance: 0, awarded: [] }); setContact(NO_CONTACT); setActive(null); setBirthdayState("");
     AsyncStorage.multiRemove(["maruf:searches", "maruf:rated", "maruf:notify", "maruf:appearance", "maruf:menu-layout"]).catch(() => {});
     resetPrefs();
   }, []);
-  const value = useMemo(() => ({ points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, resetAll, setActiveStatus }), [points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, resetAll]);
+  const value = useMemo(() => ({ birthday, setBirthday, points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, resetAll, setActiveStatus }), [points, awardPoints, spendPoints, usuals, history, addUsual, removeUsual, favorites, recent, contact, active, activeStatus, toggleFavorite, rememberOrder, rememberContact, rememberActive, forgetActive, resetAll, birthday, setBirthday]);
   return createElement(Ctx.Provider, { value }, children);
 }
 

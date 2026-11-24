@@ -14,6 +14,7 @@ import { useSite } from "../lib/site";
 import { suggestFor } from "../lib/site-merge";
 import { useMemory } from "../lib/memory";
 import { warn } from "../lib/haptics";
+import { birthdayNote, birthdayOpen } from "../lib/perks-util";
 import { pickupLabel, pickupSlots } from "../lib/pickup";
 import { colors } from "../theme";
 import { openLink } from "../lib/links";
@@ -28,7 +29,9 @@ export default function MyOrder() {
   const canPlace = ordering === true && needsPrice.length === 0;
   const payOn = canPlace && !!payments;   // the café takes payment in the app: no paying at the counter
   const incomplete = order.incomplete;   // a must-pick choice (hot or iced ...) is still missing on these lines
-  const { menu } = useSite();
+  const { menu, birthdayTreat } = useSite();
+  const treatOpen = canPlace && !!birthdayTreat && birthdayOpen(memory.birthday);   // it is the customer's birthday week and the café has a treat
+  const [treat, setTreat] = useState(true);
   const last = order.entries[order.entries.length - 1];
   const more = useMemo(() => (last ? suggestFor(menu, last, Object.keys(order.lines), 6) : []), [menu, last, order.lines]);   // "Add something else"
   const [asking, setAsking] = useState(false);   // "Clear my order" asks once more before throwing the order away
@@ -64,7 +67,7 @@ export default function MyOrder() {
     const built = buildPickup(v);
     setErrors(built.errors);
     if (Object.keys(built.errors).length) { setState({ busy: false, error: "Please check the highlighted fields." }); return; }
-    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(loyalty && earn ? { loyalty: true } : {}), ...(tip.cents > 0 ? { tipCents: tip.cents } : {}), ...(when === "later" ? { pickupAt: slotAt } : {}) });
+    const body = orderBody(order.entries, order.notes, { ...built.fields, ...(treatOpen && treat ? { note: birthdayNote(birthdayTreat, built.fields.note) } : {}), ...(loyalty && earn ? { loyalty: true } : {}), ...(tip.cents > 0 ? { tipCents: tip.cents } : {}), ...(when === "later" ? { pickupAt: slotAt } : {}) });
     key.current = keyFor(key.current, body);
     setState({ busy: true, error: "" });
     let paymentToken = "";
@@ -77,7 +80,7 @@ export default function MyOrder() {
     if (!res.ok) { warn(); if (res.newKey) key.current = null; setState({ busy: false, error: res.error }); return; }   // after a failed payment the next try is a new order
     memory.rememberContact(built.fields.name, v.phone.trim());   // as typed, so it looks the same next time
     memory.rememberOrder(order.entries, { at: Date.now(), subtotal: order.low });
-    memory.rememberActive({ id: res.orderId, ref: res.ref, total: res.totalCents, name: built.fields.name, preview: res.preview });   // Home shows where it stands
+    memory.rememberActive({ id: res.orderId, ref: res.ref, total: res.totalCents, name: built.fields.name, preview: res.preview, ...(res.paid ? { paid: true } : {}) });   // Home shows where it stands
     router.replace({ pathname: "/order-sent", params: { id: res.orderId, ref: res.ref, total: res.totalCents == null ? "" : String(res.totalCents), name: built.fields.name, fresh: "1", ...(res.paid ? { paid: "1" } : {}), ...(when === "later" ? { pickup: pickupLabel(slotAt) } : {}), ...(res.preview ? { preview: "1" } : {}) } });
     order.clear();
   }
@@ -187,6 +190,15 @@ export default function MyOrder() {
               </View>
               <Field label="Name" required value={v.name} onChangeText={set("name")} error={errors.name} autoComplete="name" textContentType="name" maxLength={60} />
               <Field label="Phone Number" required value={v.phone} onChangeText={set("phone")} error={errors.phone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" hint="So the café can reach you about your order." />
+              {treatOpen ? (
+                <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: treat }} aria-checked={treat} accessibilityLabel={`Add my birthday treat: ${birthdayTreat}`} onPress={() => setTreat((t) => !t)} style={{ flexDirection: "row", gap: 12, alignItems: "center", padding: 12, borderRadius: 16, backgroundColor: colors.goldSoft }}>
+                  <Ionicons name={treat ? "checkbox" : "square-outline"} size={26} color={treat ? colors.goldText : colors.muted} />
+                  <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                    <Text style={{ fontWeight: "800", color: colors.ink, fontSize: 15 }}>Happy birthday! Add my treat: {birthdayTreat}</Text>
+                    <Small style={{ color: colors.ink }}>The café adds a line to your order and hands it to you at pickup.</Small>
+                  </View>
+                </Pressable>
+              ) : null}
               {canPlace && loyalty ? (
                 <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: earn }} aria-checked={earn} accessibilityLabel="Earn points with this phone number" onPress={() => setEarn((e) => !e)} style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 4 }}>
                   <Ionicons name={earn ? "checkbox" : "square-outline"} size={26} color={earn ? colors.goldText : colors.muted} />

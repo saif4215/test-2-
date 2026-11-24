@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, H1, Small } from "../components/ui";
 import { FormShell } from "../components/FormShell";
 import { Celebrate } from "../components/Celebrate";
+import { Cup } from "../components/Cup";
+import { AnimatedFill } from "../components/Motion";
 import { MapCard } from "../components/MapCard";
 import { ImHere } from "../components/ImHere";
 import { NotifyToggle } from "../components/NotifyToggle";
@@ -13,6 +15,7 @@ import { announceOrder } from "../lib/notify";
 import { success } from "../lib/haptics";
 import { money } from "../lib/order";
 import { ORDER_STAGES, stageInfo } from "../lib/order-util";
+import { cupLevel, cupMood } from "../lib/motion-util";
 import { checkOrder } from "../lib/ordering";
 import { useMemory } from "../lib/memory";
 import { useSite } from "../lib/site";
@@ -29,7 +32,7 @@ function Tracker({ step, canceled }) {
         const on = !canceled && i <= step;
         return (
           <View key={s.id} style={{ flex: 1, gap: 8, alignItems: "center" }}>
-            <View style={{ height: 6, alignSelf: "stretch", borderRadius: 3, backgroundColor: on ? colors.gold : colors.line }} />
+            <AnimatedFill pct={on ? 1 : 0} color={colors.gold} height={6} delay={i * 160} style={{ alignSelf: "stretch" }} />
             <Text style={{ fontSize: 13, fontWeight: on ? "800" : "600", color: on ? colors.ink : colors.muted }}>{s.label}</Text>
           </View>
         );
@@ -46,7 +49,8 @@ export default function OrderSent() {
   const mine = active?.id === String(id);   // the order Home is following
   const [status, setStatus] = useState(mine ? activeStatus : "received");
   const [stale, setStale] = useState(false);   // the last check did not get through
-  const info = stageInfo(status);
+  const wasPaid = !!paid || !!(mine && active?.paid);   // paid in the app: nothing to pay at the counter
+  const info = stageInfo(status, wasPaid);
   // A little celebration when the order has just been sent (`fresh`), and again when it turns ready while you are looking. Not when you come back to an old one.
   const [party, setParty] = useState(0);
   useEffect(() => { if (id && fresh) { setParty(1); success(); } }, [id, fresh]);
@@ -86,9 +90,15 @@ export default function OrderSent() {
       <Stack.Screen options={{ title: "Order sent" }} />
       <Celebrate play={party} />
       <View style={{ alignItems: "flex-start", gap: 14, paddingTop: 18 }}>
-        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: canceled ? colors.dangerSoft : colors.successSoft, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={canceled ? "close" : info.status === "ready" || info.status === "done" ? "bag-check" : "checkmark"} size={46} color={canceled ? colors.danger : colors.success} />
-        </View>
+        {canceled ? (
+          <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: colors.dangerSoft, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="close" size={46} color={colors.danger} />
+          </View>
+        ) : (
+          <View accessible={false} style={{ alignSelf: "stretch", alignItems: "center", paddingVertical: 14, borderRadius: 24, backgroundColor: info.status === "ready" || info.status === "done" ? colors.successSoft : colors.goldSoft }}>
+            <Cup level={cupLevel(info.status)} size={132} tint="#7A4A2A" bounceKey={info.status} {...cupMood(info.status)} />
+          </View>
+        )}
         <H1>{info.title}</H1>
         <Body style={{ fontSize: 18, lineHeight: 27 }}>{name ? `Thank you, ${name}. ` : ""}{info.text}</Body>
       </View>
@@ -106,7 +116,7 @@ export default function OrderSent() {
       {!info.final && !canceled && !stale ? <ImHere id={String(id)} /> : null}
       {!info.final && !canceled ? <NotifyToggle /> : null}
       {info.status === "done" ? <RateOrder id={String(id)} /> : null}
-      <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}{paid ? "You paid in the app: there is nothing to pay at the counter." : "Pay at the counter when you pick it up."}</Small>
+      <Small>{stale ? "We can't check on your order right now. It was still sent. " : ""}{info.final ? "" : "This updates when Maruf Cafe updates your order. "}{wasPaid ? "You paid in the app: there is nothing to pay at the counter." : "Pay at the counter when you pick it up."}</Small>
       <Small>{pickup ? `Pickup at ${pickup} today: ` : "Pickup at "}{business.name}, {business.address.join(", ")}.</Small>
       <View style={{ gap: 12 }}>
         <Button title="Done" variant="primary" onPress={done} />

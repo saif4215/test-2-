@@ -7,6 +7,9 @@ import { useMemory } from "../lib/memory";
 import { ORDER_STAGES, stageInfo } from "../lib/order-util";
 import { checkOrder } from "../lib/ordering";
 import { success } from "../lib/haptics";
+import { Cup } from "./Cup";
+import { AnimatedFill } from "./Motion";
+import { cupLevel, cupMood } from "../lib/motion-util";
 import { colors, radius, shadow } from "../theme";
 
 const WATCH_MS = 20000, SLOWEST_MS = 120000;
@@ -44,7 +47,7 @@ export function OrderWatcher() {
 function Steps({ step, canceled }) {
   return (
     <View accessible={false} style={{ flexDirection: "row", gap: 5 }}>
-      {ORDER_STAGES.map((s, i) => <View key={s.id} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: !canceled && i <= step ? colors.gold : colors.line }} />)}
+      {ORDER_STAGES.map((s, i) => <AnimatedFill key={s.id} pct={!canceled && i <= step ? 1 : 0} color={colors.gold} height={5} delay={i * 140} style={{ flex: 1 }} />)}
     </View>
   );
 }
@@ -63,7 +66,9 @@ export function ActiveOrderCard({ compact, style }) {
     <View style={[{ flexDirection: "row", alignItems: "center", gap: 8 }, style]}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Your order${active.ref ? ` ${active.ref}` : ""}: ${info.title}. See details`} onPress={open}
         style={({ pressed }) => [{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderRadius: compact ? 18 : radius.card, borderWidth: 1, borderColor: ready ? colors.success : "rgba(36,26,18,0.06)", padding: compact ? 10 : 14, opacity: pressed ? 0.92 : 1 }, shadow]}>
-        <View style={{ width: compact ? 38 : 46, height: compact ? 38 : 46, borderRadius: 23, backgroundColor: tone.bg, alignItems: "center", justifyContent: "center" }}><Ionicons name={tone.icon} size={compact ? 19 : 23} color={tone.fg} /></View>
+        <View style={{ width: compact ? 38 : 46, height: compact ? 38 : 46, borderRadius: 23, backgroundColor: tone.bg, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          {canceled ? <Ionicons name={tone.icon} size={compact ? 19 : 23} color={tone.fg} /> : <View style={{ marginTop: compact ? 6 : 8, marginLeft: compact ? 0 : 0 }}><Cup level={cupLevel(info.status)} size={compact ? 22 : 27} scale={1} bounceKey={info.status} {...cupMood(info.status)} steam={false} /></View>}
+        </View>
         <View style={{ flex: 1, minWidth: 0, gap: compact ? 0 : 6 }}>
           <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase", color: colors.goldText }}>Your order{active.ref ? ` · ${active.ref}` : ""}</Text>
           <Text numberOfLines={1} style={{ fontSize: compact ? 15 : 17, fontWeight: "800", color: colors.ink }}>{info.title}</Text>
